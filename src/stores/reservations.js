@@ -35,13 +35,45 @@ export const useReservationsStore = defineStore('reservations', () => {
   const loading = ref(false)
   const error = ref(null)
   const lastOccupancySyncIssue = ref(null)
+  const totalCount = ref(0)
+  const currentPage = ref(1)
+  const currentPageSize = ref(25)
+  const currentSortBy = ref('check_in')
+  const currentSortDir = ref('desc')
+  const lastFetchParams = ref({})
 
-  const fetchReservations = async () => {
+  const fetchReservations = async (params = {}) => {
     loading.value = true
     error.value = null
 
+    const {
+      search = '',
+      status = '',
+      source = '',
+      checkInFrom = null,
+      checkInTo = null,
+      sortBy = 'check_in',
+      sortDir = 'desc',
+      paginated = false,
+      page = 1,
+      pageSize = 25
+    } = params
+
+    lastFetchParams.value = {
+      search,
+      status,
+      source,
+      checkInFrom,
+      checkInTo,
+      sortBy,
+      sortDir,
+      paginated,
+      page,
+      pageSize
+    }
+
     try {
-      const { data, error: supaError } = await supabase
+      let query = supabase
         .from('reservations')
         .select(`
           *,
@@ -50,10 +82,52 @@ export const useReservationsStore = defineStore('reservations', () => {
           reservation_units(unit_id, units(name, venue_id)),
           reservation_guests(is_primary, guest_id, guests!reservation_guests_guest_id_fkey(*)),
           payments(amount)
-        `)
-        .order('check_in', { ascending: true })
+        `, { count: 'exact' })
+
+      if (search) {
+        query = query.or(`guest_name.ilike.%${search}%,reservation_number.ilike.%${search}%`)
+      }
+
+      if (status) {
+        query = query.eq('status', status)
+      }
+
+      if (source) {
+        query = query.eq('source', source)
+      }
+
+      const normalizedFrom = normalizeDate(checkInFrom)
+      const normalizedTo = normalizeDate(checkInTo)
+
+      if (normalizedFrom) {
+        query = query.gte('check_in', normalizedFrom)
+      }
+
+      if (normalizedTo) {
+        query = query.lte('check_in', normalizedTo)
+      }
+
+      query = query.order(sortBy, { ascending: sortDir === 'asc' })
+
+      if (paginated) {
+        const fromIndex = Math.max((page - 1) * pageSize, 0)
+        const toIndex = fromIndex + pageSize - 1
+        query = query.range(fromIndex, toIndex)
+      }
+
+      const { data, error: supaError, count } = await query
 
       if (supaError) throw supaError
+
+      totalCount.value = count || 0
+      currentPage.value = paginated ? page : 1
+      currentPageSize.value = pageSize
+      currentSortBy.value = sortBy
+      currentSortDir.value = sortDir
+
+      if (!paginated) {
+        totalCount.value = (data || []).length
+      }
 
       reservations.value = (data || []).map(res => {
         const totalPayments = (res.payments || []).reduce((sum, p) => sum + Number(p.amount), 0)
@@ -247,7 +321,7 @@ export const useReservationsStore = defineStore('reservations', () => {
 
       const syncResult = await trySyncReservationOccupancy(data.id)
 
-      await fetchReservations()
+      await fetchReservations(lastFetchParams.value)
 
       return {
         ...data,
@@ -261,13 +335,95 @@ export const useReservationsStore = defineStore('reservations', () => {
     }
   }
 
+  const updateReservationUnits = async (reservationId, unitIds = []) => {
+    loading.value = true
+    error.value = null
+
+    try {
+      if (!reservationId) {
+        throw new Error('No se pudo identificar la reserva a actualizar.')
+      }
+
+      const normalizedUnitIds = [...new Set((unitIds || []).filter(Boolean))]
+      if (normalizedUnitIds.length === 0) {
+        throw new Error('Debes seleccionar al menos una unidad.')
+      }
+
+      const { data: reservation, error: reservationError } = await supabase
+        .from('reservations')
+        .select('id, check_in, check_out, status')
+        .eq('id', reservationId)
+        .single()
+
+      if (reservationError) throw reservationError
+      if (!reservation) {
+        throw new Error('No se encontró la reserva indicada.')
+      }
+
+      if (reservation.status === 'cancelled') {
+        throw new Error('No se pueden modificar unidades de una reserva cancelada.')
+      }
+
+      const overlap = await checkOverlap(
+        normalizedUnitIds,
+        reservation.check_in,
+        reservation.check_out,
+        reservation.id
+      )
+
+      if (overlap) {
+        throw new Error('Las unidades seleccionadas no están disponibles para esas fechas.')
+      }
+
+      const { error: deleteError } = await supabase
+        .from('reservation_units')
+        .delete()
+        .eq('reservation_id', reservation.id)
+
+      if (deleteError) throw deleteError
+
+      const payload = normalizedUnitIds.map((unitId) => ({
+        reservation_id: reservation.id,
+        unit_id: unitId
+      }))
+
+      const { error: insertError } = await supabase
+        .from('reservation_units')
+        .insert(payload)
+
+      if (insertError) throw insertError
+
+      const syncResult = await trySyncReservationOccupancy(reservation.id)
+
+      await fetchReservations(lastFetchParams.value)
+
+      return {
+        reservationId: reservation.id,
+        unitIds: normalizedUnitIds,
+        syncResult
+      }
+    } catch (err) {
+      error.value = err.message
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     reservations,
+    totalCount,
+    currentPage,
+    currentPageSize,
+    currentSortBy,
+    currentSortDir,
+    lastFetchParams,
     loading,
     error,
     lastOccupancySyncIssue,
     fetchReservations,
     createReservation,
+    updateReservationUnits,
     checkOverlap,
     getUnitAvailability,
     retryReservationOccupancySync

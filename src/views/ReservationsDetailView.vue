@@ -64,7 +64,16 @@
             </div>
             <div>
               <p class="text-gray-500 mb-1">Unidades</p>
-              <p class="font-medium text-gray-900">{{ unitNames || '-' }}</p>
+              <div class="flex flex-wrap items-center gap-2">
+                <p class="font-medium text-gray-900">{{ unitNames || '-' }}</p>
+                <button
+                  type="button"
+                  class="text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                  @click="openEditUnitsModal"
+                >
+                  Editar
+                </button>
+              </div>
             </div>
             <div>
               <p class="text-gray-500 mb-1">Origen</p>
@@ -210,13 +219,66 @@
         @submit="handleAdminPreregistroSubmit"
       />
     </BaseModal>
+
+    <BaseModal :isOpen="showEditUnitsModal" title="Editar unidades" @close="closeEditUnitsModal">
+      <div class="space-y-4">
+        <p class="text-sm text-gray-600">
+          Selecciona las unidades para esta reserva. Se validará disponibilidad en el mismo rango de fechas.
+        </p>
+
+        <div class="rounded-md border border-gray-200 bg-gray-50 p-3">
+          <p class="text-xs uppercase tracking-wide text-gray-500">Rango de estadía</p>
+          <p class="text-sm font-medium text-gray-800">
+            {{ formatDate(res?.check_in) }} → {{ formatDate(res?.check_out) }}
+          </p>
+        </div>
+
+        <div class="max-h-64 space-y-2 overflow-y-auto rounded-md border border-gray-200 bg-gray-50 p-3">
+          <p v-if="editUnitsLoading" class="text-sm text-gray-500">Cargando unidades...</p>
+          <p v-else-if="editUnitsAvailable.length === 0" class="text-sm text-gray-500">
+            No hay unidades activas disponibles en esta sede.
+          </p>
+
+          <label
+            v-for="unit in editUnitsAvailable"
+            :key="unit.id"
+            class="flex items-center gap-2 text-sm text-gray-700"
+          >
+            <input
+              v-model="editUnitsSelection"
+              type="checkbox"
+              :value="unit.id"
+              class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            >
+            <span>{{ unit.name }}</span>
+          </label>
+        </div>
+
+        <div
+          v-if="editUnitsUnavailableNames.length > 0"
+          class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
+          No disponibles en el rango seleccionado: {{ editUnitsUnavailableNames.join(', ') }}
+        </div>
+
+        <p v-if="editUnitsErrorMessage" class="text-sm text-red-600">{{ editUnitsErrorMessage }}</p>
+
+        <div class="flex justify-end gap-2 border-t pt-4">
+          <button type="button" class="btn-secondary" :disabled="editUnitsSaving" @click="closeEditUnitsModal">Cancelar</button>
+          <button type="button" class="btn-primary" :disabled="editUnitsSaving" @click="submitEditUnits">
+            {{ editUnitsSaving ? 'Guardando...' : 'Guardar unidades' }}
+          </button>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '../services/supabase'
+import { useReservationsStore } from '../stores/reservations'
 import ReservationBadge from '../components/ui/ReservationBadge.vue'
 import DeadlineAlert from '../components/ui/DeadlineAlert.vue'
 import BaseModal from '../components/ui/BaseModal.vue'
@@ -225,6 +287,7 @@ import { completeReservationPreregistro } from '../services/preregistro'
 import { getCommissionSummary, getReservationGuestName, getReservationGuestPhone } from '../utils/reservations'
 
 const route = useRoute()
+const reservationsStore = useReservationsStore()
 const loading = ref(true)
 const res = ref(null)
 const payments = ref([])
@@ -233,6 +296,13 @@ const feedbackType = ref('success')
 const showPreregistroModal = ref(false)
 const preregistroSubmitting = ref(false)
 const preregistroErrorMessage = ref('')
+const showEditUnitsModal = ref(false)
+const editUnitsLoading = ref(false)
+const editUnitsSaving = ref(false)
+const editUnitsErrorMessage = ref('')
+const editUnitsAvailable = ref([])
+const editUnitsSelection = ref([])
+const editUnitsUnavailableNames = ref([])
 
 onMounted(async () => {
   await fetchReservation()
@@ -300,6 +370,10 @@ const unitNames = computed(() => {
     .map(ru => ru.units?.name)
     .filter(Boolean)
     .join(', ')
+})
+
+const currentUnitIds = computed(() => {
+  return (res.value?.reservation_units || []).map((row) => row.unit_id).filter(Boolean)
 })
 
 const remainingBalance = computed(() => {
@@ -378,11 +452,116 @@ const openPaymentModal = () => { console.log('Abrir modal de pagos') }
 const openStatusModal = () => { console.log('Abrir modal de estado') }
 const openCancelModal = () => { console.log('Abrir modal de cancelacion') }
 
+const validateEditUnitsSelection = async () => {
+  editUnitsUnavailableNames.value = []
+
+  if (!res.value || editUnitsSelection.value.length === 0) return
+
+  const availability = await reservationsStore.getUnitAvailability(
+    editUnitsSelection.value,
+    res.value.check_in,
+    res.value.check_out,
+    res.value.id
+  )
+
+  if (availability.unavailableUnitIds.length === 0) return
+
+  editUnitsUnavailableNames.value = editUnitsAvailable.value
+    .filter((unit) => availability.unavailableUnitIds.includes(unit.id))
+    .map((unit) => unit.name)
+}
+
+const openEditUnitsModal = async () => {
+  if (!res.value?.venue_id) {
+    setFeedback('error', 'No se pudo identificar la sede de la reserva.')
+    return
+  }
+
+  editUnitsErrorMessage.value = ''
+  editUnitsUnavailableNames.value = []
+  editUnitsSaving.value = false
+  editUnitsLoading.value = true
+  showEditUnitsModal.value = true
+
+  try {
+    const { data, error } = await supabase
+      .from('units')
+      .select('id, name, is_active')
+      .eq('venue_id', res.value.venue_id)
+      .eq('is_active', true)
+      .order('name', { ascending: true })
+
+    if (error) throw error
+
+    editUnitsAvailable.value = data || []
+    editUnitsSelection.value = currentUnitIds.value.slice()
+    await validateEditUnitsSelection()
+  } catch (err) {
+    editUnitsErrorMessage.value = err.message
+  } finally {
+    editUnitsLoading.value = false
+  }
+}
+
+const closeEditUnitsModal = () => {
+  if (editUnitsSaving.value) return
+  showEditUnitsModal.value = false
+  editUnitsErrorMessage.value = ''
+  editUnitsUnavailableNames.value = []
+}
+
+const submitEditUnits = async () => {
+  editUnitsErrorMessage.value = ''
+
+  if (!res.value) {
+    editUnitsErrorMessage.value = 'No se encontró la reserva para actualizar.'
+    return
+  }
+
+  if (editUnitsSelection.value.length === 0) {
+    editUnitsErrorMessage.value = 'Selecciona al menos una unidad.'
+    return
+  }
+
+  await validateEditUnitsSelection()
+  if (editUnitsUnavailableNames.value.length > 0) {
+    editUnitsErrorMessage.value = 'Hay unidades sin disponibilidad en el rango actual.'
+    return
+  }
+
+  editUnitsSaving.value = true
+
+  try {
+    const result = await reservationsStore.updateReservationUnits(res.value.id, editUnitsSelection.value)
+    await fetchReservation()
+    showEditUnitsModal.value = false
+
+    if (result?.syncResult?.synced === false) {
+      setFeedback('error', 'Se actualizaron las unidades, pero falló la sincronización de ocupación.')
+      return
+    }
+
+    setFeedback('success', 'Unidades actualizadas correctamente.')
+  } catch (err) {
+    editUnitsErrorMessage.value = err.message
+  } finally {
+    editUnitsSaving.value = false
+  }
+}
+
 const closePreregistroModal = () => {
   if (preregistroSubmitting.value) return
   showPreregistroModal.value = false
   preregistroErrorMessage.value = ''
 }
+
+watch(
+  () => editUnitsSelection.value.slice(),
+  async () => {
+    if (!showEditUnitsModal.value) return
+    await validateEditUnitsSelection()
+  }
+)
 
 const copyPreregistroLink = async () => {
   const { data, error } = await supabase.functions.invoke('generate-preregistro-token', {

@@ -51,6 +51,16 @@
         </select>
       </div>
 
+      <div class="w-full md:w-40">
+        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Ingreso desde</label>
+        <input v-model="filters.checkInFrom" type="date" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+      </div>
+
+      <div class="w-full md:w-40">
+        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Ingreso hasta</label>
+        <input v-model="filters.checkInTo" type="date" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+      </div>
+
       <!-- Clear btn -->
       <button 
         v-if="hasActiveFilters" 
@@ -64,8 +74,15 @@
 
     <!-- Table -->
     <ReservationTable 
-      :reservations="filteredReservations" 
+      :reservations="store.reservations" 
       :loading="store.loading" 
+      :sortKey="filters.sortBy"
+      :sortDir="filters.sortDir"
+      :page="pagination.page"
+      :pageSize="pagination.pageSize"
+      :totalCount="store.totalCount"
+      @sort-change="onSortChange"
+      @page-change="onPageChange"
       @view="goToDetail"
     />
 
@@ -73,7 +90,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReservationsStore } from '../stores/reservations'
 import ReservationTable from '../components/reservations/ReservationTable.vue'
@@ -81,40 +98,101 @@ import ReservationTable from '../components/reservations/ReservationTable.vue'
 const store = useReservationsStore()
 const router = useRouter()
 
+const getLast30DaysRange = () => {
+  const today = new Date()
+  const from = new Date(today)
+  from.setDate(today.getDate() - 29)
+
+  const toIso = (date) => {
+    const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    return adjusted.toISOString().slice(0, 10)
+  }
+
+  return {
+    from: toIso(from),
+    to: toIso(today)
+  }
+}
+
+const defaultRange = getLast30DaysRange()
+
 const filters = ref({
   searchData: '',
   status: '',
   source: '',
+  checkInFrom: defaultRange.from,
+  checkInTo: defaultRange.to,
+  sortBy: 'check_in',
+  sortDir: 'desc'
 })
 
+const pagination = ref({
+  page: 1,
+  pageSize: 25
+})
+
+const fetchList = async () => {
+  await store.fetchReservations({
+    search: filters.value.searchData,
+    status: filters.value.status,
+    source: filters.value.source,
+    checkInFrom: filters.value.checkInFrom,
+    checkInTo: filters.value.checkInTo,
+    sortBy: filters.value.sortBy,
+    sortDir: filters.value.sortDir,
+    paginated: true,
+    page: pagination.value.page,
+    pageSize: pagination.value.pageSize
+  })
+}
+
 onMounted(async () => {
-  await store.fetchReservations()
+  await fetchList()
 })
 
 const hasActiveFilters = computed(() => {
-  return filters.value.searchData !== '' || filters.value.status !== '' || filters.value.source !== ''
+  return filters.value.searchData !== '' || filters.value.status !== '' || filters.value.source !== '' || filters.value.checkInFrom !== defaultRange.from || filters.value.checkInTo !== defaultRange.to || filters.value.sortDir !== 'desc'
 })
 
 const clearFilters = () => {
-  filters.value = { searchData: '', status: '', source: '' }
+  filters.value = {
+    searchData: '',
+    status: '',
+    source: '',
+    checkInFrom: defaultRange.from,
+    checkInTo: defaultRange.to,
+    sortBy: 'check_in',
+    sortDir: 'desc'
+  }
+  pagination.value.page = 1
 }
 
-const filteredReservations = computed(() => {
-  return store.reservations.filter(res => {
-    // text search
-    if (filters.value.searchData) {
-      const q = filters.value.searchData.toLowerCase()
-      const gn = res.guest_display_name?.toLowerCase() || ''
-      if (!gn.includes(q)) return false
-    }
-    // status
-    if (filters.value.status && res.status !== filters.value.status) return false
-    // source
-    if (filters.value.source && res.source !== filters.value.source) return false
-
-    return true
-  })
+watch(() => [
+  filters.value.searchData,
+  filters.value.status,
+  filters.value.source,
+  filters.value.checkInFrom,
+  filters.value.checkInTo,
+  filters.value.sortDir
+], async () => {
+  pagination.value.page = 1
+  await fetchList()
 })
+
+const onSortChange = async (sortKey) => {
+  if (filters.value.sortBy === sortKey) {
+    filters.value.sortDir = filters.value.sortDir === 'asc' ? 'desc' : 'asc'
+  } else {
+    filters.value.sortBy = sortKey
+    filters.value.sortDir = 'desc'
+  }
+}
+
+const onPageChange = async (page) => {
+  if (page < 1) return
+  pagination.value.page = page
+  await fetchList()
+}
 
 const goToDetail = (res) => {
   router.push(`/reservas/${res.id}`)

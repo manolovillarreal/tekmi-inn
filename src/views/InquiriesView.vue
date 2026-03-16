@@ -36,6 +36,7 @@
             <tr>
               <th class="px-6 py-4">Huesped</th>
               <th class="px-6 py-4">Fechas</th>
+              <th class="px-6 py-4">Noches</th>
               <th class="px-6 py-4">Personas</th>
               <th class="px-6 py-4">Origen</th>
               <th class="px-6 py-4">Estado</th>
@@ -44,10 +45,10 @@
           </thead>
           <tbody class="divide-y divide-gray-200">
             <tr v-if="store.loading">
-              <td colspan="6" class="px-6 py-10 text-center text-gray-400">Cargando consultas...</td>
+              <td colspan="7" class="px-6 py-10 text-center text-gray-400">Cargando consultas...</td>
             </tr>
             <tr v-else-if="filteredInquiries.length === 0">
-              <td colspan="6" class="px-6 py-10 text-center text-gray-500 italic">No hay consultas para mostrar.</td>
+              <td colspan="7" class="px-6 py-10 text-center text-gray-500 italic">No hay consultas para mostrar.</td>
             </tr>
             <tr v-for="inquiry in filteredInquiries" :key="inquiry.id" class="hover:bg-gray-50">
               <td class="px-6 py-4">
@@ -58,6 +59,7 @@
                 <span class="block">{{ formatDate(inquiry.check_in) }}</span>
                 <span class="block text-xs text-gray-500">hasta {{ formatDate(inquiry.check_out) }}</span>
               </td>
+              <td class="px-6 py-4 text-gray-700">{{ getNights(inquiry.check_in, inquiry.check_out) }}</td>
               <td class="px-6 py-4 text-gray-700">{{ inquiry.guests_count || '-' }}</td>
               <td class="px-6 py-4 text-gray-700 capitalize">{{ inquiry.source || '-' }}</td>
               <td class="px-6 py-4">
@@ -189,6 +191,18 @@ const statusClasses = (status) => {
 const formatDate = (value) => {
   if (!value) return '-'
   return new Date(value).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
+}
+
+const getNights = (checkIn, checkOut) => {
+  if (!checkIn || !checkOut) return '-'
+
+  const start = new Date(checkIn)
+  const end = new Date(checkOut)
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '-'
+
+  const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24))
+  return nights >= 0 ? nights : 0
 }
 
 const openCreateModal = () => {

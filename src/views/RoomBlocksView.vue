@@ -132,12 +132,15 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../services/supabase'
 import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
 import { useRoomBlocksStore } from '../stores/roomBlocks'
 
+const route = useRoute()
+const router = useRouter()
 const store = useRoomBlocksStore()
 
 const venues = ref([])
@@ -168,6 +171,7 @@ const deleteError = ref('')
 
 onMounted(async () => {
   await Promise.all([fetchMasterData(), store.fetchRoomBlocks()])
+  openEditModalFromRoute(route.params.id)
 })
 
 const fetchMasterData = async () => {
@@ -246,9 +250,26 @@ const openEditModal = (block) => {
   showModal.value = true
 }
 
+const openEditModalFromRoute = (blockId) => {
+  if (!blockId) return
+
+  const block = store.roomBlocks.find(item => item.id === blockId)
+  if (!block) {
+    feedbackType.value = 'error'
+    feedbackMessage.value = 'No se encontró el bloqueo solicitado.'
+    return
+  }
+
+  openEditModal(block)
+}
+
 const closeModal = () => {
   if (submitting.value) return
   showModal.value = false
+
+  if (route.params.id) {
+    router.replace({ name: 'bloqueos' })
+  }
 }
 
 const submitForm = async () => {
@@ -271,6 +292,10 @@ const submitForm = async () => {
     }
 
     showModal.value = false
+
+    if (route.params.id) {
+      router.replace({ name: 'bloqueos' })
+    }
   } catch (err) {
     formError.value = err.message
   } finally {
@@ -306,4 +331,22 @@ const confirmDelete = async () => {
     deleting.value = false
   }
 }
+
+watch(
+  () => route.params.id,
+  (blockId) => {
+    if (!store.roomBlocks.length) return
+    openEditModalFromRoute(blockId)
+  }
+)
+
+watch(
+  () => store.roomBlocks,
+  () => {
+    if (route.params.id) {
+      openEditModalFromRoute(route.params.id)
+    }
+  },
+  { deep: true }
+)
 </script>

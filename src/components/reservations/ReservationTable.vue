@@ -4,28 +4,36 @@
       <table class="w-full text-left border-collapse">
         <thead class="bg-gray-50 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
           <tr>
-            <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" @click="sortBy('reservation_number')">Nro</th>
-            <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" @click="sortBy('guest_display_name')">Huésped</th>
-            <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" @click="sortBy('unit_names_display')">Unidades</th>
-            <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" @click="sortBy('check_in')">Fechas</th>
+            <th class="px-6 py-4">Nro</th>
+            <th class="px-6 py-4">Huésped</th>
+            <th class="px-6 py-4">Unidades</th>
+            <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" @click="sortBy('check_in')">
+              <span class="inline-flex items-center gap-1">
+                <span>Fechas</span>
+                <span class="text-[10px] leading-none text-gray-400" :class="sortKey === 'check_in' ? 'text-gray-700' : ''">
+                  {{ sortKey === 'check_in' ? (sortDir === 'asc' ? '^' : 'v') : '^/v' }}
+                </span>
+              </span>
+            </th>
+            <th class="px-6 py-4">Noches</th>
             <th class="px-6 py-4">Estadía</th>
-            <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" @click="sortBy('status')">Estado</th>
+            <th class="px-6 py-4">Estado</th>
             <th class="px-6 py-4">Montos</th>
-            <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" @click="sortBy('balance')">Saldo</th>
+            <th class="px-6 py-4">Saldo</th>
             <th class="px-6 py-4 text-right">Acciones</th>
           </tr>
         </thead>
         
         <tbody class="divide-y divide-gray-200 text-sm">
           <tr v-if="loading">
-            <td colspan="9" class="px-6 py-12 text-center text-gray-400">Cargando reservas...</td>
+            <td colspan="10" class="px-6 py-12 text-center text-gray-400">Cargando reservas...</td>
           </tr>
           <tr v-else-if="reservations.length === 0">
-            <td colspan="9" class="px-6 py-12 text-center text-gray-500 italic">No hay reservas para mostrar.</td>
+            <td colspan="10" class="px-6 py-12 text-center text-gray-500 italic">No hay reservas para mostrar.</td>
           </tr>
           
           <tr 
-            v-for="res in sortedReservations" 
+            v-for="res in reservations" 
             :key="res.id"
             class="hover:bg-gray-50 transition-colors group"
             :class="getRowClass(res)"
@@ -46,6 +54,11 @@
             <td class="px-6 py-4 whitespace-nowrap">
               <span class="block text-gray-900" :class="{'font-bold': isToday(res.check_in)}">{{ formatDate(res.check_in) }}</span>
               <span class="block text-gray-500 text-xs">hasta {{ formatDate(res.check_out) }}</span>
+            </td>
+
+            <!-- Noches -->
+            <td class="px-6 py-4 text-gray-700">
+              {{ Number(res.nights || 0) }}
             </td>
             
             <!-- Estadía -->
@@ -87,50 +100,46 @@
         </tbody>
       </table>
     </div>
+
+    <div class="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-3 text-sm text-gray-600">
+      <p>
+        Mostrando {{ reservations.length }} de {{ totalCount }} reservas · Pagina {{ page }} de {{ totalPages }}
+      </p>
+      <div class="flex items-center gap-2">
+        <button v-if="page > 1" class="btn-secondary text-sm" :disabled="loading" @click="$emit('page-change', page - 1)">Anterior</button>
+        <button v-if="page < totalPages" class="btn-secondary text-sm" :disabled="loading" @click="$emit('page-change', page + 1)">Siguiente</button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import ReservationBadge from '../ui/ReservationBadge.vue'
-import { getCommissionSummary, getReservationGuestName } from '../../utils/reservations'
+import { getCommissionSummary } from '../../utils/reservations'
 
 const props = defineProps({
   reservations: { type: Array, required: true },
-  loading: { type: Boolean, default: false }
+  loading: { type: Boolean, default: false },
+  sortKey: { type: String, default: 'check_in' },
+  sortDir: { type: String, default: 'desc' },
+  page: { type: Number, default: 1 },
+  pageSize: { type: Number, default: 25 },
+  totalCount: { type: Number, default: 0 }
 })
 
-defineEmits(['view'])
+const emit = defineEmits(['view', 'sort-change', 'page-change'])
 
-const sortKey = ref('check_in')
-const sortDesc = ref(false)
+const totalPages = computed(() => {
+  if (!props.pageSize || props.pageSize <= 0) return 1
+  const pages = Math.ceil((props.totalCount || 0) / props.pageSize)
+  return pages > 0 ? pages : 1
+})
 
 const sortBy = (key) => {
-  if (sortKey.value === key) {
-    sortDesc.value = !sortDesc.value
-  } else {
-    sortKey.value = key
-    sortDesc.value = false
+  if (key === 'check_in') {
+    emit('sort-change', 'check_in')
   }
-}
-
-const sortedReservations = computed(() => {
-  return [...props.reservations].sort((a, b) => {
-    let valA = getNestedValue(a, sortKey.value)
-    let valB = getNestedValue(b, sortKey.value)
-    
-    // Treat nulls
-    if (valA === null) valA = ''
-    if (valB === null) valB = ''
-
-    if (valA < valB) return sortDesc.value ? 1 : -1
-    if (valA > valB) return sortDesc.value ? -1 : 1
-    return 0
-  })
-})
-
-const getNestedValue = (obj, path) => {
-  return path.split('.').reduce((acc, part) => acc && acc[part], obj)
 }
 
 const isToday = (dateStr) => {
