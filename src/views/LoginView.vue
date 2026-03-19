@@ -14,7 +14,7 @@
             type="email"
             required
             autocomplete="email"
-            class="mt-1 block w-full rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+              class="mt-1 block w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary/30"
           >
         </div>
 
@@ -25,7 +25,7 @@
             type="password"
             required
             autocomplete="current-password"
-            class="mt-1 block w-full rounded-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+              class="mt-1 block w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary/30"
           >
         </div>
 
@@ -45,7 +45,7 @@
       <button
         @click="handleSignUp"
         :disabled="loading"
-        class="w-full mt-3 text-sm text-indigo-600 hover:text-indigo-700 disabled:opacity-50"
+        class="w-full mt-3 text-sm text-primary hover:text-primary-dark disabled:opacity-50"
       >
         Crear usuario con este correo
       </button>

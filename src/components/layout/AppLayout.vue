@@ -8,12 +8,16 @@
     >
       <!-- Logo Area -->
       <div class="h-16 flex items-center px-4 border-b border-gray-800">
-        <div class="w-8 h-8 bg-indigo-500 rounded-md flex items-center justify-center font-bold text-white shrink-0">
-          HF
-        </div>
-        <span v-if="!isSidebarCollapsed" class="ml-3 font-semibold text-lg whitespace-nowrap overflow-hidden">
-          HostFlow
-        </span>
+          <!-- Icon square (always visible) -->
+          <div class="w-9 h-9 rounded-[8px] bg-primary flex flex-col items-center justify-center shrink-0">
+            <span class="leading-none text-[11px] font-semibold text-white">Tek</span>
+            <span class="leading-none text-[11px] font-semibold text-white">Mi</span>
+          </div>
+          <!-- Wordmark (only when expanded) -->
+          <div v-if="!isSidebarCollapsed" class="ml-2 flex items-baseline overflow-hidden whitespace-nowrap">
+            <span class="font-semibold text-[18px] text-white">TekMi</span>
+            <span class="ml-1 font-normal text-[18px] text-neutral-muted">· Inn</span>
+          </div>
       </div>
 
       <!-- Navigation -->
