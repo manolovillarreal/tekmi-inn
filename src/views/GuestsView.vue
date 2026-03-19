@@ -8,10 +8,6 @@
       </button>
     </div>
 
-    <div v-if="feedbackMessage" class="rounded-md border px-4 py-3 text-sm" :class="feedbackType === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
-      {{ feedbackMessage }}
-    </div>
-
     <!-- Search -->
     <div class="card !py-4">
       <div class="w-full md:w-64">
@@ -24,7 +20,7 @@
             v-model="searchQuery"
             type="text"
             placeholder="Buscar por nombre..."
-            class="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-shadow"
+            class="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary/30 focus:border-primary sm:text-sm transition-shadow"
           >
         </div>
       </div>
@@ -60,7 +56,7 @@
               <td class="px-6 py-4 text-gray-600">{{ formatDocument(guest) }}</td>
               <td class="px-6 py-4 text-gray-600">{{ getReservationCount(guest.id) }}</td>
               <td class="px-6 py-4 text-right">
-                <button v-if="can('guests', 'edit')" @click="openEditModal(guest)" class="text-gray-400 hover:text-indigo-600 px-2 py-1 transition-colors">Editar</button>
+                <button v-if="can('guests', 'edit')" @click="openEditModal(guest)" class="text-gray-400 hover:text-primary px-2 py-1 transition-colors">Editar</button>
                 <button v-if="can('guests', 'delete')" @click="removeGuest(guest)" class="text-gray-400 hover:text-red-600 px-2 py-1 transition-colors ml-2">Eliminar</button>
               </td>
             </tr>
@@ -70,85 +66,55 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    <BaseModal :isOpen="showModal" @close="closeModal" :title="editingGuest ? 'Editar Huésped' : 'Nuevo Huésped'">
-      <form @submit.prevent="submitForm" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Nombre Completo</label>
-          <input
+    <BaseModal :isOpen="showModal" @close="closeModal" :title="editingGuest ? 'Editar huésped' : 'Nuevo huésped'" size="lg">
+      <form @submit.prevent="submitForm" class="space-y-5">
+        <AppFormSection title="Identidad" :divider="true">
+          <AppInput
             v-model="form.name"
-            type="text"
+            label="Nombre"
             required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          >
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Email</label>
-            <input
-              v-model="form.email"
-              type="email"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            >
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Teléfono</label>
-            <input
-              v-model="form.phone"
-              type="tel"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            >
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Nacionalidad</label>
-            <input
-              v-model="form.nationality"
-              type="text"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            >
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Tipo documento</label>
-            <select
+            :error="fieldError('name')"
+            @blur="touchField('name')"
+          />
+          <AppFormGrid :columns="2">
+            <AppSelect
               v-model="form.document_type"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            >
-              <option value="">Sin definir</option>
-              <option value="passport">Pasaporte</option>
-              <option value="cedula">Cédula</option>
-              <option value="dni">DNI</option>
-              <option value="foreign_id">Documento extranjero</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Número documento</label>
-            <input
+              label="Tipo documento"
+              :options="documentTypeOptions"
+              placeholder="Sin definir"
+            />
+            <AppInput
               v-model="form.document_number"
-              type="text"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            >
-          </div>
-        </div>
+              label="Número documento"
+            />
+          </AppFormGrid>
+        </AppFormSection>
 
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Notas</label>
-          <textarea
+        <AppFormSection title="Contacto" :divider="true">
+          <AppFormGrid :columns="2">
+            <AppInput v-model="form.phone" type="tel" label="Teléfono" />
+            <AppInput v-model="form.email" type="email" label="Email" />
+          </AppFormGrid>
+        </AppFormSection>
+
+        <AppFormSection title="Información adicional" :divider="false">
+          <AppInput v-model="form.nationality" label="Nacionalidad" />
+          <AppTextarea
             v-model="form.notes"
-            rows="3"
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          ></textarea>
-        </div>
+            label="Notas"
+            :rows="2"
+            :autoResize="true"
+          />
+        </AppFormSection>
 
-        <div class="flex justify-end pt-4 border-t">
-          <button type="button" @click="closeModal" class="btn-secondary mr-3">Cancelar</button>
-          <button type="submit" :disabled="submitting" class="btn-primary">
-            {{ submitting ? 'Guardando...' : 'Guardar' }}
-          </button>
-        </div>
+        <AppFormActions
+          :submit-label="editingGuest ? 'Actualizar huésped' : 'Guardar huésped'"
+          cancel-label="Cancelar"
+          :loading="submitting"
+          :submit-disabled="submitting"
+          @submit="submitForm"
+          @cancel="closeModal"
+        />
       </form>
     </BaseModal>
 
@@ -172,17 +138,27 @@ import { useReservationsStore } from '../stores/reservations'
 import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
 import { usePermissions } from '../composables/usePermissions'
+import { useToast } from '../composables/useToast'
+import {
+  AppInput,
+  AppSelect,
+  AppTextarea,
+  AppFormSection,
+  AppFormGrid,
+  AppFormActions
+} from '@/components/ui/forms'
 
 const store = useGuestsStore()
 const reservationsStore = useReservationsStore()
 const { can } = usePermissions()
+const toast = useToast()
 
 const searchQuery = ref('')
 const showModal = ref(false)
 const editingGuest = ref(null)
 const submitting = ref(false)
-const feedbackMessage = ref('')
-const feedbackType = ref('success')
+const touched = ref({})
+const submitAttempted = ref(false)
 const showDeleteModal = ref(false)
 const guestToDelete = ref(null)
 const deleteErrorMessage = ref('')
@@ -199,18 +175,30 @@ const form = ref({
   notes: ''
 })
 
+const documentTypeOptions = [
+  { value: 'passport', label: 'Pasaporte' },
+  { value: 'cedula', label: 'Cédula' },
+  { value: 'dni', label: 'DNI' },
+  { value: 'foreign_id', label: 'Documento extranjero' },
+]
+
 onMounted(async () => {
   await store.fetchGuests()
   await reservationsStore.fetchReservations()
 })
 
-const setFeedback = (type, message) => {
-  feedbackType.value = type
-  feedbackMessage.value = message
+const touchField = (field) => {
+  touched.value[field] = true
 }
 
-const clearFeedback = () => {
-  feedbackMessage.value = ''
+const fieldError = (field) => {
+  if (!touched.value[field] && !submitAttempted.value) return ''
+
+  if (field === 'name' && !form.value.name?.trim()) {
+    return 'El nombre es obligatorio.'
+  }
+
+  return ''
 }
 
 const filteredGuests = computed(() => {
@@ -226,14 +214,16 @@ const getReservationCount = (guestId) => {
 const openCreateModal = () => {
   editingGuest.value = null
   form.value = { name: '', email: '', phone: '', nationality: '', document_type: '', document_number: '', notes: '' }
-  clearFeedback()
+  touched.value = {}
+  submitAttempted.value = false
   showModal.value = true
 }
 
 const openEditModal = (guest) => {
   editingGuest.value = guest
   form.value = { ...guest }
-  clearFeedback()
+  touched.value = {}
+  submitAttempted.value = false
   showModal.value = true
 }
 
@@ -243,26 +233,27 @@ const closeModal = () => {
 }
 
 const submitForm = async () => {
+  submitAttempted.value = true
+  if (fieldError('name')) return
+
   submitting.value = true
-  clearFeedback()
   try {
     if (editingGuest.value) {
       await store.updateGuest(editingGuest.value.id, form.value)
-      setFeedback('success', 'Huésped actualizado correctamente.')
+      toast.success('Huésped actualizado correctamente.')
     } else {
       await store.createGuest(form.value)
-      setFeedback('success', 'Huésped creado correctamente.')
+      toast.success('Huésped creado correctamente.')
     }
     closeModal()
   } catch (err) {
-    setFeedback('error', err.message)
+    toast.error(err.message || 'No se pudo guardar el huésped.')
   } finally {
     submitting.value = false
   }
 }
 
 const removeGuest = async (guest) => {
-  clearFeedback()
   guestToDelete.value = guest
   deleteMessage.value = `¿Estás seguro de que deseas eliminar al huésped "${guest.name}"?`
   deleteErrorMessage.value = ''
@@ -285,7 +276,7 @@ const confirmDeleteGuest = async () => {
     showDeleteModal.value = false
     guestToDelete.value = null
     deleteErrorMessage.value = ''
-    setFeedback('success', 'Huésped eliminado correctamente.')
+    toast.success('Huésped eliminado correctamente.')
   } catch (err) {
     deleteErrorMessage.value = err.message
   } finally {

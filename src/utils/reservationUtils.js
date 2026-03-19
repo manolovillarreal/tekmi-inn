@@ -5,6 +5,19 @@ export const STATUS_LABELS = {
   cancelled: 'Cancelada'
 }
 
+export const RESERVATION_TRANSITIONS = {
+  confirmed: ['completed', 'cancelled'],
+  in_stay: ['completed', 'cancelled'],
+  completed: [],
+  cancelled: []
+}
+
+export const getAvailableTransitions = (status) => {
+  const transitions = RESERVATION_TRANSITIONS[status] || []
+  // Check-in physical is handled by a dedicated action, never through this modal.
+  return transitions.filter((candidate) => candidate !== 'in_stay')
+}
+
 export const getStatusLabel = (status) => {
   return STATUS_LABELS[status] || status || 'Sin estado'
 }

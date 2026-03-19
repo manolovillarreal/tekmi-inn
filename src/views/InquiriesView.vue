@@ -5,10 +5,6 @@
       <button v-if="can('inquiries', 'create')" class="btn-primary" @click="openCreateModal">+ Nueva consulta</button>
     </div>
 
-    <div v-if="feedbackMessage" class="rounded-md border px-4 py-3 text-sm" :class="feedbackType === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
-      {{ feedbackMessage }}
-    </div>
-
     <div class="card !py-4 flex flex-wrap items-center gap-4 bg-white">
       <input
         v-model="filters.search"
@@ -92,100 +88,103 @@
       </div>
     </div>
 
-    <BaseModal :isOpen="showCreateModal" title="Nueva consulta" @close="closeCreateModal">
-      <form class="space-y-4" @submit.prevent="submitCreate">
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Nombre <span class="text-red-500">*</span></label>
-            <input v-model="createForm.guest_name" type="text" required class="mt-1 block w-full rounded-md border-gray-300">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Teléfono</label>
-            <input v-model="createForm.guest_phone" type="text" class="mt-1 block w-full rounded-md border-gray-300">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Check-in</label>
-            <input v-model="createForm.check_in" type="date" class="mt-1 block w-full rounded-md border-gray-300">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Check-out</label>
-            <input v-model="createForm.check_out" type="date" class="mt-1 block w-full rounded-md border-gray-300">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Adultos</label>
-            <input v-model="createForm.adults" type="number" min="1" class="mt-1 block w-full rounded-md border-gray-300">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Niños</label>
-            <input v-model="createForm.children" type="number" min="0" class="mt-1 block w-full rounded-md border-gray-300">
-          </div>
-        </div>
+    <BaseModal :isOpen="showCreateModal" title="Nueva consulta" size="lg" @close="closeCreateModal">
+      <form class="space-y-5" @submit.prevent="submitCreate">
+        <AppFormSection title="Solicitante" :divider="true">
+          <AppFormGrid :columns="2">
+            <AppInput
+              v-model="createForm.guest_name"
+              label="Nombre"
+              required
+              :error="createFieldError('guest_name')"
+              @blur="touchCreateField('guest_name')"
+            />
+            <AppInput
+              v-model="createForm.guest_phone"
+              label="Teléfono"
+              hint="Opcional"
+            />
+          </AppFormGrid>
+        </AppFormSection>
 
-        <SourceSelector
-          :modelValue="{ sourceTypeId: createForm.source_type_id, sourceDetailId: createForm.source_detail_id }"
-          @update:modelValue="updateCreateSourceSelection"
-          @suggestions="applyCreateSourceSuggestions"
+        <AppFormSection title="Fechas de interés" :divider="true">
+          <AppFormGrid :columns="2">
+            <AppDatePicker v-model="createForm.check_in" label="Check-in" hint="Opcional" />
+            <AppDatePicker v-model="createForm.check_out" label="Check-out" hint="Opcional" />
+          </AppFormGrid>
+
+          <p v-if="createNights > 0" class="text-sm text-[#6B7280]">{{ createNights }} noches</p>
+
+          <AppFieldGroup title="¿Qué unidades te interesan?" subtitle="Opcional" :compact="true" :border="true">
+            <div class="max-h-40 space-y-1 overflow-y-auto">
+              <p v-if="units.length === 0" class="text-sm text-gray-500">No hay unidades activas.</p>
+              <label v-for="unit in units" :key="unit.id" class="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-white">
+                <input type="checkbox" :value="unit.id" v-model="createForm.unit_ids" class="rounded border-gray-300">
+                <span>{{ unit.name }}<span v-if="venueNameById(unit.venue_id)" class="text-gray-400"> · {{ venueNameById(unit.venue_id) }}</span></span>
+              </label>
+            </div>
+          </AppFieldGroup>
+        </AppFormSection>
+
+        <AppFormSection title="Personas" :divider="true">
+          <AppFormGrid :columns="2">
+            <AppCounter v-model="createForm.adults" label="Adultos" :min="1" :max="20" />
+            <AppCounter v-model="createForm.children" label="Niños" :min="0" :max="20" />
+          </AppFormGrid>
+          <p class="text-sm text-[#6B7280]">Total: <strong class="text-[#111827]">{{ Number(createForm.adults || 0) + Number(createForm.children || 0) }}</strong></p>
+        </AppFormSection>
+
+        <AppFormSection title="Cotización" :divider="true">
+          <AppInput v-model="createForm.price_per_night" type="number" label="Precio por noche" prefix="$" hint="Opcional" />
+
+          <AppFormGrid :columns="2">
+            <AppInput v-model="createForm.discount_percentage" type="number" label="Descuento" suffix="%" hint="Opcional" />
+            <AppInput v-model="createForm.commission_percentage" type="number" label="Comisión" suffix="%" hint="Opcional" />
+          </AppFormGrid>
+
+          <AppDatePicker v-model="createForm.quote_expires_at" label="Cotización válida hasta" hint="Opcional" />
+
+          <PricingCalculatorPanel
+            :checkIn="createForm.check_in"
+            :checkOut="createForm.check_out"
+            :pricePerNight="Number(createForm.price_per_night || 0)"
+            :discountPercentage="Number(createForm.discount_percentage || 0)"
+            :commissionPercentage="Number(createForm.commission_percentage || 0)"
+            :units="createForm.unit_ids"
+            :adults="Number(createForm.adults || 1)"
+            :children="Number(createForm.children || 0)"
+          />
+        </AppFormSection>
+
+        <AppFormSection title="Origen" :divider="true">
+          <AppFieldGroup title="Canal de origen" :border="false" :compact="true">
+            <SourceSelector
+              :modelValue="{ sourceTypeId: createForm.source_type_id, sourceDetailId: createForm.source_detail_id }"
+              @update:modelValue="updateCreateSourceSelection"
+              @suggestions="applyCreateSourceSuggestions"
+            />
+          </AppFieldGroup>
+        </AppFormSection>
+
+        <AppFormSection title="Notas" :divider="false">
+          <AppTextarea
+            v-model="createForm.notes"
+            label="Notas"
+            :rows="2"
+            :autoResize="true"
+          />
+        </AppFormSection>
+
+        <AppInlineAlert v-if="createError" type="error" :message="createError" />
+
+        <AppFormActions
+          submit-label="Guardar consulta"
+          cancel-label="Cancelar"
+          :loading="creating"
+          :submit-disabled="creating"
+          @submit="submitCreate"
+          @cancel="closeCreateModal"
         />
-
-        <!-- Unidades de interés -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">¿Qué unidades te interesan? <span class="text-gray-400 font-normal">(opcional)</span></label>
-          <div class="max-h-40 space-y-1 overflow-y-auto rounded-md border border-gray-200 bg-gray-50 p-3">
-            <p v-if="units.length === 0" class="text-sm text-gray-500">No hay unidades activas.</p>
-            <label v-for="unit in units" :key="unit.id" class="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-white">
-              <input type="checkbox" :value="unit.id" v-model="createForm.unit_ids" class="rounded border-gray-300">
-              <span>{{ unit.name }}<span v-if="venueNameById(unit.venue_id)" class="text-gray-400"> · {{ venueNameById(unit.venue_id) }}</span></span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Precio y vencimiento -->
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Precio por noche</label>
-            <input v-model="createForm.price_per_night" type="number" min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Cotización válida hasta</label>
-            <input v-model="createForm.quote_expires_at" type="date" class="mt-1 block w-full rounded-md border-gray-300">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Comisión</label>
-            <input v-model="createForm.commission_name" type="text" class="mt-1 block w-full rounded-md border-gray-300" placeholder="Booking, agencia...">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">% Comisión</label>
-            <input v-model="createForm.commission_percentage" type="number" min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">% Descuento</label>
-            <input v-model="createForm.discount_percentage" type="number" min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300">
-          </div>
-        </div>
-
-        <div v-if="showCreateCalculationPanel" class="rounded-md border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-          <p>Noches: <strong>{{ createNights }}</strong></p>
-          <p>Precio por noche: <strong>${{ formatCurrency(createForm.price_per_night || 0) }}</strong></p>
-          <p>Subtotal: <strong>${{ formatCurrency(createSubtotal) }}</strong></p>
-          <p>Descuento ({{ Number(createForm.discount_percentage || 0) }}%): <strong>-${{ formatCurrency(createDiscountAmount) }}</strong></p>
-          <p>Total cliente: <strong>${{ formatCurrency(createCustomerTotal) }}</strong></p>
-          <p>Comisión ({{ Number(createForm.commission_percentage || 0) }}%): <strong>-${{ formatCurrency(createCommissionAmount) }}</strong></p>
-          <p>Ingreso neto: <strong>${{ formatCurrency(createNetAmount) }}</strong></p>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Notas</label>
-          <textarea v-model="createForm.notes" rows="3" class="mt-1 block w-full rounded-md border-gray-300"></textarea>
-        </div>
-
-        <p v-if="createError" class="text-sm text-red-600">{{ createError }}</p>
-
-        <div class="flex justify-end gap-2 border-t pt-4">
-          <button type="button" class="btn-secondary" @click="closeCreateModal">Cancelar</button>
-          <button type="submit" class="btn-primary" :disabled="creating">{{ creating ? 'Guardando...' : 'Guardar consulta' }}</button>
-        </div>
       </form>
     </BaseModal>
   </div>
@@ -199,6 +198,19 @@ import { useInquiriesStore } from '../stores/inquiries'
 import { usePermissions } from '../composables/usePermissions'
 import { useAccountStore } from '../stores/account'
 import { supabase } from '../services/supabase'
+import { useToast } from '../composables/useToast'
+import {
+  AppInput,
+  AppTextarea,
+  AppDatePicker,
+  AppCounter,
+  AppFieldGroup,
+  AppFormSection,
+  AppFormActions,
+  AppInlineAlert,
+  AppFormGrid,
+  PricingCalculatorPanel
+} from '@/components/ui/forms'
 import {
   INQUIRY_STATUS_LABELS,
   getInquiryStatusLabel,
@@ -208,14 +220,15 @@ import {
 const store = useInquiriesStore()
 const { can } = usePermissions()
 const accountStore = useAccountStore()
+const toast = useToast()
 
 const filters = ref({ search: '', status: [], dateFrom: '', dateTo: '' })
-const feedbackMessage = ref('')
-const feedbackType = ref('success')
 
 const showCreateModal = ref(false)
 const creating = ref(false)
 const createError = ref('')
+const createTouched = ref({})
+const createSubmitAttempted = ref(false)
 
 const venues = ref([])
 const units = ref([])
@@ -356,6 +369,8 @@ const applyCreateSourceSuggestions = (payload) => {
 const openCreateModal = () => {
   createForm.value = buildEmptyForm()
   createError.value = ''
+  createTouched.value = {}
+  createSubmitAttempted.value = false
   showCreateModal.value = true
 }
 
@@ -365,23 +380,34 @@ const closeCreateModal = () => {
 }
 
 const submitCreate = async () => {
-  if (!createForm.value.guest_name?.trim()) {
-    createError.value = 'El nombre es obligatorio.'
-    return
-  }
+  createSubmitAttempted.value = true
+  if (createFieldError('guest_name')) return
+
   creating.value = true
   createError.value = ''
 
   try {
     await store.createInquiry(createForm.value)
     showCreateModal.value = false
-    feedbackType.value = 'success'
-    feedbackMessage.value = 'Consulta creada correctamente.'
-    setTimeout(() => { feedbackMessage.value = '' }, 4000)
+    toast.success('Consulta creada correctamente.')
   } catch (err) {
     createError.value = err.message
   } finally {
     creating.value = false
   }
+}
+
+const touchCreateField = (field) => {
+  createTouched.value[field] = true
+}
+
+const createFieldError = (field) => {
+  if (!createTouched.value[field] && !createSubmitAttempted.value) return ''
+
+  if (field === 'guest_name' && !createForm.value.guest_name?.trim()) {
+    return 'El nombre es obligatorio.'
+  }
+
+  return ''
 }
 </script>

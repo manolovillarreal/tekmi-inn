@@ -1,77 +1,80 @@
 <template>
   <BaseModal :isOpen="isOpen" title="Registrar pago" size="md" @close="closeModal">
-    <form class="space-y-4" @submit.prevent="submitPayment">
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <label class="text-sm text-gray-700">
-          Monto
-          <input
+    <form class="space-y-5" @submit.prevent="submitPayment">
+      <AppFormSection title="Datos del pago" :divider="true">
+        <AppFormGrid :columns="2">
+          <AppInput
             v-model="form.amount"
             type="number"
-            min="0"
-            step="0.01"
-            class="mt-1 block w-full rounded-md border-gray-300 text-sm"
-            placeholder="0"
-          >
-          <span v-if="errors.amount" class="mt-1 block text-xs text-red-600">{{ errors.amount }}</span>
-        </label>
+            label="Monto"
+            prefix="$"
+            required
+            :error="fieldError('amount')"
+            @blur="touchField('amount')"
+          />
 
-        <label class="text-sm text-gray-700">
-          Metodo
-          <select v-model="form.method" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-            <option value="">Selecciona un metodo</option>
-            <option value="efectivo">Efectivo</option>
-            <option value="transferencia">Transferencia</option>
-            <option value="nequi">Nequi</option>
-            <option value="tarjeta">Tarjeta</option>
-            <option value="plataforma">Plataforma</option>
-          </select>
-          <span v-if="errors.method" class="mt-1 block text-xs text-red-600">{{ errors.method }}</span>
-        </label>
+          <AppSelect
+            v-model="form.method"
+            label="Método"
+            :options="methodOptions"
+            placeholder="Selecciona un método"
+            :error="fieldError('method')"
+            @blur="touchField('method')"
+          />
 
-        <label class="text-sm text-gray-700">
-          Referencia
-          <input
+          <AppInput
             v-model="form.reference"
-            type="text"
-            class="mt-1 block w-full rounded-md border-gray-300 text-sm"
+            label="Referencia"
             placeholder="Opcional"
-          >
-        </label>
+            hint="Número de transferencia u otro ID"
+          />
 
-        <label class="text-sm text-gray-700">
-          Fecha del pago
-          <input v-model="form.paymentDate" type="date" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-          <span v-if="errors.paymentDate" class="mt-1 block text-xs text-red-600">{{ errors.paymentDate }}</span>
-        </label>
+          <AppDatePicker
+            v-model="form.paymentDate"
+            label="Fecha del pago"
+            :error="fieldError('paymentDate')"
+            @blur="touchField('paymentDate')"
+          />
+        </AppFormGrid>
 
-        <label class="text-sm text-gray-700 md:col-span-2">
-          Notas
-          <textarea
-            v-model="form.notes"
-            rows="2"
-            class="mt-1 block w-full rounded-md border-gray-300 text-sm"
-            placeholder="Opcional"
-          ></textarea>
-        </label>
-      </div>
+        <AppTextarea
+          v-model="form.notes"
+          label="Notas"
+          hint="Opcional"
+          :rows="2"
+          :autoResize="true"
+        />
+      </AppFormSection>
 
-      <div class="rounded-md border border-gray-200 bg-gray-50 p-3 text-sm">
-        <p class="flex justify-between"><span>Total reserva:</span><span class="font-medium">{{ formatCop(totalAmount) }}</span></p>
-        <p class="mt-1 flex justify-between"><span>Ya pagado:</span><span class="font-medium">{{ formatCop(paidAmount) }}</span></p>
-        <p class="mt-1 flex justify-between"><span>Este pago:</span><span class="font-medium">{{ formatCop(liveAmount) }}</span></p>
-        <p class="mt-2 flex justify-between border-t border-gray-200 pt-2 font-semibold" :class="pendingAfterPayment > 0 ? 'text-red-600' : 'text-emerald-700'">
-          <span>Quedara pendiente:</span>
-          <span>{{ formatCop(pendingAfterPayment) }}</span>
-        </p>
-        <p v-if="pendingAfterPayment === 0" class="mt-2 text-xs font-medium text-emerald-700">Reserva quedaria saldada ✓</p>
-      </div>
+      <AppFormSection title="Resumen financiero" :divider="false">
+        <AppFieldGroup :compact="true" :border="true">
+          <div class="space-y-2 text-sm text-[#111827]">
+            <p class="flex justify-between"><span>Total reserva:</span><span class="font-medium">{{ formatCop(totalAmount) }}</span></p>
+            <p class="flex justify-between"><span>Ya pagado:</span><span class="font-medium">{{ formatCop(paidAmount) }}</span></p>
+            <p class="flex justify-between"><span>Este pago:</span><span class="font-medium">{{ formatCop(liveAmount) }}</span></p>
+          </div>
+          <template #footer>
+            <p class="flex justify-between text-sm font-semibold" :class="pendingAfterPayment > 0 ? 'text-[#EF4444]' : 'text-[#10B981]'">
+              <span>Quedará pendiente:</span>
+              <span>{{ formatCop(pendingAfterPayment) }}</span>
+            </p>
+            <AppInlineAlert
+              v-if="pendingAfterPayment === 0 && Number(form.amount || 0) > 0"
+              type="success"
+              message="Reserva quedaría saldada ✓"
+            />
+          </template>
+        </AppFieldGroup>
+      </AppFormSection>
 
-      <div class="flex justify-end gap-2 border-t border-gray-200 pt-4">
-        <button type="button" class="btn-secondary" :disabled="saving" @click="closeModal">Cancelar</button>
-        <button type="submit" class="btn-primary" :disabled="saving || !isFormValid || hasErrors">
-          {{ saving ? 'Guardando...' : 'Guardar pago' }}
-        </button>
-      </div>
+      <AppFormActions
+        submit-label="Registrar pago"
+        cancel-label="Cancelar"
+        :loading="saving"
+        :submit-disabled="saving || !isFormValid"
+        @submit="submitPayment"
+        @cancel="closeModal"
+      />
     </form>
   </BaseModal>
 </template>
@@ -82,6 +85,17 @@ import BaseModal from '../ui/BaseModal.vue'
 import { supabase } from '../../services/supabase'
 import { useAccountStore } from '../../stores/account'
 import { useToast } from '../../composables/useToast'
+import {
+  AppInput,
+  AppSelect,
+  AppTextarea,
+  AppDatePicker,
+  AppFormSection,
+  AppFormGrid,
+  AppFieldGroup,
+  AppInlineAlert,
+  AppFormActions
+} from '@/components/ui/forms'
 
 const props = defineProps({
   isOpen: { type: Boolean, required: true },
@@ -115,8 +129,24 @@ const errors = reactive({
   paymentDate: '',
 })
 
-const state = reactive({ saving: false })
+const touched = reactive({
+  amount: false,
+  method: false,
+  paymentDate: false,
+})
+
+const submitAttempted = computed(() => state.submitAttempted)
+
+const state = reactive({ saving: false, submitAttempted: false })
 const saving = computed(() => state.saving)
+
+const methodOptions = [
+  { value: 'efectivo', label: 'Efectivo' },
+  { value: 'transferencia', label: 'Transferencia' },
+  { value: 'nequi', label: 'Nequi' },
+  { value: 'tarjeta', label: 'Tarjeta' },
+  { value: 'plataforma', label: 'Plataforma' },
+]
 
 const resetForm = () => {
   form.amount = ''
@@ -128,6 +158,11 @@ const resetForm = () => {
   errors.amount = ''
   errors.method = ''
   errors.paymentDate = ''
+
+  touched.amount = false
+  touched.method = false
+  touched.paymentDate = false
+  state.submitAttempted = false
 }
 
 watch(
@@ -174,9 +209,14 @@ const validate = () => {
   return !errors.amount && !errors.method && !errors.paymentDate
 }
 
-const hasErrors = computed(() => {
-  return Boolean(errors.amount || errors.method || errors.paymentDate)
-})
+const touchField = (field) => {
+  touched[field] = true
+}
+
+const fieldError = (field) => {
+  if (!touched[field] && !submitAttempted.value) return ''
+  return errors[field] || ''
+}
 
 const isFormValid = computed(() => {
   const amount = Number(form.amount)
@@ -210,6 +250,7 @@ const closeModal = () => {
 }
 
 const submitPayment = async () => {
+  state.submitAttempted = true
   if (!validate()) return
 
   state.saving = true

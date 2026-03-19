@@ -12,10 +12,6 @@
       </div>
     </div>
 
-    <div v-if="feedbackMessage" class="rounded-md border px-4 py-3 text-sm" :class="feedbackType === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
-      {{ feedbackMessage }}
-    </div>
-
     <div v-if="loading" class="animate-pulse space-y-6">
       <div class="h-32 bg-gray-200 rounded-xl"></div>
       <div class="grid grid-cols-3 gap-6">
@@ -357,6 +353,18 @@
       @close="closeCheckinConfirmModal"
       @confirm="confirmCheckin"
     />
+
+    <StatusChangeModal
+      v-if="res"
+      :isOpen="showStatusModal"
+      :reservationId="res.id"
+      :currentStatus="res.status"
+      :guestName="guestDisplayName"
+      :hasGuest="Boolean(res.guest_id)"
+      :initialStatus="statusModalInitialStatus"
+      @close="closeStatusModal"
+      @updated="handleStatusUpdated"
+    />
   </div>
 </template>
 
@@ -371,6 +379,7 @@ import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
 import PreRegistroForm from '../components/preregistro/PreRegistroForm.vue'
 import PaymentModal from '../components/payments/PaymentModal.vue'
+import StatusChangeModal from '../components/reservations/StatusChangeModal.vue'
 import { completeReservationPreregistro } from '../services/preregistro'
 import { getCommissionSummary, getReservationGuestName, getReservationGuestPhone } from '../utils/reservations'
 import { formatReferenceDisplay } from '../utils/referenceUtils'
@@ -387,8 +396,8 @@ const toast = useToast()
 const loading = ref(true)
 const res = ref(null)
 const payments = ref([])
-const feedbackMessage = ref('')
-const feedbackType = ref('success')
+const showStatusModal = ref(false)
+const statusModalInitialStatus = ref('')
 const showPreregistroModal = ref(false)
 const preregistroSubmitting = ref(false)
 const preregistroErrorMessage = ref('')
@@ -587,11 +596,6 @@ const formatDateTime = (ds) => {
   return new Date(ds).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-const setFeedback = (type, message) => {
-  feedbackType.value = type
-  feedbackMessage.value = message
-}
-
 const parseFunctionError = async (error) => {
   if (!error) return 'Ocurrió un error inesperado.'
 
@@ -607,8 +611,14 @@ const parseFunctionError = async (error) => {
 const openPaymentModal = () => {
   showPaymentModal.value = true
 }
-const openStatusModal = () => { console.log('Abrir modal de estado') }
-const openCancelModal = () => { console.log('Abrir modal de cancelacion') }
+const openStatusModal = () => {
+  statusModalInitialStatus.value = ''
+  showStatusModal.value = true
+}
+const openCancelModal = () => {
+  statusModalInitialStatus.value = 'cancelled'
+  showStatusModal.value = true
+}
 const openVoucher = () => {
   if (!res.value?.id) return
   router.push(`/reservas/${res.value.id}/voucher`)
@@ -616,6 +626,15 @@ const openVoucher = () => {
 
 const closePaymentModal = () => {
   showPaymentModal.value = false
+}
+
+const closeStatusModal = () => {
+  showStatusModal.value = false
+  statusModalInitialStatus.value = ''
+}
+
+const handleStatusUpdated = async () => {
+  await fetchReservation()
 }
 
 const handlePaymentSaved = async () => {
@@ -713,7 +732,7 @@ const validateEditUnitsSelection = async () => {
 
 const openEditUnitsModal = async () => {
   if (!res.value?.venue_id) {
-    setFeedback('error', 'No se pudo identificar la sede de la reserva.')
+    toast.error('No se pudo identificar la sede de la reserva.')
     return
   }
 
@@ -779,11 +798,11 @@ const submitEditUnits = async () => {
     showEditUnitsModal.value = false
 
     if (result?.syncResult?.synced === false) {
-      setFeedback('error', 'Se actualizaron las unidades, pero falló la sincronización de ocupación.')
+      toast.error('Se actualizaron las unidades, pero falló la sincronización de ocupación.')
       return
     }
 
-    setFeedback('success', 'Unidades actualizadas correctamente.')
+    toast.success('Unidades actualizadas correctamente.')
   } catch (err) {
     editUnitsErrorMessage.value = err.message
   } finally {
@@ -813,7 +832,7 @@ const copyPreregistroLink = async () => {
   })
 
   if (error) {
-    setFeedback('error', await parseFunctionError(error))
+    toast.error(await parseFunctionError(error))
     return
   }
 
@@ -843,7 +862,7 @@ const handleAdminPreregistroSubmit = async ({ primary_guest, additional_guests }
 
 const confirmCheckin = async () => {
   if (!res.value?.guest_id) {
-    setFeedback('error', 'Debes vincular un huésped registrado antes de marcar la llegada física.')
+    toast.error('Debes vincular un huésped registrado antes de marcar la llegada física.')
     return
   }
 
@@ -878,7 +897,7 @@ const confirmCheckin = async () => {
     closeCheckinConfirmModal()
     toast.success('Llegada registrada')
   } catch (error) {
-    setFeedback('error', error.message || 'No se pudo registrar la llegada.')
+    toast.error(error.message || 'No se pudo registrar la llegada.')
   } finally {
     checkinSubmitting.value = false
   }

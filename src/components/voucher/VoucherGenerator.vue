@@ -49,7 +49,10 @@
 </template>
 
 <script setup>
+import { useToast } from '../../composables/useToast'
+
 const props = defineProps({ res: { type: Object, required: true } })
+const toast = useToast()
 
 const guestName = props.res.guests?.name || props.res.guest_name || 'Sin nombre'
 
@@ -65,7 +68,7 @@ const copyForWhatsApp = async () => {
 ¡Gracias por elegirnos! Quedamos atentos.`
 
   await navigator.clipboard.writeText(text)
-  alert('¡Plantilla copiada al portapapeles!')
+  toast.success('Plantilla copiada al portapapeles')
 }
 
 const printVoucher = () => window.print()

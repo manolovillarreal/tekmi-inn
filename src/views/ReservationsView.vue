@@ -81,6 +81,7 @@
       @page-change="onPageChange"
       @view="goToDetail"
       @register-payment="openPaymentModal"
+      @change-status="openStatusModal"
     />
 
     <PaymentModal
@@ -93,6 +94,17 @@
       @saved="handlePaymentSaved"
     />
 
+    <StatusChangeModal
+      v-if="selectedStatusReservation"
+      :isOpen="showStatusModal"
+      :reservationId="selectedStatusReservation.id"
+      :currentStatus="selectedStatusReservation.status"
+      :guestName="selectedStatusReservation.guest_display_name || selectedStatusReservation.guest_name || 'Sin nombre'"
+      :hasGuest="Boolean(selectedStatusReservation.guest_id)"
+      @close="closeStatusModal"
+      @updated="handleStatusUpdated"
+    />
+
   </div>
 </template>
 
@@ -103,6 +115,7 @@ import { useReservationsStore } from '../stores/reservations'
 import { useSourcesStore } from '../stores/sources'
 import ReservationTable from '../components/reservations/ReservationTable.vue'
 import PaymentModal from '../components/payments/PaymentModal.vue'
+import StatusChangeModal from '../components/reservations/StatusChangeModal.vue'
 import { usePermissions } from '../composables/usePermissions'
 
 const store = useReservationsStore()
@@ -147,6 +160,8 @@ const pagination = ref({
 
 const showPaymentModal = ref(false)
 const selectedReservation = ref(null)
+const showStatusModal = ref(false)
+const selectedStatusReservation = ref(null)
 
 const fetchList = async () => {
   await store.fetchReservations({
@@ -227,5 +242,20 @@ const closePaymentModal = () => {
 
 const handlePaymentSaved = async () => {
   await fetchList()
+}
+
+const openStatusModal = (reservation) => {
+  selectedStatusReservation.value = reservation
+  showStatusModal.value = true
+}
+
+const closeStatusModal = () => {
+  showStatusModal.value = false
+  selectedStatusReservation.value = null
+}
+
+const handleStatusUpdated = async () => {
+  await fetchList()
+  closeStatusModal()
 }
 </script>

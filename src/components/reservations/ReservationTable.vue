@@ -116,6 +116,13 @@
                     Ver detalle
                   </button>
                   <button
+                    v-if="can('reservations', 'edit')"
+                    class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    @click="handleChangeStatus(res)"
+                  >
+                    Cambiar estado
+                  </button>
+                  <button
                     v-if="can('payments', 'create')"
                     class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
                     @click="handleRegisterPayment(res)"
@@ -160,7 +167,7 @@ const props = defineProps({
   totalCount: { type: Number, default: 0 }
 })
 
-const emit = defineEmits(['view', 'sort-change', 'page-change', 'register-payment'])
+const emit = defineEmits(['view', 'sort-change', 'page-change', 'register-payment', 'change-status'])
 const openMenuId = ref('')
 
 const totalPages = computed(() => {
@@ -193,6 +200,11 @@ const handleView = (reservation) => {
 const handleRegisterPayment = (reservation) => {
   openMenuId.value = ''
   emit('register-payment', reservation)
+}
+
+const handleChangeStatus = (reservation) => {
+  openMenuId.value = ''
+  emit('change-status', reservation)
 }
 
 const isToday = (dateStr) => {
