@@ -122,6 +122,18 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/configuracion/canales-origenes',
+      name: 'configuracion-canales-origenes',
+      component: () => import('../views/SourcesSettingsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/configuracion/perfil',
+      name: 'configuracion-perfil',
+      component: () => import('../views/ProfileSettingsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/account-association-error',
       name: 'account-association-error',
       component: () => import('../views/AccountAssociationErrorView.vue'),

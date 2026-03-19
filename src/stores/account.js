@@ -118,6 +118,7 @@ export const useAccountStore = defineStore('account', () => {
 
   const hasPermission = (resource, action) => {
     if (!resource || !action) return false
+    if (currentUserRole.value === 'admin') return true
     return permissionSet.value.has(`${resource}:${action}`)
   }
 
