@@ -41,6 +41,7 @@
 
         <section class="voucher-section border-b border-gray-200 py-5">
           <h1 class="voucher-title text-2xl font-semibold">Comprobante de Reserva</h1>
+          <p class="mt-2 text-base font-semibold text-gray-900">Código de reserva: {{ formattedReferenceDisplay }}</p>
           <div class="mt-3 grid grid-cols-1 gap-1 text-sm text-gray-700 md:grid-cols-3 md:gap-3">
             <p><span class="font-semibold">Reserva:</span> {{ reservation.reservation_number || '-' }}</p>
             <p><span class="font-semibold">Código:</span> {{ reservation.reference_code || '-' }}</p>
@@ -138,6 +139,7 @@ import { useAccountStore } from '../stores/account'
 import { useToast } from '../composables/useToast'
 import { formatNit } from '../utils/nitUtils'
 import { copyAsWhatsApp, formatCop } from '../utils/voucherUtils'
+import { formatReferenceDisplay } from '../utils/referenceUtils'
 
 const route = useRoute()
 const router = useRouter()
@@ -243,6 +245,7 @@ const guestData = computed(() => {
 })
 
 const sourceLabel = computed(() => reservation.value?.source_detail_info?.label_es || reservation.value?.source || '-')
+const formattedReferenceDisplay = computed(() => formatReferenceDisplay(reservation.value?.reference_code, guestData.value?.name))
 
 const formattedNit = computed(() => {
   const nitValue = profile.value?.nit

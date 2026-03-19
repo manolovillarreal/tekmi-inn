@@ -37,6 +37,7 @@
           <div class="mb-4 flex items-center justify-between">
             <div>
               <p class="mb-0.5 font-mono text-xs text-gray-400">{{ inquiry.inquiry_number || '' }}</p>
+              <p class="mb-0.5 font-mono text-xs text-gray-500">{{ inquiryReferenceDisplay }}</p>
               <h1 class="text-2xl font-semibold text-gray-900">{{ inquiry.guest_name || 'Sin nombre' }}</h1>
             </div>
             <span
@@ -294,6 +295,7 @@ import InquiryConversionModal from '../components/inquiries/InquiryConversionMod
 import { useInquiriesStore } from '../stores/inquiries'
 import { usePermissions } from '../composables/usePermissions'
 import { useAccountStore } from '../stores/account'
+import { formatReferenceDisplay } from '../utils/referenceUtils'
 import {
   getInquiryStatusLabel,
   getInquiryStatusStyle,
@@ -312,6 +314,7 @@ const feedbackMessage = ref('')
 const feedbackType = ref('success')
 
 const availableTransitions = computed(() => getAvailableInquiryTransitions(inquiry.value?.status))
+const inquiryReferenceDisplay = computed(() => formatReferenceDisplay(inquiry.value?.reference_code, inquiry.value?.guest_name))
 const canViewQuotation = computed(() => !!String(inquiry.value?.guest_name || '').trim())
 const quotationWarningTooltip = computed(() => {
   if (!inquiry.value) return ''

@@ -118,7 +118,7 @@ import { useAccountStore } from '../../stores/account'
 import { useReservationsStore } from '../../stores/reservations'
 import { useInquiriesStore } from '../../stores/inquiries'
 import { useToast } from '../../composables/useToast'
-import { generateAccountPrefix, generateReferenceCode } from '../../utils/referenceUtils'
+import { generateUniqueReferenceCode } from '../../utils/referenceUtils'
 import BaseModal from '../ui/BaseModal.vue'
 import SourceSelector from '../sources/SourceSelector.vue'
 
@@ -279,7 +279,7 @@ const submitConversion = async () => {
     // Shared reference code logic: reuse from inquiry if available, else generate and persist it first.
     let referenceCode = props.inquiry?.reference_code || null
     if (!referenceCode) {
-      referenceCode = generateReferenceCode(generateAccountPrefix(accountId))
+      referenceCode = await generateUniqueReferenceCode(accountId)
       await inquiriesStore.updateInquiry(props.inquiry.id, { reference_code: referenceCode })
     }
 

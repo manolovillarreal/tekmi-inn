@@ -36,6 +36,7 @@
           <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
             <tr>
               <th class="px-4 py-4">Número</th>
+              <th class="px-4 py-4">Código</th>
               <th class="px-4 py-4">Huésped</th>
               <th class="px-4 py-4">Check-in</th>
               <th class="px-4 py-4">Check-out</th>
@@ -48,14 +49,17 @@
           </thead>
           <tbody class="divide-y divide-gray-200">
             <tr v-if="store.loading">
-              <td colspan="9" class="px-6 py-10 text-center text-gray-400">Cargando consultas...</td>
+              <td colspan="10" class="px-6 py-10 text-center text-gray-400">Cargando consultas...</td>
             </tr>
             <tr v-else-if="filteredInquiries.length === 0">
-              <td colspan="9" class="px-6 py-10 text-center text-gray-500 italic">No hay consultas para mostrar.</td>
+              <td colspan="10" class="px-6 py-10 text-center text-gray-500 italic">No hay consultas para mostrar.</td>
             </tr>
             <tr v-for="inquiry in filteredInquiries" :key="inquiry.id" class="hover:bg-gray-50">
               <td class="px-4 py-4">
                 <span class="font-mono text-xs text-gray-500">{{ inquiry.inquiry_number || '-' }}</span>
+              </td>
+              <td class="px-4 py-4">
+                <span class="font-mono text-xs text-gray-700">{{ inquiry.reference_code || '-' }}</span>
               </td>
               <td class="px-4 py-4">
                 <p class="font-medium text-gray-900">{{ inquiry.guest_name || 'Sin nombre' }}</p>
@@ -274,7 +278,7 @@ const filteredInquiries = computed(() => {
 
     if (filters.value.search) {
       const q = filters.value.search.toLowerCase()
-      const haystack = `${inquiry.guest_name || ''} ${inquiry.guest_phone || ''} ${inquiry.inquiry_number || ''}`.toLowerCase()
+      const haystack = `${inquiry.guest_name || ''} ${inquiry.guest_phone || ''} ${inquiry.inquiry_number || ''} ${inquiry.reference_code || ''}`.toLowerCase()
       if (!haystack.includes(q)) return false
     }
 

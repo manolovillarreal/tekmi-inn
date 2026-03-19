@@ -367,7 +367,7 @@ import {
   updateSourceDetail,
 } from '../services/sourceService'
 import { calculateNitDigit, formatNit } from '../utils/nitUtils'
-import { generateAccountPrefix, generateReferenceCode } from '../utils/referenceUtils'
+import { generateReferenceCode } from '../utils/referenceUtils'
 
 const accountStore = useAccountStore()
 const sourcesStore = useSourcesStore()
@@ -422,11 +422,6 @@ const sourceDetailForm = ref({
 const MAX_LOGO_BYTES = 2 * 1024 * 1024
 const ALLOWED_LOGO_TYPES = new Set(['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'])
 
-const profilePrefix = computed(() => {
-  if (profileForm.value.reference_prefix) return profileForm.value.reference_prefix
-  return generateAccountPrefix(accountStore.currentAccountId || '')
-})
-
 const sampleReferenceCode = ref('')
 
 const nitDigitPreview = computed(() => {
@@ -453,9 +448,9 @@ const sourceDetailModalTitle = computed(() => {
 })
 
 watch(
-  profilePrefix,
-  (prefix) => {
-    sampleReferenceCode.value = generateReferenceCode(prefix)
+  () => profileForm.value.reference_prefix,
+  () => {
+    sampleReferenceCode.value = generateReferenceCode()
   },
   { immediate: true }
 )
@@ -475,7 +470,7 @@ const setProfileForm = (data = {}) => {
     website: data.website || '',
     slogan: data.slogan || '',
     logo_url: data.logo_url || '',
-    reference_prefix: data.reference_prefix || generateAccountPrefix(accountStore.currentAccountId || ''),
+    reference_prefix: data.reference_prefix || '',
   }
 }
 

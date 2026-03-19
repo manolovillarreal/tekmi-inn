@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from './account'
 import { getSourceLabel } from '../utils/sourceUtils'
-import { generateInquiryNumber } from '../utils/referenceUtils'
+import { generateInquiryNumber, generateUniqueReferenceCode } from '../utils/referenceUtils'
 import { isValidInquiryTransition } from '../utils/inquiryUtils'
 
 const INQUIRY_SELECT = `
@@ -70,6 +70,7 @@ export const useInquiriesStore = defineStore('inquiries', () => {
 
   const createInquiry = async (payload) => {
     const accountId = accountStore.getRequiredAccountId()
+    const referenceCode = await generateUniqueReferenceCode(accountId)
 
     // Generate inquiry_number
     const yearMonth = (() => {
@@ -99,6 +100,7 @@ export const useInquiriesStore = defineStore('inquiries', () => {
     const inquiryPayload = {
       account_id: accountId,
       inquiry_number: inquiryNumber,
+      reference_code: referenceCode,
       guest_name: payload.guest_name || null,
       guest_phone: payload.guest_phone || null,
       check_in: normalizeDate(payload.check_in),

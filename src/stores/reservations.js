@@ -11,8 +11,7 @@ import {
   getGuestsTotal
 } from '../utils/reservationUtils'
 import { getSourceLabel } from '../utils/sourceUtils'
-import { getNextReservationNumber, syncReservationOccupancy } from '../services/reservationService'
-import { generateAccountPrefix, generateReferenceCode } from '../utils/referenceUtils'
+import { getNextReservationNumber, resolveReservationReferenceCode, syncReservationOccupancy } from '../services/reservationService'
 
 const normalizeDate = (value) => {
   if (!value) return null
@@ -95,7 +94,7 @@ export const useReservationsStore = defineStore('reservations', () => {
         .eq('account_id', accountId)
 
       if (search) {
-        query = query.or(`guest_name.ilike.%${search}%,reservation_number.ilike.%${search}%`)
+        query = query.or(`guest_name.ilike.%${search}%,guests.name.ilike.%${search}%,reference_code.ilike.%${search}%,reservation_number.ilike.%${search}%`)
       }
 
       if (status) {
@@ -273,7 +272,11 @@ export const useReservationsStore = defineStore('reservations', () => {
       }
 
       const reservationNumber = await getNextReservationNumber()
-      const referenceCode = reservationData.reference_code || generateReferenceCode(generateAccountPrefix(accountId))
+      const referenceCode = await resolveReservationReferenceCode({
+        accountId,
+        inquiryId: reservationData.inquiry_id || null,
+        providedCode: reservationData.reference_code || null
+      })
       const adults = Number(reservationData.adults || 1)
       const children = Number(reservationData.children || 0)
       const nights = getDaysDifference(normalizedCheckIn, normalizedCheckOut)

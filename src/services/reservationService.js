@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { generateReservationNumber } from '../utils/reservationUtils'
 import { useAccountStore } from '../stores/account'
+import { generateUniqueReferenceCode } from '../utils/referenceUtils'
 
 const normalizeDate = (value) => {
   if (!value) return null
@@ -36,6 +37,41 @@ export const getNextReservationNumber = async () => {
 
   const previousReservationNumber = data?.[0]?.reservation_number || null
   return generateReservationNumber({ date: new Date(), previousReservationNumber })
+}
+
+export const resolveReservationReferenceCode = async ({ accountId, inquiryId = null, providedCode = null }) => {
+  if (!accountId) throw new Error('accountId es obligatorio para resolver referencia.')
+
+  if (providedCode) {
+    return String(providedCode).trim().toUpperCase()
+  }
+
+  if (!inquiryId) {
+    return generateUniqueReferenceCode(accountId)
+  }
+
+  const { data: inquiry, error: inquiryError } = await supabase
+    .from('inquiries')
+    .select('id, reference_code')
+    .eq('account_id', accountId)
+    .eq('id', inquiryId)
+    .single()
+
+  if (inquiryError) throw inquiryError
+
+  if (inquiry?.reference_code) {
+    return String(inquiry.reference_code).trim().toUpperCase()
+  }
+
+  const newCode = await generateUniqueReferenceCode(accountId)
+  const { error: updateError } = await supabase
+    .from('inquiries')
+    .update({ reference_code: newCode })
+    .eq('account_id', accountId)
+    .eq('id', inquiryId)
+
+  if (updateError) throw updateError
+  return newCode
 }
 
 const getReservationUnits = async (reservationId) => {

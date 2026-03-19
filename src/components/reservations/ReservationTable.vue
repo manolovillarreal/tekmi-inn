@@ -5,6 +5,7 @@
         <thead class="bg-gray-50 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
           <tr>
             <th class="px-6 py-4">Nro</th>
+            <th class="px-6 py-4">Código</th>
             <th class="px-6 py-4">Huésped</th>
             <th class="px-6 py-4">Unidades</th>
             <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" @click="sortBy('check_in')">
@@ -40,6 +41,10 @@
           >
             <td class="px-6 py-4 font-mono text-xs text-gray-600">
               {{ res.reservation_number || '-' }}
+            </td>
+
+            <td class="px-6 py-4 font-mono text-xs text-gray-700">
+              {{ res.reference_code || '-' }}
             </td>
 
             <!-- Huésped -->
@@ -168,7 +173,7 @@ const showFinancialColumns = computed(() => {
   return can('payments', 'view') || can('reports', 'view_financial')
 })
 
-const tableColumnCount = computed(() => (showFinancialColumns.value ? 10 : 8))
+const tableColumnCount = computed(() => (showFinancialColumns.value ? 11 : 9))
 
 const sortBy = (key) => {
   if (key === 'check_in') {

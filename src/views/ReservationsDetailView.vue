@@ -39,6 +39,7 @@
         <div class="card bg-white overflow-hidden !p-0">
           <div class="p-6 border-b border-gray-100 flex justify-between items-start">
             <div>
+              <p class="mb-1 font-mono text-xs text-gray-500">{{ res.reservation_number || '' }} · {{ reservationReferenceDisplay }}</p>
               <div class="flex items-center gap-3 mb-2">
                 <h1 class="text-2xl font-semibold text-gray-900">{{ guestDisplayName }}</h1>
                 <ReservationBadge :status="res.status" class="cursor-pointer hover:ring-2 ring-offset-1 transition-all" @click="openStatusModal" title="Cambiar estado" />
@@ -372,6 +373,7 @@ import PreRegistroForm from '../components/preregistro/PreRegistroForm.vue'
 import PaymentModal from '../components/payments/PaymentModal.vue'
 import { completeReservationPreregistro } from '../services/preregistro'
 import { getCommissionSummary, getReservationGuestName, getReservationGuestPhone } from '../utils/reservations'
+import { formatReferenceDisplay } from '../utils/referenceUtils'
 import { usePermissions } from '../composables/usePermissions'
 import { useAccountStore } from '../stores/account'
 import { useToast } from '../composables/useToast'
@@ -458,6 +460,7 @@ const totalPaid = computed(() => {
 
 const guestDisplayName = computed(() => getReservationGuestName(res.value))
 const guestDisplayPhone = computed(() => getReservationGuestPhone(res.value))
+const reservationReferenceDisplay = computed(() => formatReferenceDisplay(res.value?.reference_code, guestDisplayName.value))
 
 const guestDocumentLabel = computed(() => {
   if (!res.value?.guests?.document_number) {

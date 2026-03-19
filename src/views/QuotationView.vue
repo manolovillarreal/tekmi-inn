@@ -41,6 +41,7 @@
 
         <section class="quotation-section border-b border-gray-200 py-5">
           <h1 class="quotation-title text-2xl font-semibold">Cotización</h1>
+          <p class="mt-2 text-base font-semibold text-gray-900">Código de referencia: {{ formattedReferenceDisplay }}</p>
           <div class="mt-3 grid grid-cols-1 gap-1 text-sm text-gray-700 md:grid-cols-3 md:gap-3">
             <p><span class="font-semibold">Número:</span> {{ quotationNumber }}</p>
             <p><span class="font-semibold">Fecha:</span> {{ formatDateShort(now) }}</p>
@@ -106,6 +107,7 @@ import { useAccountStore } from '../stores/account'
 import { useToast } from '../composables/useToast'
 import { formatNit } from '../utils/nitUtils'
 import { copyQuotationAsWhatsApp, formatCop } from '../utils/voucherUtils'
+import { formatReferenceDisplay } from '../utils/referenceUtils'
 
 const route = useRoute()
 const router = useRouter()
@@ -187,6 +189,8 @@ const quotationNumber = computed(() => {
   if (!inquiryNumber.startsWith('INQ-')) return inquiryNumber || '-'
   return inquiryNumber.replace('INQ-', 'COT-')
 })
+
+const formattedReferenceDisplay = computed(() => formatReferenceDisplay(inquiry.value?.reference_code, inquiry.value?.guest_name))
 
 const unitsLabel = computed(() => {
   const names = (inquiry.value?.inquiry_units || [])

@@ -1,3 +1,5 @@
+import { formatReferenceDisplay } from './referenceUtils'
+
 const currencyFormatter = new Intl.NumberFormat('es-CO', {
   style: 'currency',
   currency: 'COP',
@@ -35,6 +37,7 @@ export const copyAsWhatsApp = async (reservation, profile) => {
   const totalGuests = Number(reservation?.adults || 0) + Number(reservation?.children || 0)
   const unitName = reservation?.unitName || reservation?.unitLabel || 'Unidad'
   const referenceCode = reservation?.reference_code || reservation?.referenceCode || '-'
+  const referenceDisplay = formatReferenceDisplay(referenceCode, reservation?.guestName || reservation?.guest_name)
   const total = Number(reservation?.total_amount || reservation?.total || 0)
   const paid = Number(reservation?.paid_amount || reservation?.paid || 0)
   const balance = Math.max(0, total - paid)
@@ -49,7 +52,7 @@ export const copyAsWhatsApp = async (reservation, profile) => {
     `🌙 ${nights} noches · ${totalGuests} personas`,
     `🏠 ${unitName}`,
     '',
-    `💳 Código de reserva: ${referenceCode}`,
+    `💳 Código de reserva: ${referenceDisplay}`,
     '',
     `💰 Total: ${formatCop(total)}`,
     `✅ Pagado: ${formatCop(paid)}`,
@@ -90,6 +93,7 @@ export const copyQuotationAsWhatsApp = async (inquiry, profile) => {
   const totalGuests = adults + children
   const unitsLabel = String(inquiry?.units_label || '').trim()
   const referenceCode = inquiry?.reference_code || inquiry?.quotation_number || '-'
+  const referenceDisplay = formatReferenceDisplay(referenceCode, inquiry?.guest_name)
   const pricePerNight = Number(inquiry?.price_per_night || 0)
   const discountPercentage = Number(inquiry?.discount_percentage || 0)
   const subtotal = pricePerNight * Math.max(nights, 0)
@@ -125,7 +129,7 @@ export const copyQuotationAsWhatsApp = async (inquiry, profile) => {
   }
 
   lines.push('')
-  lines.push(`💳 Código de referencia: ${referenceCode}`)
+  lines.push(`💳 Código de referencia: ${referenceDisplay}`)
 
   if (pricePerNight > 0 && nights > 0) {
     lines.push('')
