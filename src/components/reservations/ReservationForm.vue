@@ -250,8 +250,10 @@ import { useReservationsStore } from '../../stores/reservations'
 import { supabase } from '../../services/supabase'
 import { getCommissionAmount, getNetAmount } from '../../utils/reservations'
 import BaseModal from '../ui/BaseModal.vue'
+import { useAccountStore } from '../../stores/account'
 
 const store = useReservationsStore()
+const accountStore = useAccountStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -315,6 +317,8 @@ const normalizeDate = (value) => {
   return trimmed.slice(0, 10)
 }
 
+const getAccountId = () => accountStore.getRequiredAccountId()
+
 const isDateRangeValid = computed(() => {
   if (!form.value.check_in || !form.value.check_out) return false
   return new Date(form.value.check_in) < new Date(form.value.check_out)
@@ -353,9 +357,12 @@ const loadInquiryPrefill = async () => {
   const inquiryId = route.query.inquiryId
   if (!inquiryId) return
 
+  const accountId = getAccountId()
+
   const { data, error } = await supabase
     .from('inquiries')
     .select('*')
+    .eq('account_id', accountId)
     .eq('id', inquiryId)
     .single()
 
@@ -373,9 +380,10 @@ const loadInquiryPrefill = async () => {
 }
 
 onMounted(async () => {
+  const accountId = getAccountId()
   const [{ data: venueData }, { data: unitData }] = await Promise.all([
     supabase.from('venues').select('id, name, is_active').eq('is_active', true),
-    supabase.from('units').select('id, venue_id, name, is_active').eq('is_active', true)
+    supabase.from('units').select('id, venue_id, name, is_active').eq('account_id', accountId).eq('is_active', true)
   ])
 
   venues.value = venueData || []
@@ -466,10 +474,12 @@ const calculateDetails = async () => {
   }
 
   try {
+    const accountId = getAccountId()
     const seasonRequests = form.value.unit_ids.map(unitId =>
       supabase
         .from('pricing_seasons')
         .select('price_per_night')
+        .eq('account_id', accountId)
         .eq('unit_id', unitId)
         .lte('start_date', form.value.check_in)
         .gte('end_date', form.value.check_in)
@@ -531,10 +541,12 @@ watch(fullHouseEnabled, async (enabled) => {
 })
 
 const searchGuestSuggestions = async (query) => {
+  const accountId = getAccountId()
   autocompleteLoading.value = true
   const { data } = await supabase
     .from('guests')
     .select('id, name, phone')
+    .eq('account_id', accountId)
     .ilike('name', `${query}%`)
     .limit(5)
 
@@ -592,7 +604,9 @@ const submitCreateGuest = async () => {
   newGuestErrorMessage.value = ''
 
   try {
+    const accountId = getAccountId()
     const payload = {
+      account_id: accountId,
       name: newGuestForm.value.name?.trim(),
       phone: newGuestForm.value.phone?.trim() || null,
       email: newGuestForm.value.email?.trim() || null
@@ -700,6 +714,7 @@ const submitManualOccupancy = async () => {
   manualOccupancyError.value = ''
 
   try {
+    const accountId = getAccountId()
     if (!syncIssue.value?.reservationId) {
       throw new Error('No hay reserva asociada para crear ocupación manual.')
     }
@@ -712,6 +727,7 @@ const submitManualOccupancy = async () => {
     }
 
     const payload = form.value.unit_ids.map(unitId => ({
+      account_id: accountId,
       unit_id: unitId,
       start_date: startDate,
       end_date: endDate,

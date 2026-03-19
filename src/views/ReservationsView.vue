@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <h1 class="text-3xl font-semibold text-gray-900 tracking-tight">Reservas</h1>
-      <router-link to="/reservar" class="btn-primary flex items-center gap-2">
+      <router-link v-if="can('reservations', 'create')" to="/reservar" class="btn-primary flex items-center gap-2">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
         Nueva reserva
       </router-link>
@@ -94,9 +94,11 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReservationsStore } from '../stores/reservations'
 import ReservationTable from '../components/reservations/ReservationTable.vue'
+import { usePermissions } from '../composables/usePermissions'
 
 const store = useReservationsStore()
 const router = useRouter()
+const { can } = usePermissions()
 
 const getLast30DaysRange = () => {
   const today = new Date()

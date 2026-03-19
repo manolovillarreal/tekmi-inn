@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { supabase } from '../services/supabase'
+import { useAccountStore } from './account'
 
 export const useGuestsStore = defineStore('guests', () => {
+  const accountStore = useAccountStore()
   const guests = ref([])
   const loading = ref(false)
   const error = ref(null)
@@ -11,9 +13,11 @@ export const useGuestsStore = defineStore('guests', () => {
     loading.value = true
     error.value = null
     try {
+      const accountId = accountStore.getRequiredAccountId()
       const { data, error: supaError } = await supabase
         .from('guests')
         .select('*')
+        .eq('account_id', accountId)
         .order('name', { ascending: true })
 
       if (supaError) throw supaError
@@ -30,8 +34,10 @@ export const useGuestsStore = defineStore('guests', () => {
     loading.value = true
     error.value = null
     try {
+      const accountId = accountStore.getRequiredAccountId()
       const payload = {
         ...guestData,
+        account_id: accountId,
         document: guestData.document_number || null,
       }
 
@@ -56,6 +62,7 @@ export const useGuestsStore = defineStore('guests', () => {
     loading.value = true
     error.value = null
     try {
+      const accountId = accountStore.getRequiredAccountId()
       const payload = {
         ...guestData,
         document: guestData.document_number || null,
@@ -64,6 +71,7 @@ export const useGuestsStore = defineStore('guests', () => {
       const { data, error: supaError } = await supabase
         .from('guests')
         .update(payload)
+        .eq('account_id', accountId)
         .eq('id', id)
         .select()
         .single()
@@ -83,9 +91,11 @@ export const useGuestsStore = defineStore('guests', () => {
     loading.value = true
     error.value = null
     try {
+      const accountId = accountStore.getRequiredAccountId()
       const { count, error: relationError } = await supabase
         .from('reservations')
         .select('id', { count: 'exact', head: true })
+        .eq('account_id', accountId)
         .eq('guest_id', id)
 
       if (relationError) throw relationError
@@ -97,6 +107,7 @@ export const useGuestsStore = defineStore('guests', () => {
       const { error: supaError } = await supabase
         .from('guests')
         .delete()
+        .eq('account_id', accountId)
         .eq('id', id)
 
       if (supaError) throw supaError

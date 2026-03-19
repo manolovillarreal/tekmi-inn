@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { supabase } from '../services/supabase'
+import { useAccountStore } from './account'
 
 export const useUnitsStore = defineStore('units', () => {
+  const accountStore = useAccountStore()
   const units = ref([])
   const loading = ref(false)
   const error = ref(null)
@@ -11,9 +13,11 @@ export const useUnitsStore = defineStore('units', () => {
     loading.value = true
     error.value = null
     try {
+      const accountId = accountStore.getRequiredAccountId()
       let query = supabase
         .from('units')
         .select('*, venues(name)')
+        .eq('account_id', accountId)
         .order('name', { ascending: true })
 
       if (venueId) {
@@ -36,9 +40,10 @@ export const useUnitsStore = defineStore('units', () => {
     loading.value = true
     error.value = null
     try {
+      const accountId = accountStore.getRequiredAccountId()
       const { data, error: supaError } = await supabase
         .from('units')
-        .insert(unitData)
+        .insert({ ...unitData, account_id: accountId })
         .select()
         .single()
 
@@ -57,9 +62,11 @@ export const useUnitsStore = defineStore('units', () => {
     loading.value = true
     error.value = null
     try {
+      const accountId = accountStore.getRequiredAccountId()
       const { data, error: supaError } = await supabase
         .from('units')
         .update(unitData)
+        .eq('account_id', accountId)
         .eq('id', id)
         .select()
         .single()
@@ -79,9 +86,11 @@ export const useUnitsStore = defineStore('units', () => {
     loading.value = true
     error.value = null
     try {
+      const accountId = accountStore.getRequiredAccountId()
       const { count, error: relationError } = await supabase
         .from('reservation_units')
         .select('id', { count: 'exact', head: true })
+        .eq('account_id', accountId)
         .eq('unit_id', id)
 
       if (relationError) throw relationError
@@ -93,6 +102,7 @@ export const useUnitsStore = defineStore('units', () => {
       const { error: supaError } = await supabase
         .from('units')
         .delete()
+        .eq('account_id', accountId)
         .eq('id', id)
 
       if (supaError) throw supaError

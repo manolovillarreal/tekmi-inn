@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { supabase } from '../services/supabase'
+import { useAccountStore } from './account'
 
 const normalizeDate = (value) => {
   if (!value) return null
@@ -16,6 +17,7 @@ const normalizeDate = (value) => {
 }
 
 export const useRoomBlocksStore = defineStore('roomBlocks', () => {
+  const accountStore = useAccountStore()
   const roomBlocks = ref([])
   const loading = ref(false)
   const error = ref(null)
@@ -25,9 +27,11 @@ export const useRoomBlocksStore = defineStore('roomBlocks', () => {
     error.value = null
 
     try {
+      const accountId = accountStore.getRequiredAccountId()
       const { data, error: supaError } = await supabase
         .from('occupancies')
         .select('*, units(name, venue_id, venues(name))')
+        .eq('account_id', accountId)
         .neq('occupancy_type', 'reservation')
         .or('occupancy_type.neq.inquiry_hold,expires_at.gt.now()')
         .order('start_date', { ascending: true })
@@ -52,6 +56,7 @@ export const useRoomBlocksStore = defineStore('roomBlocks', () => {
   }
 
   const createRoomBlock = async (payload) => {
+    const accountId = accountStore.getRequiredAccountId()
     const startDate = normalizeDate(payload.start_date)
     const endDate = normalizeDate(payload.end_date)
 
@@ -66,6 +71,7 @@ export const useRoomBlocksStore = defineStore('roomBlocks', () => {
     const { data, error: supaError } = await supabase
       .from('occupancies')
       .insert({
+        account_id: accountId,
         unit_id: payload.unit_id,
         start_date: startDate,
         end_date: endDate,
@@ -82,6 +88,7 @@ export const useRoomBlocksStore = defineStore('roomBlocks', () => {
   }
 
   const updateRoomBlock = async (id, payload) => {
+    const accountId = accountStore.getRequiredAccountId()
     const mergedNotes = payload.reason ? `${payload.reason}${payload.notes ? `\n${payload.notes}` : ''}` : payload.notes
 
     const updatePayload = {
@@ -98,6 +105,7 @@ export const useRoomBlocksStore = defineStore('roomBlocks', () => {
     const { data, error: supaError } = await supabase
       .from('occupancies')
       .update(updatePayload)
+      .eq('account_id', accountId)
       .eq('id', id)
       .select()
       .single()
@@ -109,9 +117,11 @@ export const useRoomBlocksStore = defineStore('roomBlocks', () => {
   }
 
   const deleteRoomBlock = async (id) => {
+    const accountId = accountStore.getRequiredAccountId()
     const { error: supaError } = await supabase
       .from('occupancies')
       .delete()
+      .eq('account_id', accountId)
       .eq('id', id)
 
     if (supaError) throw supaError

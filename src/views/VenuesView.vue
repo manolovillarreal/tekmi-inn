@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <h1 class="text-3xl font-semibold text-gray-900 tracking-tight">Sedes</h1>
-      <button @click="openCreateModal" class="btn-primary">
+      <button v-if="can('settings', 'edit')" @click="openCreateModal" class="btn-primary">
         + Nueva Sede
       </button>
     </div>
@@ -44,11 +44,11 @@
               </td>
               <td class="px-6 py-4 text-gray-600">{{ getUnitCount(venue.id) }}</td>
               <td class="px-6 py-4 text-right">
-                <button @click="openEditModal(venue)" class="text-gray-400 hover:text-indigo-600 px-2 py-1 transition-colors">Editar</button>
-                <button @click="toggleActive(venue)" class="text-gray-400 hover:text-indigo-600 px-2 py-1 transition-colors ml-2">
+                <button v-if="can('settings', 'edit')" @click="openEditModal(venue)" class="text-gray-400 hover:text-indigo-600 px-2 py-1 transition-colors">Editar</button>
+                <button v-if="can('settings', 'edit')" @click="toggleActive(venue)" class="text-gray-400 hover:text-indigo-600 px-2 py-1 transition-colors ml-2">
                   {{ venue.is_active ? 'Desactivar' : 'Activar' }}
                 </button>
-                <button @click="removeVenue(venue)" class="text-gray-400 hover:text-red-600 px-2 py-1 transition-colors ml-2">Eliminar</button>
+                <button v-if="can('settings', 'edit')" @click="removeVenue(venue)" class="text-gray-400 hover:text-red-600 px-2 py-1 transition-colors ml-2">Eliminar</button>
               </td>
             </tr>
           </tbody>
@@ -118,9 +118,11 @@ import { useVenuesStore } from '../stores/venues'
 import { useUnitsStore } from '../stores/units'
 import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
+import { usePermissions } from '../composables/usePermissions'
 
 const store = useVenuesStore()
 const unitsStore = useUnitsStore()
+const { can } = usePermissions()
 
 const showModal = ref(false)
 const editingVenue = ref(null)

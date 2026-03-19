@@ -8,10 +8,10 @@
         Volver a Reservas
       </router-link>
       <div class="flex items-center gap-3">
-        <button class="btn-secondary text-sm" @click="copyPreregistroLink">Copiar link pre-registro</button>
-        <button class="btn-secondary text-sm" @click="showPreregistroModal = true">Completar pre-registro</button>
-        <button class="btn-secondary text-sm" @click="registerArrival">Registrar llegada</button>
-        <button class="btn-secondary text-sm">Generar Voucher</button>
+        <button v-if="can('reservations', 'edit')" class="btn-secondary text-sm" @click="copyPreregistroLink">Copiar link pre-registro</button>
+        <button v-if="can('reservations', 'edit')" class="btn-secondary text-sm" @click="showPreregistroModal = true">Completar pre-registro</button>
+        <button v-if="can('reservations', 'checkin')" class="btn-secondary text-sm" @click="registerArrival">Registrar llegada</button>
+        <button v-if="can('vouchers', 'generate')" class="btn-secondary text-sm">Generar Voucher</button>
       </div>
     </div>
 
@@ -83,11 +83,11 @@
               <p class="text-gray-500 mb-1">Registro</p>
               <p class="font-medium text-gray-900">{{ formatDate(res.created_at) }}</p>
             </div>
-            <div>
+            <div v-if="canViewFinancial">
               <p class="text-gray-500 mb-1">Total</p>
               <p class="font-medium text-gray-900">${{ formatCurrency(res.total_amount) }}</p>
             </div>
-            <div>
+            <div v-if="canViewFinancial">
               <p class="text-gray-500 mb-1">Comisión</p>
               <p class="font-medium text-gray-900">
                 {{ commissionSummary.name }} ({{ commissionSummary.percentage }}%)
@@ -98,10 +98,10 @@
         </div>
 
         <!-- Payments Section -->
-        <div class="card">
+        <div v-if="canViewFinancial" class="card">
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold text-gray-900">Historial de Pagos</h2>
-            <button class="text-sm font-medium text-indigo-600 hover:text-indigo-800" @click="openPaymentModal">+ Registrar Pago</button>
+            <button v-if="can('payments', 'create')" class="text-sm font-medium text-indigo-600 hover:text-indigo-800" @click="openPaymentModal">+ Registrar Pago</button>
           </div>
           
           <div v-if="payments.length === 0" class="text-center py-6 text-gray-500 text-sm italic bg-gray-50 rounded-lg border border-dashed border-gray-200">
@@ -285,9 +285,13 @@ import BaseModal from '../components/ui/BaseModal.vue'
 import PreRegistroForm from '../components/preregistro/PreRegistroForm.vue'
 import { completeReservationPreregistro } from '../services/preregistro'
 import { getCommissionSummary, getReservationGuestName, getReservationGuestPhone } from '../utils/reservations'
+import { usePermissions } from '../composables/usePermissions'
+import { useAccountStore } from '../stores/account'
 
 const route = useRoute()
 const reservationsStore = useReservationsStore()
+const accountStore = useAccountStore()
+const { can } = usePermissions()
 const loading = ref(true)
 const res = ref(null)
 const payments = ref([])
@@ -311,9 +315,11 @@ onMounted(async () => {
 const fetchReservation = async () => {
   loading.value = true
   try {
+    const accountId = accountStore.getRequiredAccountId()
     const { data, error } = await supabase
       .from('reservations')
       .select('*, guests!reservations_guest_id_fkey(*), venues(name), reservation_units(unit_id, units(*)), reservation_guests(is_primary, guest_id, guests!reservation_guests_guest_id_fkey(*))')
+      .eq('account_id', accountId)
       .eq('id', route.params.id)
       .single()
 
@@ -332,9 +338,11 @@ const fetchReservation = async () => {
 }
 
 const fetchPayments = async () => {
+  const accountId = accountStore.getRequiredAccountId()
   const { data } = await supabase
     .from('payments')
     .select('*')
+    .eq('account_id', accountId)
     .eq('reservation_id', res.value.id)
     .order('payment_date', { ascending: false })
   payments.value = data || []
@@ -418,6 +426,10 @@ const isDeadlineOverdue = computed(() => {
   return res.value.payment_deadline < today
 })
 
+const canViewFinancial = computed(() => {
+  return can('payments', 'view') || can('reports', 'view_financial')
+})
+
 // Formatting
 const formatDate = (ds) => {
   if(!ds) return '-'
@@ -484,9 +496,11 @@ const openEditUnitsModal = async () => {
   showEditUnitsModal.value = true
 
   try {
+    const accountId = accountStore.getRequiredAccountId()
     const { data, error } = await supabase
       .from('units')
       .select('id, name, is_active')
+      .eq('account_id', accountId)
       .eq('venue_id', res.value.venue_id)
       .eq('is_active', true)
       .order('name', { ascending: true })
@@ -602,12 +616,14 @@ const registerArrival = async () => {
     return
   }
 
+  const accountId = accountStore.getRequiredAccountId()
   const { error: updateError } = await supabase
     .from('reservations')
     .update({
       checkin_at: new Date().toISOString(),
       status: 'in_stay'
     })
+    .eq('account_id', accountId)
     .eq('id', res.value.id)
 
   if (updateError) {
@@ -616,6 +632,7 @@ const registerArrival = async () => {
   }
 
   await supabase.from('reservation_status_logs').insert({
+    account_id: accountId,
     reservation_id: res.value.id,
     previous_status: res.value.status,
     new_status: 'in_stay',

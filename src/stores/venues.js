@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { supabase } from '../services/supabase'
+import { useAccountStore } from './account'
 
 export const useVenuesStore = defineStore('venues', () => {
+  const accountStore = useAccountStore()
   const venues = ref([])
   const loading = ref(false)
   const error = ref(null)
@@ -73,9 +75,11 @@ export const useVenuesStore = defineStore('venues', () => {
     loading.value = true
     error.value = null
     try {
+      const accountId = accountStore.getRequiredAccountId()
       const { data: venueUnits, error: unitsError } = await supabase
         .from('units')
         .select('id', { count: 'exact' })
+        .eq('account_id', accountId)
         .eq('venue_id', id)
 
       if (unitsError) throw unitsError
@@ -85,6 +89,7 @@ export const useVenuesStore = defineStore('venues', () => {
       const { count: reservationsCount, error: reservationsError } = await supabase
         .from('reservations')
         .select('id', { count: 'exact', head: true })
+        .eq('account_id', accountId)
         .eq('venue_id', id)
 
       if (reservationsError) throw reservationsError
@@ -97,6 +102,7 @@ export const useVenuesStore = defineStore('venues', () => {
         const { count: reservationUnitsCount, error: reservationUnitsError } = await supabase
           .from('reservation_units')
           .select('id', { count: 'exact', head: true })
+          .eq('account_id', accountId)
           .in('unit_id', unitIds)
 
         if (reservationUnitsError) throw reservationUnitsError

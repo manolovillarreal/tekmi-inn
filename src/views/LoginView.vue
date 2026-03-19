@@ -57,9 +57,11 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../services/supabase'
+import { useAccountStore } from '../stores/account'
 
 const router = useRouter()
 const route = useRoute()
+const accountStore = useAccountStore()
 
 const email = ref('')
 const password = ref('')
@@ -85,6 +87,13 @@ const handleLogin = async () => {
     })
 
     if (error) throw error
+
+    const accountReady = await accountStore.initializeFromSession()
+    if (!accountReady) {
+      router.push({ name: 'account-association-error' })
+      return
+    }
+
     router.push(redirectTo())
   } catch (err) {
     errorMessage.value = err.message || 'No se pudo iniciar sesión.'

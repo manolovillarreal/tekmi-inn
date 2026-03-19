@@ -3,8 +3,8 @@
     <div class="flex items-center justify-between">
       <router-link to="/consultas" class="text-sm font-medium text-gray-500 hover:text-gray-900">← Volver a Consultas</router-link>
       <div class="flex items-center gap-2">
-        <button class="btn-secondary text-sm" @click="goToPrefilledReservation" :disabled="!inquiry">Convertir a reserva</button>
-        <button class="btn-secondary text-sm" @click="openEditModal" :disabled="!inquiry">Editar</button>
+        <button v-if="can('inquiries', 'convert')" class="btn-secondary text-sm" @click="goToPrefilledReservation" :disabled="!inquiry">Convertir a reserva</button>
+        <button v-if="can('inquiries', 'edit')" class="btn-secondary text-sm" @click="openEditModal" :disabled="!inquiry">Editar</button>
       </div>
     </div>
 
@@ -46,14 +46,15 @@
       <div class="space-y-6">
         <div class="card">
           <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-900">Gestion de estado</h2>
-          <div class="space-y-2">
+          <div class="space-y-2" v-if="can('inquiries', 'edit')">
             <button v-for="status in inquiryStatuses" :key="status" class="w-full rounded-md border px-3 py-2 text-left text-sm" :class="inquiry.status === status ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'" @click="changeStatus(status)">
               {{ statusLabel(status) }}
             </button>
           </div>
+          <p v-else class="text-sm text-gray-500">No tienes permisos para editar estado.</p>
         </div>
 
-        <div class="card">
+        <div class="card" v-if="can('occupancies', 'create')">
           <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-900">Bloqueo temporal</h2>
           <p class="mb-3 text-sm text-gray-600">Genera un hold desde esta consulta para bloquear la unidad hasta el vencimiento definido.</p>
           <button class="w-full rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100" @click="openHoldModal">
@@ -61,7 +62,7 @@
           </button>
         </div>
 
-        <div class="card border-red-100 bg-red-50/30">
+        <div v-if="can('inquiries', 'delete')" class="card border-red-100 bg-red-50/30">
           <h2 class="mb-2 text-sm font-semibold text-red-800">Zona de peligro</h2>
           <button class="w-full rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50" @click="showDeleteModal = true">Eliminar consulta</button>
         </div>
@@ -192,10 +193,14 @@ import { supabase } from '../services/supabase'
 import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
 import { useInquiriesStore } from '../stores/inquiries'
+import { usePermissions } from '../composables/usePermissions'
+import { useAccountStore } from '../stores/account'
 
 const route = useRoute()
 const router = useRouter()
 const store = useInquiriesStore()
+const { can } = usePermissions()
+const accountStore = useAccountStore()
 
 const loading = ref(true)
 const inquiry = ref(null)
@@ -292,9 +297,10 @@ const toDateTimeLocalValue = (value) => {
 }
 
 const fetchMasterData = async () => {
+  const accountId = accountStore.getRequiredAccountId()
   const [{ data: venuesData }, { data: unitsData }] = await Promise.all([
     supabase.from('venues').select('id, name').order('name', { ascending: true }),
-    supabase.from('units').select('id, name, venue_id').eq('is_active', true).order('name', { ascending: true })
+    supabase.from('units').select('id, name, venue_id').eq('account_id', accountId).eq('is_active', true).order('name', { ascending: true })
   ])
 
   venues.value = venuesData || []

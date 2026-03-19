@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DashboardView from '../views/DashboardView.vue'
 import { supabase } from '../services/supabase'
+import { useAccountStore } from '../stores/account'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -88,11 +89,24 @@ const router = createRouter({
       name: 'huespedes',
       component: () => import('../views/GuestsView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/configuracion',
+      name: 'configuracion',
+      component: () => import('../views/SettingsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/account-association-error',
+      name: 'account-association-error',
+      component: () => import('../views/AccountAssociationErrorView.vue'),
+      meta: { requiresAuth: true, plainLayout: true }
     }
   ]
 })
 
 router.beforeEach(async (to) => {
+  const accountStore = useAccountStore()
   const { data } = await supabase.auth.getSession()
   const isAuthenticated = !!data.session
 
@@ -102,6 +116,16 @@ router.beforeEach(async (to) => {
 
   if (to.meta.guestOnly && isAuthenticated) {
     return { name: 'dashboard' }
+  }
+
+  if (isAuthenticated && to.name !== 'account-association-error') {
+    if (!accountStore.initialized) {
+      await accountStore.initializeFromSession()
+    }
+
+    if (!accountStore.currentAccountId) {
+      return { name: 'account-association-error' }
+    }
   }
 
   return true

@@ -2,7 +2,7 @@
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-3xl font-semibold tracking-tight text-gray-900">Consultas</h1>
-      <button class="btn-primary" @click="openCreateModal">+ Nueva consulta</button>
+      <button v-if="can('inquiries', 'create')" class="btn-primary" @click="openCreateModal">+ Nueva consulta</button>
     </div>
 
     <div v-if="feedbackMessage" class="rounded-md border px-4 py-3 text-sm" :class="feedbackType === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
@@ -124,8 +124,10 @@
 import { computed, onMounted, ref } from 'vue'
 import BaseModal from '../components/ui/BaseModal.vue'
 import { useInquiriesStore } from '../stores/inquiries'
+import { usePermissions } from '../composables/usePermissions'
 
 const store = useInquiriesStore()
+const { can } = usePermissions()
 
 const filters = ref({ search: '', status: '' })
 const feedbackMessage = ref('')

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { supabase } from '../services/supabase'
+import { useAccountStore } from './account'
 import {
   getCommissionAmount,
   getNetAmount,
@@ -31,6 +32,7 @@ const getDaysDifference = (checkIn, checkOut) => {
 }
 
 export const useReservationsStore = defineStore('reservations', () => {
+  const accountStore = useAccountStore()
   const reservations = ref([])
   const loading = ref(false)
   const error = ref(null)
@@ -73,6 +75,7 @@ export const useReservationsStore = defineStore('reservations', () => {
     }
 
     try {
+      const accountId = accountStore.getRequiredAccountId()
       let query = supabase
         .from('reservations')
         .select(`
@@ -83,6 +86,7 @@ export const useReservationsStore = defineStore('reservations', () => {
           reservation_guests(is_primary, guest_id, guests!reservation_guests_guest_id_fkey(*)),
           payments(amount)
         `, { count: 'exact' })
+        .eq('account_id', accountId)
 
       if (search) {
         query = query.or(`guest_name.ilike.%${search}%,reservation_number.ilike.%${search}%`)
@@ -161,6 +165,7 @@ export const useReservationsStore = defineStore('reservations', () => {
 
   const getUnitAvailability = async (unitIds, checkIn, checkOut, excludeReservationId = null) => {
     try {
+      const accountId = accountStore.getRequiredAccountId()
       const normalizedCheckIn = normalizeDate(checkIn)
       const normalizedCheckOut = normalizeDate(checkOut)
 
@@ -174,6 +179,7 @@ export const useReservationsStore = defineStore('reservations', () => {
       let query = supabase
         .from('occupancies')
         .select('id, unit_id, start_date, end_date, occupancy_type, reservation_id, notes')
+        .eq('account_id', accountId)
         .in('unit_id', unitIds)
         .lt('start_date', normalizedCheckOut)
         .gt('end_date', normalizedCheckIn)
@@ -235,6 +241,7 @@ export const useReservationsStore = defineStore('reservations', () => {
     error.value = null
 
     try {
+      const accountId = accountStore.getRequiredAccountId()
       const unitIds = reservationData.unit_ids || []
       const normalizedCheckIn = normalizeDate(reservationData.check_in)
       const normalizedCheckOut = normalizeDate(reservationData.check_out)
@@ -264,6 +271,7 @@ export const useReservationsStore = defineStore('reservations', () => {
       const totalAmount = Number(reservationData.total_amount || (pricePerNight * nights) || 0)
 
       const reservationPayload = {
+        account_id: accountId,
         reservation_number: reservationNumber,
         venue_id: reservationData.venue_id,
         guest_id: reservationData.guest_id || null,
@@ -293,6 +301,7 @@ export const useReservationsStore = defineStore('reservations', () => {
       if (insertError) throw insertError
 
       const reservationUnitsPayload = unitIds.map(unitId => ({
+        account_id: accountId,
         reservation_id: data.id,
         unit_id: unitId
       }))
@@ -304,6 +313,7 @@ export const useReservationsStore = defineStore('reservations', () => {
       if (reservationUnitsError) throw reservationUnitsError
 
       await supabase.from('reservation_status_logs').insert({
+        account_id: accountId,
         reservation_id: data.id,
         new_status: data.status,
         notes: 'Creación inicial'
@@ -316,6 +326,7 @@ export const useReservationsStore = defineStore('reservations', () => {
             status: 'converted',
             notes: reservationData.inquiry_conversion_note || 'Convertida manualmente a reserva.'
           })
+          .eq('account_id', accountId)
           .eq('id', reservationData.inquiry_id)
       }
 
@@ -340,6 +351,7 @@ export const useReservationsStore = defineStore('reservations', () => {
     error.value = null
 
     try {
+      const accountId = accountStore.getRequiredAccountId()
       if (!reservationId) {
         throw new Error('No se pudo identificar la reserva a actualizar.')
       }
@@ -352,6 +364,7 @@ export const useReservationsStore = defineStore('reservations', () => {
       const { data: reservation, error: reservationError } = await supabase
         .from('reservations')
         .select('id, check_in, check_out, status')
+        .eq('account_id', accountId)
         .eq('id', reservationId)
         .single()
 
@@ -378,11 +391,13 @@ export const useReservationsStore = defineStore('reservations', () => {
       const { error: deleteError } = await supabase
         .from('reservation_units')
         .delete()
+        .eq('account_id', accountId)
         .eq('reservation_id', reservation.id)
 
       if (deleteError) throw deleteError
 
       const payload = normalizedUnitIds.map((unitId) => ({
+        account_id: accountId,
         reservation_id: reservation.id,
         unit_id: unitId
       }))

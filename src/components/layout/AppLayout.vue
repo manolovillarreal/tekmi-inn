@@ -19,7 +19,7 @@
       <!-- Navigation -->
       <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
         <router-link 
-          v-for="item in primaryNav" :key="item.name"
+          v-for="item in visiblePrimaryNav" :key="item.name"
           :to="item.to"
           class="flex items-center px-2 py-2 rounded-md transition-colors group"
           :class="[$route.path === item.to ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white']"
@@ -31,7 +31,7 @@
 
         <div class="pt-4 pb-2 mt-4 border-t border-gray-800">
           <router-link 
-            v-for="item in secondaryNav" :key="item.name"
+            v-for="item in visibleSecondaryNav" :key="item.name"
             :to="item.to"
             class="flex items-center px-2 py-2 rounded-md transition-colors group"
             :class="[$route.path === item.to ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white']"
@@ -52,7 +52,8 @@
           {{ isSidebarCollapsed ? '>>' : '<<' }}
         </button>
         <div v-if="!isSidebarCollapsed" class="ml-3 flex flex-col overflow-hidden">
-          <span class="text-sm font-medium truncate">Administrador</span>
+          <span class="text-sm font-medium truncate">{{ userLabel }}</span>
+          <span class="text-xs text-gray-500 capitalize">{{ roleLabel }}</span>
           <button @click="logout" class="text-left text-xs text-gray-400 hover:text-white">
             Cerrar sesión
           </button>
@@ -72,12 +73,16 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../services/supabase'
+import { useAccountStore } from '../../stores/account'
+import { usePermissions } from '../../composables/usePermissions'
 
 const isSidebarCollapsed = ref(false)
 const router = useRouter()
+const accountStore = useAccountStore()
+const { can } = usePermissions()
 
 const primaryNav = [
   { name: 'Dashboard', to: '/', icon: '◫' },
@@ -94,8 +99,36 @@ const secondaryNav = [
   { name: 'Configuración', to: '/configuracion', icon: '⚙️' },
 ]
 
+const visiblePrimaryNav = computed(() => {
+  return primaryNav.filter((item) => {
+    if (item.to === '/reservas') return can('reservations', 'view')
+    if (item.to === '/consultas') return can('inquiries', 'view')
+    if (item.to === '/bloqueos') return can('occupancies', 'view')
+    if (item.to === '/calendar') return can('calendar', 'view')
+    if (item.to === '/huespedes') return can('guests', 'view')
+    return true
+  })
+})
+
+const visibleSecondaryNav = computed(() => {
+  return secondaryNav.filter((item) => {
+    if (item.to === '/unidades') return can('units', 'create') || can('units', 'edit') || can('units', 'delete')
+    if (item.to === '/configuracion') return can('settings', 'edit') || can('users', 'invite')
+    return true
+  })
+})
+
+const userLabel = computed(() => {
+  return accountStore.currentAccountName || 'Sin cuenta'
+})
+
+const roleLabel = computed(() => {
+  return accountStore.currentUserRole || 'sin rol'
+})
+
 const logout = async () => {
   await supabase.auth.signOut()
+  accountStore.clear()
   router.push({ name: 'login' })
 }
 </script>

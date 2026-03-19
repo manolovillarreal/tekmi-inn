@@ -18,18 +18,18 @@
             <th class="px-6 py-4">Noches</th>
             <th class="px-6 py-4">Estadía</th>
             <th class="px-6 py-4">Estado</th>
-            <th class="px-6 py-4">Montos</th>
-            <th class="px-6 py-4">Saldo</th>
+            <th v-if="showFinancialColumns" class="px-6 py-4">Montos</th>
+            <th v-if="showFinancialColumns" class="px-6 py-4">Saldo</th>
             <th class="px-6 py-4 text-right">Acciones</th>
           </tr>
         </thead>
         
         <tbody class="divide-y divide-gray-200 text-sm">
           <tr v-if="loading">
-            <td colspan="10" class="px-6 py-12 text-center text-gray-400">Cargando reservas...</td>
+            <td :colspan="tableColumnCount" class="px-6 py-12 text-center text-gray-400">Cargando reservas...</td>
           </tr>
           <tr v-else-if="reservations.length === 0">
-            <td colspan="10" class="px-6 py-12 text-center text-gray-500 italic">No hay reservas para mostrar.</td>
+            <td :colspan="tableColumnCount" class="px-6 py-12 text-center text-gray-500 italic">No hay reservas para mostrar.</td>
           </tr>
           
           <tr 
@@ -77,7 +77,7 @@
             </td>
             
             <!-- Total -->
-            <td class="px-6 py-4 text-gray-900">
+            <td v-if="showFinancialColumns" class="px-6 py-4 text-gray-900">
               <span class="block whitespace-nowrap">Total: {{ res.total_amount != null ? `$${formatCurrency(res.total_amount)}` : '—' }}</span>
               <span class="block whitespace-nowrap text-xs text-gray-500">Pagado: ${{ formatCurrency(res.paid_amount || 0) }}</span>
               <span v-if="Number(res.commission_percentage || 0) > 0" class="mt-1 block text-xs text-gray-500">
@@ -86,7 +86,7 @@
             </td>
             
             <!-- Saldo -->
-            <td class="px-6 py-4 whitespace-nowrap font-medium">
+            <td v-if="showFinancialColumns" class="px-6 py-4 whitespace-nowrap font-medium">
                <span v-if="res.balance === 0 || res.balance === '0'" class="text-emerald-600">Pagado</span>
                <span v-else-if="res.balance != null" class="text-red-600">${{ formatCurrency(res.balance) }}</span>
                <span v-else class="text-gray-400">—</span>
@@ -117,6 +117,9 @@
 import { computed } from 'vue'
 import ReservationBadge from '../ui/ReservationBadge.vue'
 import { getCommissionSummary } from '../../utils/reservations'
+import { usePermissions } from '../../composables/usePermissions'
+
+const { can } = usePermissions()
 
 const props = defineProps({
   reservations: { type: Array, required: true },
@@ -135,6 +138,12 @@ const totalPages = computed(() => {
   const pages = Math.ceil((props.totalCount || 0) / props.pageSize)
   return pages > 0 ? pages : 1
 })
+
+const showFinancialColumns = computed(() => {
+  return can('payments', 'view') || can('reports', 'view_financial')
+})
+
+const tableColumnCount = computed(() => (showFinancialColumns.value ? 10 : 8))
 
 const sortBy = (key) => {
   if (key === 'check_in') {

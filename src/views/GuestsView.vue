@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <h1 class="text-3xl font-semibold text-gray-900 tracking-tight">Huéspedes</h1>
-      <button @click="openCreateModal" class="btn-primary">
+      <button v-if="can('guests', 'create')" @click="openCreateModal" class="btn-primary">
         + Nuevo Huésped
       </button>
     </div>
@@ -60,8 +60,8 @@
               <td class="px-6 py-4 text-gray-600">{{ formatDocument(guest) }}</td>
               <td class="px-6 py-4 text-gray-600">{{ getReservationCount(guest.id) }}</td>
               <td class="px-6 py-4 text-right">
-                <button @click="openEditModal(guest)" class="text-gray-400 hover:text-indigo-600 px-2 py-1 transition-colors">Editar</button>
-                <button @click="removeGuest(guest)" class="text-gray-400 hover:text-red-600 px-2 py-1 transition-colors ml-2">Eliminar</button>
+                <button v-if="can('guests', 'edit')" @click="openEditModal(guest)" class="text-gray-400 hover:text-indigo-600 px-2 py-1 transition-colors">Editar</button>
+                <button v-if="can('guests', 'delete')" @click="removeGuest(guest)" class="text-gray-400 hover:text-red-600 px-2 py-1 transition-colors ml-2">Eliminar</button>
               </td>
             </tr>
           </tbody>
@@ -171,9 +171,11 @@ import { useGuestsStore } from '../stores/guests'
 import { useReservationsStore } from '../stores/reservations'
 import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
+import { usePermissions } from '../composables/usePermissions'
 
 const store = useGuestsStore()
 const reservationsStore = useReservationsStore()
+const { can } = usePermissions()
 
 const searchQuery = ref('')
 const showModal = ref(false)

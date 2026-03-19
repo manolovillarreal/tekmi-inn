@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { supabase } from '../services/supabase'
+import { useAccountStore } from './account'
 
 const normalizeDate = (value) => {
   if (!value) return null
@@ -16,6 +17,7 @@ const normalizeDate = (value) => {
 }
 
 export const useInquiriesStore = defineStore('inquiries', () => {
+  const accountStore = useAccountStore()
   const inquiries = ref([])
   const loading = ref(false)
   const error = ref(null)
@@ -24,9 +26,11 @@ export const useInquiriesStore = defineStore('inquiries', () => {
     loading.value = true
     error.value = null
     try {
+      const accountId = accountStore.getRequiredAccountId()
       const { data, error: supaError } = await supabase
         .from('inquiries')
         .select('*')
+        .eq('account_id', accountId)
         .order('created_at', { ascending: false })
 
       if (supaError) throw supaError
@@ -40,7 +44,9 @@ export const useInquiriesStore = defineStore('inquiries', () => {
   }
 
   const createInquiry = async (payload) => {
+    const accountId = accountStore.getRequiredAccountId()
     const inquiryPayload = {
+      account_id: accountId,
       guest_name: payload.guest_name || null,
       guest_phone: payload.guest_phone || null,
       check_in: normalizeDate(payload.check_in),
@@ -64,6 +70,7 @@ export const useInquiriesStore = defineStore('inquiries', () => {
   }
 
   const updateInquiry = async (id, payload) => {
+    const accountId = accountStore.getRequiredAccountId()
     const updatePayload = {
       ...payload,
       check_in: payload.check_in === undefined ? undefined : normalizeDate(payload.check_in),
@@ -73,6 +80,7 @@ export const useInquiriesStore = defineStore('inquiries', () => {
     const { data, error: supaError } = await supabase
       .from('inquiries')
       .update(updatePayload)
+      .eq('account_id', accountId)
       .eq('id', id)
       .select()
       .single()
@@ -88,9 +96,11 @@ export const useInquiriesStore = defineStore('inquiries', () => {
   }
 
   const deleteInquiry = async (id) => {
+    const accountId = accountStore.getRequiredAccountId()
     const { error: supaError } = await supabase
       .from('inquiries')
       .delete()
+      .eq('account_id', accountId)
       .eq('id', id)
 
     if (supaError) throw supaError
@@ -99,9 +109,11 @@ export const useInquiriesStore = defineStore('inquiries', () => {
   }
 
   const getInquiryById = async (id) => {
+    const accountId = accountStore.getRequiredAccountId()
     const { data, error: supaError } = await supabase
       .from('inquiries')
       .select('*')
+      .eq('account_id', accountId)
       .eq('id', id)
       .single()
 
@@ -110,6 +122,7 @@ export const useInquiriesStore = defineStore('inquiries', () => {
   }
 
   const createInquiryHold = async (payload) => {
+    const accountId = accountStore.getRequiredAccountId()
     const inquiryId = payload.inquiry_id
     const unitId = payload.unit_id
     const startDate = normalizeDate(payload.start_date)
@@ -134,6 +147,7 @@ export const useInquiriesStore = defineStore('inquiries', () => {
     const { data: conflicts, error: conflictError } = await supabase
       .from('occupancies')
       .select('id')
+      .eq('account_id', accountId)
       .eq('unit_id', unitId)
       .lt('start_date', endDate)
       .gt('end_date', startDate)
@@ -149,6 +163,7 @@ export const useInquiriesStore = defineStore('inquiries', () => {
     const { data, error: supaError } = await supabase
       .from('occupancies')
       .insert({
+        account_id: accountId,
         unit_id: unitId,
         start_date: startDate,
         end_date: endDate,

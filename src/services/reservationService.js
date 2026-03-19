@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { generateReservationNumber } from '../utils/reservationUtils'
+import { useAccountStore } from '../stores/account'
 
 const normalizeDate = (value) => {
   if (!value) return null
@@ -13,13 +14,20 @@ const currentYearMonth = () => {
   return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 
+const getAccountId = () => {
+  const accountStore = useAccountStore()
+  return accountStore.getRequiredAccountId()
+}
+
 export const getNextReservationNumber = async () => {
+  const accountId = getAccountId()
   const yearMonth = currentYearMonth()
   const pattern = `RES-${yearMonth}-%`
 
   const { data, error } = await supabase
     .from('reservations')
     .select('reservation_number')
+    .eq('account_id', accountId)
     .like('reservation_number', pattern)
     .order('reservation_number', { ascending: false })
     .limit(1)
@@ -31,9 +39,11 @@ export const getNextReservationNumber = async () => {
 }
 
 const getReservationUnits = async (reservationId) => {
+  const accountId = getAccountId()
   const { data, error } = await supabase
     .from('reservation_units')
     .select('unit_id')
+    .eq('account_id', accountId)
     .eq('reservation_id', reservationId)
 
   if (error) throw error
@@ -45,9 +55,12 @@ export const syncReservationOccupancy = async (reservationId) => {
     throw new Error('reservationId es obligatorio para sincronizar ocupación.')
   }
 
+  const accountId = getAccountId()
+
   const { data: reservation, error: reservationError } = await supabase
     .from('reservations')
     .select('id, status, check_in, check_out')
+    .eq('account_id', accountId)
     .eq('id', reservationId)
     .single()
 
@@ -63,6 +76,7 @@ export const syncReservationOccupancy = async (reservationId) => {
     const { error: deleteError } = await supabase
       .from('occupancies')
       .delete()
+      .eq('account_id', accountId)
       .eq('reservation_id', reservationId)
       .eq('occupancy_type', 'reservation')
 
@@ -81,6 +95,7 @@ export const syncReservationOccupancy = async (reservationId) => {
   const { data: existingRows, error: existingError } = await supabase
     .from('occupancies')
     .select('id, unit_id')
+    .eq('account_id', accountId)
     .eq('reservation_id', reservationId)
     .eq('occupancy_type', 'reservation')
 
@@ -109,6 +124,7 @@ export const syncReservationOccupancy = async (reservationId) => {
     const { error: insertError } = await supabase
       .from('occupancies')
       .insert({
+        account_id: accountId,
         unit_id: unitId,
         start_date: startDate,
         end_date: endDate,

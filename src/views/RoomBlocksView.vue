@@ -2,7 +2,7 @@
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-3xl font-semibold tracking-tight text-gray-900">Bloqueos</h1>
-      <button class="btn-primary" @click="openCreateModal">+ Nuevo bloqueo</button>
+      <button v-if="can('occupancies', 'create')" class="btn-primary" @click="openCreateModal">+ Nuevo bloqueo</button>
     </div>
 
     <div v-if="feedbackMessage" class="rounded-md border px-4 py-3 text-sm" :class="feedbackType === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
@@ -55,9 +55,9 @@
               <td class="px-6 py-4 text-gray-700">{{ formatOccupancyType(block.occupancy_type) }}</td>
               <td class="px-6 py-4 text-gray-700">{{ block.reason || '-' }}</td>
               <td class="px-6 py-4 text-right">
-                <div class="inline-flex items-center gap-3">
-                  <button class="text-sm font-medium text-indigo-600 hover:text-indigo-800" @click="openEditModal(block)">Editar</button>
-                  <button class="text-sm font-medium text-red-600 hover:text-red-800" @click="openDeleteModal(block)">Eliminar</button>
+                <div class="inline-flex items-center gap-3" v-if="can('occupancies', 'edit') || can('occupancies', 'delete')">
+                  <button v-if="can('occupancies', 'edit')" class="text-sm font-medium text-indigo-600 hover:text-indigo-800" @click="openEditModal(block)">Editar</button>
+                  <button v-if="can('occupancies', 'delete')" class="text-sm font-medium text-red-600 hover:text-red-800" @click="openDeleteModal(block)">Eliminar</button>
                 </div>
               </td>
             </tr>
@@ -138,10 +138,14 @@ import { supabase } from '../services/supabase'
 import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
 import { useRoomBlocksStore } from '../stores/roomBlocks'
+import { usePermissions } from '../composables/usePermissions'
+import { useAccountStore } from '../stores/account'
 
 const route = useRoute()
 const router = useRouter()
 const store = useRoomBlocksStore()
+const { can } = usePermissions()
+const accountStore = useAccountStore()
 
 const venues = ref([])
 const units = ref([])
@@ -175,9 +179,10 @@ onMounted(async () => {
 })
 
 const fetchMasterData = async () => {
+  const accountId = accountStore.getRequiredAccountId()
   const [{ data: venuesData }, { data: unitsData }] = await Promise.all([
     supabase.from('venues').select('id, name').order('name', { ascending: true }),
-    supabase.from('units').select('id, name, venue_id').eq('is_active', true).order('name', { ascending: true })
+    supabase.from('units').select('id, name, venue_id').eq('account_id', accountId).eq('is_active', true).order('name', { ascending: true })
   ])
 
   venues.value = venuesData || []
