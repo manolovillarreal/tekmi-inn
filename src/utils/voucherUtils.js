@@ -77,3 +77,75 @@ export const copyAsWhatsApp = async (reservation, profile) => {
   await navigator.clipboard.writeText(message)
   return message
 }
+
+export const copyQuotationAsWhatsApp = async (inquiry, profile) => {
+  const guestName = inquiry?.guest_name || 'huesped'
+  const businessName = profile?.commercial_name || profile?.legal_name || 'nuestro alojamiento'
+  const contactPhone = profile?.phone || '-'
+  const checkIn = inquiry?.check_in
+  const checkOut = inquiry?.check_out
+  const nights = Number(inquiry?.nights || 0)
+  const adults = Number(inquiry?.adults || 0)
+  const children = Number(inquiry?.children || 0)
+  const totalGuests = adults + children
+  const unitsLabel = String(inquiry?.units_label || '').trim()
+  const referenceCode = inquiry?.reference_code || inquiry?.quotation_number || '-'
+  const pricePerNight = Number(inquiry?.price_per_night || 0)
+  const discountPercentage = Number(inquiry?.discount_percentage || 0)
+  const subtotal = pricePerNight * Math.max(nights, 0)
+  const discountAmount = subtotal * discountPercentage / 100
+  const total = Math.max(subtotal - discountAmount, 0)
+
+  const longDateWithoutWeekday = (value) => {
+    const date = normalizeDate(value)
+    if (!date) return '-'
+    return new Intl.DateTimeFormat('es-CO', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }).format(date)
+  }
+
+  const lines = [
+    `Hola ${guestName}! 👋`,
+    '',
+    `Te compartimos tu cotización de ${businessName}.`,
+  ]
+
+  if (checkIn && checkOut && nights > 0) {
+    lines.push('')
+    lines.push(`🗓 Check-in: ${formatDateLongEs(checkIn)}`)
+    lines.push(`🗓 Check-out: ${formatDateLongEs(checkOut)}`)
+    lines.push(`🌙 ${nights} noches · ${totalGuests} personas`)
+  }
+
+  if (unitsLabel) {
+    lines.push(`🏠 ${unitsLabel}`)
+  }
+
+  lines.push('')
+  lines.push(`💳 Código de referencia: ${referenceCode}`)
+
+  if (pricePerNight > 0 && nights > 0) {
+    lines.push('')
+    lines.push(`💰 Precio por noche: ${formatCop(pricePerNight)}`)
+    if (discountPercentage > 0) {
+      lines.push(`🎁 Descuento (${discountPercentage}%): -${formatCop(discountAmount)}`)
+    }
+    lines.push(`💵 Total: ${formatCop(total)}`)
+  }
+
+  if (inquiry?.quote_expires_at) {
+    lines.push('')
+    lines.push(`⏰ Válida hasta: ${longDateWithoutWeekday(inquiry.quote_expires_at)}`)
+  }
+
+  lines.push('')
+  lines.push('Para confirmar escríbenos.')
+  lines.push(`${businessName} · ${contactPhone}`)
+
+  const message = lines.join('\n')
+  await navigator.clipboard.writeText(message)
+  return message
+}

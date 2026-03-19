@@ -4,6 +4,13 @@
       <router-link to="/consultas" class="text-sm font-medium text-gray-500 hover:text-gray-900">← Volver a Consultas</router-link>
       <div class="flex items-center gap-2">
         <button
+          v-if="canViewQuotation"
+          class="btn-secondary text-sm"
+          :title="quotationWarningTooltip"
+          @click="goToQuotation"
+          :disabled="!inquiry"
+        >Ver cotización</button>
+        <button
           v-if="can('inquiries', 'convert') && inquiry && inquiry.status !== 'convertida' && inquiry.status !== 'perdida'"
           class="btn-primary text-sm"
           @click="openConversionModal"
@@ -305,6 +312,14 @@ const feedbackMessage = ref('')
 const feedbackType = ref('success')
 
 const availableTransitions = computed(() => getAvailableInquiryTransitions(inquiry.value?.status))
+const canViewQuotation = computed(() => !!String(inquiry.value?.guest_name || '').trim())
+const quotationWarningTooltip = computed(() => {
+  if (!inquiry.value) return ''
+  if (inquiry.value?.price_per_night == null || Number(inquiry.value?.price_per_night || 0) <= 0) {
+    return 'La cotización no incluirá precio (no hay precio por noche definido)'
+  }
+  return ''
+})
 const isQuoteExpired = computed(() => {
   if (inquiry.value?.status !== 'cotizada') return false
   if (!inquiry.value?.quote_expires_at) return false
@@ -590,6 +605,11 @@ const onReservationCreated = async (reservationId) => {
   } catch (err) {
     // swallow — navigation handled in modal
   }
+}
+
+const goToQuotation = () => {
+  if (!inquiry.value?.id) return
+  router.push(`/consultas/${inquiry.value.id}/cotizacion`)
 }
 
 </script>

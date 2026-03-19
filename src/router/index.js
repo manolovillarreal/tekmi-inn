@@ -56,6 +56,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/consultas/:id/cotizacion',
+      name: 'cotizacion-consulta',
+      component: () => import('../views/QuotationView.vue'),
+      meta: { requiresAuth: true, plainLayout: true }
+    },
+    {
       path: '/bloqueos',
       name: 'bloqueos',
       component: () => import('../views/RoomBlocksView.vue'),
