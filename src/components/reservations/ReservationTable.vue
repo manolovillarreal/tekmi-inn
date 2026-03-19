@@ -12,11 +12,11 @@
               <span class="inline-flex items-center gap-1">
                 <span>Fechas</span>
                 <span class="text-[10px] leading-none text-gray-400" :class="sortKey === 'check_in' ? 'text-gray-700' : ''">
-                  {{ sortKey === 'check_in' ? (sortDir === 'asc' ? '^' : 'v') : '^/v' }}
+                  {{ sortKey === 'check_in' ? (sortDir === 'asc' ? '↑' : sortDir === 'desc' ? '↓' : '↕') : '↕' }}
                 </span>
               </span>
             </th>
-            <th class="px-6 py-4">Noches</th>
+            <th class="px-6 py-4 text-center">Noches</th>
             <th class="px-6 py-4">Estadía</th>
             <th class="px-6 py-4">Estado</th>
             <th v-if="showFinancialColumns" class="px-6 py-4">Montos</th>
@@ -62,8 +62,8 @@
             </td>
 
             <!-- Noches -->
-            <td class="px-6 py-4 text-gray-700">
-              {{ Number(res.nights || 0) }}
+            <td class="px-6 py-4 text-center text-gray-700">
+              {{ getReservationNights(res) }}
             </td>
             
             <!-- Estadía -->
@@ -241,5 +241,18 @@ const formatCurrency = (val) => Number(val).toLocaleString('es-CO')
 const formatSource = (src) => {
   const map = { whatsapp: 'WhatsApp', instagram: 'Instagram', telefono: 'Teléfono', directo: 'Directo', agencia: 'Agencia' }
   return map[src] || src
+}
+
+const getReservationNights = (reservation) => {
+  const checkIn = reservation?.check_in
+  const checkOut = reservation?.check_out
+  if (!checkIn || !checkOut) return '—'
+
+  const start = new Date(checkIn)
+  const end = new Date(checkOut)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '—'
+
+  const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24))
+  return Number.isFinite(nights) && nights >= 0 ? nights : '—'
 }
 </script>

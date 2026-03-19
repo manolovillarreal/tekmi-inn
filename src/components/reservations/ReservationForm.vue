@@ -78,8 +78,24 @@
           hint="Opcional"
         />
       </AppFormSection>
+      <!-- ── 2. Origen ──────────────────────────────────────────── -->
+      <AppFormSection title="Origen" :divider="true">
+        <AppFieldGroup title="Canal de origen" :border="false" :compact="true">
+          <SourceSelector
+            :modelValue="{ sourceTypeId: form.source_type_id, sourceDetailId: form.source_detail_id }"
+            @update:modelValue="updateSourceSelection"
+            @suggestions="applySourceSuggestions"
+          />
+        </AppFieldGroup>
 
-      <!-- ── 2. Fechas y unidad ─────────────────────────────────── -->
+        <AppInput
+          v-model="form.commission_name"
+          label="Nombre de comisión"
+          placeholder="Booking, agencia..."
+          hint="Opcional"
+        />
+      </AppFormSection>
+      <!-- ── 3. Fechas y unidad ─────────────────────────────────── -->
       <AppFormSection title="Fechas y unidad" :divider="true">
         <AppFormGrid :columns="2">
           <AppDatePicker
@@ -153,7 +169,7 @@
         </AppFieldGroup>
       </AppFormSection>
 
-      <!-- ── 3. Personas ───────────────────────────────────────── -->
+      <!-- ── 4. Personas ───────────────────────────────────────── -->
       <AppFormSection title="Personas" :divider="true">
         <AppFormGrid :columns="2">
           <AppCounter
@@ -174,7 +190,7 @@
         </p>
       </AppFormSection>
 
-      <!-- ── 4. Precio y comisión ──────────────────────────────── -->
+      <!-- ── 5. Precio y comisión ──────────────────────────────── -->
       <AppFormSection title="Precio y comisión" :divider="true">
         <AppFormGrid :columns="2">
           <AppInput
@@ -243,26 +259,7 @@
           label="Fecha límite de pago"
           hint="Opcional — hasta cuándo se reservan las fechas"
         />
-      </AppFormSection>
-
-      <!-- ── 5. Origen ──────────────────────────────────────────── -->
-      <AppFormSection title="Origen" :divider="true">
-        <AppFieldGroup title="Canal de origen" :border="false" :compact="true">
-          <SourceSelector
-            :modelValue="{ sourceTypeId: form.source_type_id, sourceDetailId: form.source_detail_id }"
-            @update:modelValue="updateSourceSelection"
-            @suggestions="applySourceSuggestions"
-          />
-        </AppFieldGroup>
-
-        <AppInput
-          v-model="form.commission_name"
-          label="Nombre de comisión"
-          placeholder="Booking, agencia..."
-          hint="Opcional"
-        />
-      </AppFormSection>
-
+      </AppFormSection>  
       <!-- ── 6. Notas ───────────────────────────────────────────── -->
       <AppFormSection title="Notas" :divider="false">
         <AppTextarea

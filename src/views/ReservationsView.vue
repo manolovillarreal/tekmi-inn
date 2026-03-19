@@ -147,8 +147,8 @@ const filters = ref({
   sourceDetailId: '',
   checkInFrom: defaultRange.from,
   checkInTo: defaultRange.to,
-  sortBy: 'check_in',
-  sortDir: 'desc'
+  sortBy: '',
+  sortDir: ''
 })
 
 const sourceDetails = computed(() => sourcesStore.sourceDetails)
@@ -170,8 +170,8 @@ const fetchList = async () => {
     sourceDetailId: filters.value.sourceDetailId,
     checkInFrom: filters.value.checkInFrom,
     checkInTo: filters.value.checkInTo,
-    sortBy: filters.value.sortBy,
-    sortDir: filters.value.sortDir,
+    sortBy: filters.value.sortBy || 'check_in',
+    sortDir: filters.value.sortDir || 'desc',
     paginated: true,
     page: pagination.value.page,
     pageSize: pagination.value.pageSize
@@ -183,7 +183,7 @@ onMounted(async () => {
 })
 
 const hasActiveFilters = computed(() => {
-  return filters.value.searchData !== '' || filters.value.status !== '' || filters.value.sourceDetailId !== '' || filters.value.checkInFrom !== defaultRange.from || filters.value.checkInTo !== defaultRange.to || filters.value.sortDir !== 'desc'
+  return filters.value.searchData !== '' || filters.value.status !== '' || filters.value.sourceDetailId !== '' || filters.value.checkInFrom !== defaultRange.from || filters.value.checkInTo !== defaultRange.to || filters.value.sortBy !== '' || filters.value.sortDir !== ''
 })
 
 const clearFilters = () => {
@@ -193,8 +193,8 @@ const clearFilters = () => {
     sourceDetailId: '',
     checkInFrom: defaultRange.from,
     checkInTo: defaultRange.to,
-    sortBy: 'check_in',
-    sortDir: 'desc'
+    sortBy: '',
+    sortDir: ''
   }
   pagination.value.page = 1
 }
@@ -212,12 +212,24 @@ watch(() => [
 })
 
 const onSortChange = async (sortKey) => {
-  if (filters.value.sortBy === sortKey) {
-    filters.value.sortDir = filters.value.sortDir === 'asc' ? 'desc' : 'asc'
-  } else {
+  if (filters.value.sortBy !== sortKey) {
     filters.value.sortBy = sortKey
-    filters.value.sortDir = 'desc'
+    filters.value.sortDir = 'asc'
+    return
   }
+
+  if (filters.value.sortDir === 'asc') {
+    filters.value.sortDir = 'desc'
+    return
+  }
+
+  if (filters.value.sortDir === 'desc') {
+    filters.value.sortBy = ''
+    filters.value.sortDir = ''
+    return
+  }
+
+  filters.value.sortDir = 'asc'
 }
 
 const onPageChange = async (page) => {

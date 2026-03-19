@@ -1,12 +1,12 @@
 <template>
   <div class="space-y-6 p-6">
     <div class="flex flex-wrap items-center justify-between gap-4">
-      <h1 class="text-2xl font-bold text-gray-800">Calendario Marmanu House</h1>
+      <h1 class="text-2xl font-bold text-gray-800">Calendario</h1>
       <div class="flex flex-wrap items-end gap-3">
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Vista</label>
           <select v-model="viewMode" class="mt-1 rounded-md border-gray-300 text-sm">
-            <option value="clasica">Clasica</option>
+            <option value="clasica">Clásica</option>
             <option value="completa">Completa</option>
             <option value="por_unidad">Por unidad</option>
           </select>
@@ -34,15 +34,15 @@
         </div>
 
         <div v-if="periodPreset === 'this_week'" class="flex items-center gap-2 self-end">
-          <button class="btn-secondary text-sm" @click="goToPreviousWeek">Semana anterior</button>
+          <button class="btn-secondary text-sm" @click="goToPreviousWeek">← Semana anterior</button>
           <span class="text-sm text-gray-600">{{ weekRangeLabel }}</span>
-          <button class="btn-secondary text-sm" @click="goToNextWeek">Semana siguiente</button>
+          <button class="btn-secondary text-sm" @click="goToNextWeek">Semana siguiente →</button>
         </div>
       </div>
     </div>
 
     <div
-      v-if="viewMode === 'completa' || viewMode === 'por_unidad'"
+      v-if="viewMode === 'completa'"
       class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
     >
       <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Filtro de sedes</p>
@@ -57,7 +57,7 @@
             :value="venue.id"
             :checked="selectedVenueIds.includes(venue.id)"
             @change="toggleVenueFilter(venue.id)"
-            class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            class="rounded border-gray-300 text-primary focus:ring-primary/30"
           >
           <span>{{ venue.name }}</span>
         </label>
@@ -79,7 +79,10 @@
 
       <div v-else-if="periodPreset === 'today'" class="space-y-3">
         <div v-if="todayAgendaEvents.length === 0" class="rounded-md border border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500">
-          No hay eventos para hoy.
+          <p class="flex items-center gap-2">
+            <span class="text-base text-gray-400">◌</span>
+            <span>No hay movimientos para hoy.</span>
+          </p>
         </div>
 
         <button
@@ -98,11 +101,12 @@
             >
               {{ event.eventType }}
             </span>
+            <span v-else class="text-xs font-medium text-gray-500">Estadía</span>
           </div>
 
           <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-gray-600">
             <span>{{ event.pax }} pax</span>
-            <span class="capitalize">{{ event.source || 'Sin origen' }}</span>
+            <span class="capitalize">{{ event.sourceDetail || 'Sin origen' }}</span>
             <span v-if="event.balance > 0" class="font-semibold text-red-600">Saldo: ${{ formatCurrency(event.balance) }}</span>
           </div>
         </button>
@@ -114,8 +118,7 @@
           :key="`week-${day.date}`"
           class="rounded-md border border-gray-200 bg-white p-2"
         >
-          <p class="text-xs uppercase text-gray-500">{{ day.dayName }}</p>
-          <p class="text-sm font-semibold text-gray-800">{{ formatDate(day.date) }}</p>
+          <p class="text-sm font-semibold text-gray-800">{{ day.dayName }} {{ day.dayNumber }}</p>
 
           <div class="mt-2 space-y-1">
             <button
@@ -236,11 +239,16 @@
         </div>
 
         <div v-for="venue in visibleVenues" :key="`unit-group-${venue.id}`" class="rounded-md border border-gray-200 bg-white">
-          <div class="border-b border-gray-100 px-4 py-3">
+          <button
+            type="button"
+            class="flex w-full items-center justify-between border-b border-gray-100 px-4 py-3 text-left"
+            @click="toggleVenueCollapse(venue.id)"
+          >
             <h3 class="font-semibold text-gray-800">{{ venue.name }}</h3>
-          </div>
+            <span class="text-sm text-gray-500">{{ isVenueCollapsed(venue.id) ? '+' : '-' }}</span>
+          </button>
 
-          <div class="space-y-2 p-3">
+          <div v-if="!isVenueCollapsed(venue.id)" class="space-y-2 p-3">
             <div v-for="unit in getUnitsByVenue(venue.id)" :key="`unit-collapse-${unit.id}`" class="rounded-md border border-gray-200">
               <button
                 type="button"
@@ -433,14 +441,18 @@ const weekDays = computed(() => {
     const date = addDays(weekStart.value, i)
     days.push({
       date: toIsoDate(date),
-      dayName: date.toLocaleDateString('es-ES', { weekday: 'short' })
+      dayName: date.toLocaleDateString('es-CO', { weekday: 'short' }).replace('.', '').replace(/^./, (char) => char.toUpperCase()),
+      dayNumber: date.getDate()
     })
   }
   return days
 })
 
 const weekRangeLabel = computed(() => {
-  return `${formatDate(toIsoDate(weekStart.value))} - ${formatDate(toIsoDate(addDays(weekStart.value, 6)))}`
+  const start = new Date(toIsoDate(weekStart.value))
+  const end = new Date(toIsoDate(addDays(weekStart.value, 6)))
+  const monthYear = new Intl.DateTimeFormat('es-CO', { month: 'short', year: 'numeric' }).format(end).replace('.', '')
+  return `${start.getDate()} - ${end.getDate()} ${monthYear}`
 })
 
 const timelineGridStyle = computed(() => ({
@@ -484,7 +496,7 @@ const todayAgendaEvents = computed(() => {
           unitNames: new Set(),
           eventType: isEntry ? 'Entrada' : isExit ? 'Salida' : 'Estadia',
           pax: Number(occ.reservations?.adults || 0) + Number(occ.reservations?.children || 0),
-          source: occ.reservations?.source || '',
+          sourceDetail: occ.reservations?.source_detail_info?.label_es || occ.reservations?.source || '',
           balance: Math.max(0, Number(occ.reservations?.total_amount || 0) - Number(occ.reservations?.paid_amount || 0))
         })
       }
@@ -496,6 +508,10 @@ const todayAgendaEvents = computed(() => {
     ...event,
     unitLabel: Array.from(event.unitNames).join(', ')
   }))
+  .sort((a, b) => {
+    const priority = { Entrada: 1, Salida: 2, Estadia: 3 }
+    return (priority[a.eventType] || 99) - (priority[b.eventType] || 99)
+  })
 })
 
 async function fetchMasterData() {
@@ -524,7 +540,7 @@ async function fetchOccupancies() {
     const accountId = accountStore.getRequiredAccountId()
     const { data } = await supabase
       .from('occupancies')
-      .select('id, unit_id, start_date, end_date, occupancy_type, reservation_id, inquiry_id, notes, units(name, venue_id, venues(name)), reservations(id, guest_name, adults, children, source, total_amount, paid_amount, check_in, check_out)')
+        .select('id, unit_id, start_date, end_date, occupancy_type, reservation_id, inquiry_id, notes, units(name, venue_id, venues(name)), reservations(id, guest_name, adults, children, source, source_detail_info:source_details!reservations_source_detail_id_fkey(label_es), total_amount, paid_amount, check_in, check_out)')
       .eq('account_id', accountId)
       .lt('start_date', toExclusive)
       .gt('end_date', periodFrom.value)
@@ -593,7 +609,7 @@ function occupancyColor(occ) {
 }
 
 function getOccupancyDisplayLabel(occ, mode) {
-  if ((mode === 'por_unidad' || mode === 'completa') && occ.occupancy_type === 'reservation') {
+  if (mode === 'por_unidad' && occ.occupancy_type === 'reservation') {
     return occ.reservations?.guest_name || 'Reserva'
   }
 
@@ -736,7 +752,9 @@ const tooltipDetails = computed(() => {
     nights,
     holderName: occ.occupancy_type === 'reservation' ? (occ.reservations?.guest_name || '') : '',
     paxLabel: occ.occupancy_type === 'reservation' ? String(pax) : '',
-    sourceLabel: occ.occupancy_type === 'reservation' ? (occ.reservations?.source || '') : '',
+    sourceLabel: occ.occupancy_type === 'reservation'
+      ? (occ.reservations?.source_detail_info?.label_es || occ.reservations?.source || '')
+      : '',
     balance,
     reason
   }

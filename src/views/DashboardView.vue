@@ -8,15 +8,30 @@
       </router-link>
     </div>
 
-    <!-- Active Alerts Banner -->
-    <DeadlineAlert v-if="overdueReservations.length > 0" :show="true">
-      <ul class="list-disc pl-5 space-y-1">
-        <li v-for="res in overdueReservations" :key="res.id">
-          <strong>{{ res.guest_display_name }}</strong> — reserva del {{ res.check_in }} tiene deadline de pago vencido.
-          <router-link :to="`/reservas/${res.id}`" class="underline hover:text-orange-900 ml-2">Ver reserva &rarr;</router-link>
-        </li>
-      </ul>
-    </DeadlineAlert>
+    <div v-if="overdueReservations.length > 0 || preregPendingReservations.length > 0" class="space-y-3">
+      <AppInlineAlert
+        v-for="res in overdueReservations"
+        :key="`deadline-${res.id}`"
+        type="warning"
+        :message="`${res.guest_display_name || 'Reserva'} — deadline de pago vencido el ${formatDate(res.payment_deadline)}`"
+      >
+        <template #actions>
+          <router-link :to="`/reservas/${res.id}`" class="text-sm font-medium underline">Ver reserva</router-link>
+        </template>
+      </AppInlineAlert>
+
+      <AppInlineAlert
+        v-for="res in preregPendingReservations"
+        :key="`prereg-${res.id}`"
+        type="info"
+        :message="`${res.guest_display_name || 'Reserva'} llega el ${formatDate(res.check_in)} — pre-registro pendiente`"
+      >
+        <template #actions>
+          <router-link :to="`/reservas/${res.id}`" class="text-sm font-medium underline">Ver reserva</router-link>
+          <button type="button" class="btn-secondary text-sm" @click="copyPreregistroLink(res)">Copiar link</button>
+        </template>
+      </AppInlineAlert>
+    </div>
 
     <div class="card !py-4 flex flex-wrap items-end gap-4 bg-white">
       <div class="w-full md:w-64">
@@ -29,7 +44,7 @@
         </select>
       </div>
 
-      <div v-if="incomeFilterPreset === 'this_month'" class="rounded-md border border-[#C7D2FE] bg-[#EEF2FF] px-3 py-2 text-sm font-medium text-[#2D1B69]">
+      <div v-if="incomeFilterPreset === 'this_month'" class="rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-sm font-medium text-primary-dark">
         {{ currentMonthLabel }}
       </div>
 
@@ -131,11 +146,13 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReservationsStore } from '../stores/reservations'
-import DeadlineAlert from '../components/ui/DeadlineAlert.vue'
+import { useToast } from '../composables/useToast'
+import { AppInlineAlert } from '@/components/ui/forms'
 import { getNetAmount } from '../utils/reservations'
 
 const store = useReservationsStore()
 const router = useRouter()
+const toast = useToast()
 
 const incomeFilterPreset = ref('last_week')
 const customIncomeRange = ref({
@@ -153,7 +170,6 @@ const metrics = ref({
   departuresWeek: 0,
 })
 
-const overdueReservations = ref([])
 const weekDays = ref([])
 
 const toIsoDate = (value) => {
@@ -215,12 +231,36 @@ const incomeRangeLabel = computed(() => {
 const currentMonthLabel = computed(() => {
   if (incomeFilterPreset.value !== 'this_month') return ''
 
-  const monthLabel = new Date().toLocaleDateString('es-ES', {
+  const monthLabel = new Intl.DateTimeFormat('es-CO', {
     month: 'long',
     year: 'numeric'
-  })
+  }).format(new Date())
 
   return monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)
+})
+
+const overdueReservations = computed(() => {
+  const todayIso = toIsoDate(new Date())
+
+  return store.reservations.filter((res) => {
+    if (!res?.payment_deadline) return false
+    if (!['confirmed', 'in_stay'].includes(res.status)) return false
+    return String(res.payment_deadline) < todayIso
+  })
+})
+
+const preregPendingReservations = computed(() => {
+  const today = new Date()
+  const maxDate = shiftDays(today, 7)
+  const todayIso = toIsoDate(today)
+  const maxIso = toIsoDate(maxDate)
+
+  return store.reservations.filter((res) => {
+    if (res.status !== 'confirmed') return false
+    if (!res.check_in) return false
+    if (res.preregistro_completado === true) return false
+    return res.check_in >= todayIso && res.check_in <= maxIso
+  })
 })
 
 const weekRangeLabel = computed(() => {
@@ -275,8 +315,14 @@ const calculateMetrics = () => {
     }
   })
 
-  metrics.value = { monthReservations: monthRes, monthGrossIncome: monthGross, monthNetIncome: monthNet, pendingCount: 0, arrivalsWeek: arrivals, departuresWeek: departures }
-  overdueReservations.value = []
+  metrics.value = {
+    monthReservations: monthRes,
+    monthGrossIncome: monthGross,
+    monthNetIncome: monthNet,
+    pendingCount: overdueReservations.value.length + preregPendingReservations.value.length,
+    arrivalsWeek: arrivals,
+    departuresWeek: departures
+  }
 }
 
 const generateWeekDays = () => {
@@ -318,16 +364,34 @@ const getReservationsForDay = (dateObj) => {
 
 const getMiniCalendarStyles = (status) => {
   const map = {
-    confirmed: 'bg-[#EEF2FF] text-[#2D1B69] border-l-2 border-[#C7D2FE]',
-    in_stay: 'bg-[#ECFDF5] text-[#065F46] border-l-2 border-[#6EE7B7]',
-    completed: 'bg-[#F9FAFB] text-[#6B7280] border-l-2 border-[#E5E7EB]',
-    cancelled: 'bg-[#F3F4F6] text-[#9CA3AF] border-l-2 border-[#E5E7EB]',
+    confirmed: 'bg-blue-50 text-blue-700 border-l-2 border-blue-400',
+    in_stay: 'bg-emerald-50 text-emerald-800 border-l-2 border-emerald-400',
+    completed: 'bg-gray-100 text-gray-600',
   }
-  return map[status] || 'bg-[#F9FAFB] text-[#6B7280] border-l-2 border-[#E5E7EB]'
+  return map[status] || 'bg-gray-100 text-gray-500'
 }
 
 const formatCurrency = (val) => {
   return val.toLocaleString('es-CO')
+}
+
+const copyPreregistroLink = async (reservation) => {
+  if (!reservation?.id) return
+
+  try {
+    const { data, error } = await supabase.functions.invoke('generate-preregistro-token', {
+      body: { reservation_id: reservation.id }
+    })
+
+    if (error) throw error
+
+    const rawPath = String(data?.checkin_url || '')
+    const fullUrl = rawPath.startsWith('http') ? rawPath : `${window.location.origin}${rawPath}`
+    await navigator.clipboard.writeText(fullUrl)
+    toast.success('Link de pre-registro copiado')
+  } catch (error) {
+    toast.error(error?.message || 'No se pudo copiar el link de pre-registro.')
+  }
 }
 
 const openDetails = (res) => {

@@ -13,7 +13,8 @@
         class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm md:w-72"
       >
 
-      <select v-model="filters.status" multiple class="rounded-md border border-gray-300 px-3 py-2 text-sm min-w-44">
+      <select v-model="filters.status" class="rounded-md border border-gray-300 px-3 py-2 text-sm min-w-44">
+        <option value="">Todos los estados</option>
         <option v-for="(label, key) in INQUIRY_STATUS_LABELS" :key="key" :value="key">{{ label }}</option>
       </select>
 
@@ -222,7 +223,7 @@ const { can } = usePermissions()
 const accountStore = useAccountStore()
 const toast = useToast()
 
-const filters = ref({ search: '', status: [], dateFrom: '', dateTo: '' })
+const filters = ref({ search: '', status: '', dateFrom: '', dateTo: '' })
 
 const showCreateModal = ref(false)
 const creating = ref(false)
@@ -270,7 +271,7 @@ onMounted(async () => {
 const venueNameById = (venueId) => venues.value.find(v => v.id === venueId)?.name || ''
 
 const hasFilters = computed(() =>
-  !!filters.value.search || filters.value.status.length > 0 || !!filters.value.dateFrom || !!filters.value.dateTo
+  !!filters.value.search || !!filters.value.status || !!filters.value.dateFrom || !!filters.value.dateTo
 )
 const createNights = computed(() => getNumericNights(createForm.value.check_in, createForm.value.check_out))
 const createSubtotal = computed(() => Number(createForm.value.price_per_night || 0) * createNights.value)
@@ -284,7 +285,7 @@ const showCreateCalculationPanel = computed(() => {
 
 const filteredInquiries = computed(() => {
   return store.inquiries.filter(inquiry => {
-    if (filters.value.status.length > 0 && !filters.value.status.includes(inquiry.status)) return false
+    if (filters.value.status && inquiry.status !== filters.value.status) return false
 
     if (filters.value.dateFrom && inquiry.check_in && inquiry.check_in < filters.value.dateFrom) return false
     if (filters.value.dateTo && inquiry.check_in && inquiry.check_in > filters.value.dateTo) return false
@@ -300,7 +301,7 @@ const filteredInquiries = computed(() => {
 })
 
 const clearFilters = () => {
-  filters.value = { search: '', status: [], dateFrom: '', dateTo: '' }
+  filters.value = { search: '', status: '', dateFrom: '', dateTo: '' }
 }
 
 const isQuoteExpired = (inquiry) => {
