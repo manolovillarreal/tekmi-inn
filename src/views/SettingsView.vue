@@ -61,6 +61,8 @@
         La creacion de usuarios se realiza en Supabase. Aqui solo gestionas la asociacion y rol dentro de la cuenta.
       </p>
 
+      <AppInlineAlert v-if="usersSuccessMessage" type="success" :message="usersSuccessMessage" />
+
       <div class="overflow-x-auto">
         <table class="w-full border-collapse text-left text-sm">
           <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
@@ -82,26 +84,28 @@
               <td class="px-4 py-3 text-gray-900">{{ item.user_id }}</td>
               <td class="px-4 py-3 text-gray-700">{{ item.user_email || '-' }}</td>
               <td class="px-4 py-3">
-                <select
-                  :disabled="!can('users', 'edit_role') || savingRoleId === item.id"
-                  :value="item.role"
-                  class="rounded-md border border-gray-300 px-2 py-1 text-sm"
-                  @change="updateRole(item, $event.target.value)"
-                >
-                  <option value="admin">admin</option>
-                  <option value="manager">manager</option>
-                  <option value="staff">staff</option>
-                </select>
+                <div class="w-36">
+                  <AppSelect
+                    :model-value="item.role"
+                    :options="roleOptions"
+                    placeholder="Seleccionar rol"
+                    :disabled="!can('users', 'edit_role') || savingRoleId === item.id"
+                    @change="updateRole(item, $event)"
+                  />
+                </div>
               </td>
               <td class="px-4 py-3 text-right">
-                <button
-                  v-if="can('users', 'remove')"
-                  class="text-sm font-medium text-red-600 hover:text-red-800"
-                  :disabled="removingId === item.id"
-                  @click="removeUser(item)"
-                >
-                  Quitar
-                </button>
+                <div class="flex items-center justify-end gap-3">
+                  <span v-if="savingRoleId === item.id" class="text-xs text-gray-500">Guardando rol...</span>
+                  <button
+                    v-if="can('users', 'remove')"
+                    class="text-sm font-medium text-red-600 hover:text-red-800"
+                    :disabled="removingId === item.id"
+                    @click="removeUser(item)"
+                  >
+                    Quitar
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -119,11 +123,12 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
 import { usePermissions } from '../composables/usePermissions'
 import { useToast } from '../composables/useToast'
+import { AppInlineAlert, AppSelect } from '@/components/ui/forms'
 
 const accountStore = useAccountStore()
 const { can } = usePermissions()
@@ -133,6 +138,33 @@ const users = ref([])
 const loading = ref(false)
 const savingRoleId = ref('')
 const removingId = ref('')
+const usersSuccessMessage = ref('')
+
+let successMessageTimeout = null
+
+const roleOptions = [
+  { value: 'admin', label: 'admin' },
+  { value: 'manager', label: 'manager' },
+  { value: 'staff', label: 'staff' },
+]
+
+const showUsersSuccess = (message) => {
+  usersSuccessMessage.value = message
+  if (successMessageTimeout) {
+    clearTimeout(successMessageTimeout)
+  }
+  successMessageTimeout = setTimeout(() => {
+    usersSuccessMessage.value = ''
+    successMessageTimeout = null
+  }, 2500)
+}
+
+onBeforeUnmount(() => {
+  if (successMessageTimeout) {
+    clearTimeout(successMessageTimeout)
+    successMessageTimeout = null
+  }
+})
 
 const fetchUsers = async () => {
   if (!can('users', 'invite')) return
@@ -173,7 +205,7 @@ const updateRole = async (item, role) => {
     if (error) throw error
 
     item.role = role
-    toast.success('Rol actualizado correctamente.')
+    showUsersSuccess('Rol actualizado correctamente.')
   } catch (err) {
     toast.error(err.message)
   } finally {

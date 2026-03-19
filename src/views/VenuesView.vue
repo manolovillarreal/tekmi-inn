@@ -8,10 +8,6 @@
       </button>
     </div>
 
-    <div v-if="feedbackMessage" class="rounded-md border px-4 py-3 text-sm" :class="feedbackType === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
-      {{ feedbackMessage }}
-    </div>
-
     <!-- Venues List -->
     <div class="card overflow-hidden">
       <div class="overflow-x-auto">
@@ -44,8 +40,8 @@
               </td>
               <td class="px-6 py-4 text-gray-600">{{ getUnitCount(venue.id) }}</td>
               <td class="px-6 py-4 text-right">
-                <button v-if="can('settings', 'edit')" @click="openEditModal(venue)" class="text-gray-400 hover:text-indigo-600 px-2 py-1 transition-colors">Editar</button>
-                <button v-if="can('settings', 'edit')" @click="toggleActive(venue)" class="text-gray-400 hover:text-indigo-600 px-2 py-1 transition-colors ml-2">
+                <button v-if="can('settings', 'edit')" @click="openEditModal(venue)" class="text-gray-400 hover:text-primary px-2 py-1 transition-colors">Editar</button>
+                <button v-if="can('settings', 'edit')" @click="toggleActive(venue)" class="text-gray-400 hover:text-primary px-2 py-1 transition-colors ml-2">
                   {{ venue.is_active ? 'Desactivar' : 'Activar' }}
                 </button>
                 <button v-if="can('settings', 'edit')" @click="removeVenue(venue)" class="text-gray-400 hover:text-red-600 px-2 py-1 transition-colors ml-2">Eliminar</button>
@@ -57,42 +53,23 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    <BaseModal :isOpen="showModal" @close="closeModal" :title="editingVenue ? 'Editar Sede' : 'Nueva Sede'">
-      <form @submit.prevent="submitForm" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Nombre</label>
-          <input
-            v-model="form.name"
-            type="text"
-            required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          >
-        </div>
+    <BaseModal :isOpen="showModal" @close="closeModal" :title="editingVenue ? 'Editar sede' : 'Nueva sede'">
+      <form @submit.prevent="submitForm" class="space-y-5">
+        <AppFormSection title="Datos de la sede" :divider="false">
+          <AppInput v-model="form.name" label="Nombre" required />
+          <AppInput v-model="form.address" label="Dirección" />
+          <AppTextarea v-model="form.description" label="Descripción" :rows="2" :autoResize="true" />
+          <AppToggle v-model="form.is_active" label="Sede activa" />
+        </AppFormSection>
 
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Dirección</label>
-          <input
-            v-model="form.address"
-            type="text"
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          >
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Descripción</label>
-          <textarea
-            v-model="form.description"
-            rows="3"
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          ></textarea>
-        </div>
-
-        <div class="flex justify-end pt-4 border-t">
-          <button type="button" @click="closeModal" class="btn-secondary mr-3">Cancelar</button>
-          <button type="submit" :disabled="submitting" class="btn-primary">
-            {{ submitting ? 'Guardando...' : 'Guardar' }}
-          </button>
-        </div>
+        <AppFormActions
+          :submit-label="editingVenue ? 'Actualizar sede' : 'Guardar sede'"
+          cancel-label="Cancelar"
+          :loading="submitting"
+          :submit-disabled="submitting"
+          @submit="submitForm"
+          @cancel="closeModal"
+        />
       </form>
     </BaseModal>
 
@@ -119,16 +96,17 @@ import { useUnitsStore } from '../stores/units'
 import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
 import { usePermissions } from '../composables/usePermissions'
+import { useToast } from '../composables/useToast'
+import { AppInput, AppTextarea, AppToggle, AppFormSection, AppFormActions } from '@/components/ui/forms'
 
 const store = useVenuesStore()
 const unitsStore = useUnitsStore()
 const { can } = usePermissions()
+const toast = useToast()
 
 const showModal = ref(false)
 const editingVenue = ref(null)
 const submitting = ref(false)
-const feedbackMessage = ref('')
-const feedbackType = ref('success')
 const showDeleteModal = ref(false)
 const venueToDelete = ref(null)
 const deleteConfirmationInput = ref('')
@@ -138,22 +116,14 @@ const deleteLoading = ref(false)
 const form = ref({
   name: '',
   address: '',
-  description: ''
+  description: '',
+  is_active: true
 })
 
 onMounted(async () => {
   await store.fetchVenues()
   await unitsStore.fetchUnits()
 })
-
-const setFeedback = (type, message) => {
-  feedbackType.value = type
-  feedbackMessage.value = message
-}
-
-const clearFeedback = () => {
-  feedbackMessage.value = ''
-}
 
 const deleteConfirmationText = ref('')
 const deleteMessage = ref('')
@@ -164,15 +134,13 @@ const getUnitCount = (venueId) => {
 
 const openCreateModal = () => {
   editingVenue.value = null
-  form.value = { name: '', address: '', description: '' }
-  clearFeedback()
+  form.value = { name: '', address: '', description: '', is_active: true }
   showModal.value = true
 }
 
 const openEditModal = (venue) => {
   editingVenue.value = venue
-  form.value = { ...venue }
-  clearFeedback()
+  form.value = { ...venue, is_active: venue.is_active !== false }
   showModal.value = true
 }
 
@@ -183,35 +151,32 @@ const closeModal = () => {
 
 const submitForm = async () => {
   submitting.value = true
-  clearFeedback()
   try {
     if (editingVenue.value) {
       await store.updateVenue(editingVenue.value.id, form.value)
-      setFeedback('success', 'Sede actualizada correctamente.')
+      toast.success('Sede actualizada correctamente.')
     } else {
       await store.createVenue(form.value)
-      setFeedback('success', 'Sede creada correctamente.')
+      toast.success('Sede creada correctamente.')
     }
     closeModal()
   } catch (err) {
-    setFeedback('error', err.message)
+    toast.error(err.message || 'No se pudo guardar la sede.')
   } finally {
     submitting.value = false
   }
 }
 
 const toggleActive = async (venue) => {
-  clearFeedback()
   try {
     await store.updateVenue(venue.id, { is_active: !venue.is_active })
-    setFeedback('success', `Sede ${venue.is_active ? 'desactivada' : 'activada'} correctamente.`)
+    toast.success(`Sede ${venue.is_active ? 'desactivada' : 'activada'} correctamente.`)
   } catch (err) {
-    setFeedback('error', err.message)
+    toast.error(err.message || 'No se pudo actualizar la sede.')
   }
 }
 
 const removeVenue = async (venue) => {
-  clearFeedback()
   venueToDelete.value = venue
   deleteConfirmationText.value = `ELIMINAR ${venue.name}`
   deleteMessage.value = 'Esta acción eliminará la sede y sus unidades asociadas. Solo se completará si no existe relación con reservas ni historial.'
@@ -239,7 +204,7 @@ const confirmDeleteVenue = async () => {
     venueToDelete.value = null
     deleteConfirmationInput.value = ''
     deleteErrorMessage.value = ''
-    setFeedback('success', 'Sede eliminada correctamente.')
+    toast.success('Sede eliminada correctamente.')
   } catch (err) {
     deleteErrorMessage.value = err.message
   } finally {

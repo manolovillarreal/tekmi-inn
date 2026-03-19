@@ -48,6 +48,13 @@
           </div>
 
           <div v-if="!loadingSourceCatalog" class="space-y-4">
+            <AppInlineAlert
+              v-if="deleteConstraintMessage"
+              type="warning"
+              :message="deleteConstraintMessage"
+              dismissible
+            />
+
             <div v-for="group in groupedSourceDetails" :key="group.type.id" class="rounded-lg border border-gray-200 bg-white">
               <div class="flex items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
                 <div>
@@ -80,13 +87,13 @@
                       <td class="px-4 py-3 text-gray-700">{{ Number(detail.suggested_commission_percentage || 0) }}%</td>
                       <td class="px-4 py-3 text-gray-700">{{ Number(detail.suggested_discount_percentage || 0) }}%</td>
                       <td class="px-4 py-3">
-                        <input
-                          :checked="detail.is_active"
-                          type="checkbox"
-                          class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/30"
+                        <AppToggle
+                          :model-value="detail.is_active"
+                          size="sm"
+                          label=""
                           :disabled="savingSourceDetailId === detail.id"
-                          @change="toggleSourceDetail(detail, $event.target.checked)"
-                        >
+                          @update:modelValue="toggleSourceDetail(detail, $event)"
+                        />
                       </td>
                       <td class="px-4 py-3 text-right">
                         <div class="flex justify-end gap-3">
@@ -112,39 +119,42 @@
     </div>
 
     <BaseModal :isOpen="showSourceDetailModal" :title="sourceDetailModalTitle" @close="closeSourceDetailModal">
-      <form class="space-y-4" @submit.prevent="submitSourceDetail">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Tipo</label>
-          <select v-model="sourceDetailForm.source_type_id" class="mt-1 block w-full rounded-md border-gray-300 text-sm" :disabled="sourceDetailModalMode === 'edit'">
-            <option value="">Seleccionar tipo</option>
-            <option v-for="type in sourceTypesCatalog" :key="type.id" :value="type.id">{{ type.label_es }}</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Canal</label>
-          <input v-model="sourceDetailForm.label_es" type="text" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-        </div>
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">% Comision sugerida</label>
-            <input v-model="sourceDetailForm.suggested_commission_percentage" type="number" min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">% Descuento sugerido</label>
-            <input v-model="sourceDetailForm.suggested_discount_percentage" type="number" min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-          </div>
-        </div>
-        <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-          <input v-model="sourceDetailForm.is_active" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/30">
-          <span>Canal activo</span>
-        </label>
+      <form class="space-y-5" @submit.prevent="submitSourceDetail">
+        <AppFormSection title="Configuracion del canal" :divider="false">
+          <AppSelect
+            v-model="sourceDetailForm.source_type_id"
+            label="Tipo"
+            :options="sourceTypeOptions"
+            placeholder="Seleccionar tipo"
+            :disabled="sourceDetailModalMode === 'edit'"
+          />
+          <AppInput v-model="sourceDetailForm.label_es" label="Canal" />
+          <AppFormGrid :columns="2">
+            <AppInput
+              v-model="sourceDetailForm.suggested_commission_percentage"
+              type="number"
+              label="% Comision sugerida"
+              min="0"
+              step="0.01"
+            />
+            <AppInput
+              v-model="sourceDetailForm.suggested_discount_percentage"
+              type="number"
+              label="% Descuento sugerido"
+              min="0"
+              step="0.01"
+            />
+          </AppFormGrid>
+          <AppToggle v-model="sourceDetailForm.is_active" label="Canal activo" size="sm" />
+        </AppFormSection>
 
-        <div class="flex justify-end gap-2 border-t pt-4">
-          <button type="button" class="btn-secondary" @click="closeSourceDetailModal">Cancelar</button>
-          <button type="submit" class="btn-primary" :disabled="savingSourceDetail">
-            {{ savingSourceDetail ? 'Guardando...' : sourceDetailModalMode === 'create' ? 'Crear canal' : 'Guardar cambios' }}
-          </button>
-        </div>
+        <AppFormActions
+          :submit-label="sourceDetailModalMode === 'create' ? 'Crear canal' : 'Guardar cambios'"
+          :loading="savingSourceDetail"
+          :submit-disabled="savingSourceDetail"
+          @submit="submitSourceDetail"
+          @cancel="closeSourceDetailModal"
+        />
       </form>
     </BaseModal>
   </div>
@@ -163,6 +173,15 @@ import { useAccountStore } from '../stores/account'
 import { useSourcesStore } from '../stores/sources'
 import { usePermissions } from '../composables/usePermissions'
 import { useToast } from '../composables/useToast'
+import {
+  AppInput,
+  AppSelect,
+  AppToggle,
+  AppFormSection,
+  AppFormGrid,
+  AppFormActions,
+  AppInlineAlert,
+} from '@/components/ui/forms'
 import {
   createSourceDetail,
   deleteSourceDetail,
@@ -187,6 +206,7 @@ const savingSourceDetail = ref(false)
 const sourceDetailModalMode = ref('create')
 const sourceTypesCatalog = ref([])
 const sourceDetailsCatalog = ref([])
+const deleteConstraintMessage = ref('')
 
 const sourceDetailForm = ref({
   id: '',
@@ -206,6 +226,13 @@ const groupedSourceDetails = computed(() => {
 
 const sourceDetailModalTitle = computed(() => {
   return sourceDetailModalMode.value === 'create' ? 'Agregar canal' : 'Editar canal'
+})
+
+const sourceTypeOptions = computed(() => {
+  return sourceTypesCatalog.value.map((type) => ({
+    value: type.id,
+    label: type.label_es
+  }))
 })
 
 const loadSourceCatalog = async () => {
@@ -247,6 +274,7 @@ const resetSourceDetailForm = () => {
 
 const openCreateSourceDetailModal = (type) => {
   sourceDetailModalMode.value = 'create'
+  deleteConstraintMessage.value = ''
   resetSourceDetailForm()
   sourceDetailForm.value.source_type_id = type?.id || ''
   showSourceDetailModal.value = true
@@ -254,6 +282,7 @@ const openCreateSourceDetailModal = (type) => {
 
 const openEditSourceDetailModal = (detail) => {
   sourceDetailModalMode.value = 'edit'
+  deleteConstraintMessage.value = ''
   sourceDetailForm.value = {
     id: detail.id,
     source_type_id: detail.source_type_id,
@@ -271,6 +300,7 @@ const closeSourceDetailModal = () => {
 }
 
 const submitSourceDetail = async () => {
+  deleteConstraintMessage.value = ''
   savingSourceDetail.value = true
   try {
     const accountId = accountStore.getRequiredAccountId()
@@ -324,13 +354,19 @@ const toggleSourceDetail = async (detail, isActive) => {
 
 const removeSourceDetail = async (detail) => {
   deletingSourceDetailId.value = detail.id
+  deleteConstraintMessage.value = ''
   try {
     await deleteSourceDetail(accountStore.getRequiredAccountId(), detail.id)
     sourceDetailsCatalog.value = sourceDetailsCatalog.value.filter((item) => item.id !== detail.id)
     toast.success('Canal eliminado correctamente.')
     await syncActiveSourceStore()
   } catch (err) {
-    toast.error(err.message || 'No se pudo eliminar el canal.')
+    const message = err.message || 'No se pudo eliminar el canal.'
+    if (message.includes('registros asociados')) {
+      deleteConstraintMessage.value = 'Este canal tiene reservas o consultas asociadas y no puede eliminarse.'
+    } else {
+      toast.error(message)
+    }
   } finally {
     deletingSourceDetailId.value = ''
   }

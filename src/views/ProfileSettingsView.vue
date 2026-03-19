@@ -10,115 +10,86 @@
 
     <div class="card">
       <form class="space-y-6" @submit.prevent="saveProfile">
-        <section class="space-y-3">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Informacion comercial</h3>
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <label class="text-sm text-gray-700">
-              Nombre comercial
-              <input v-model="profileForm.commercial_name" type="text" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-            </label>
-            <label class="text-sm text-gray-700">
-              Razon social
-              <input v-model="profileForm.legal_name" type="text" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-            </label>
-            <label class="text-sm text-gray-700 md:col-span-1">
-              NIT
-              <input
-                v-model="profileForm.nit"
-                type="text"
-                inputmode="numeric"
-                class="mt-1 block w-full rounded-md border-gray-300 text-sm"
-                placeholder="900123456"
-                @input="onNitInput"
-              >
-            </label>
-            <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
-              <p><span class="font-medium text-gray-900">Digito de verificacion:</span> {{ nitDigitPreview ?? '-' }}</p>
-              <p class="mt-1"><span class="font-medium text-gray-900">Vista previa:</span> {{ nitFormattedPreview || '-' }}</p>
+        <AppFormSection title="Informacion comercial" :divider="false">
+          <AppFormGrid :columns="2">
+            <AppInput v-model="profileForm.commercial_name" label="Nombre comercial" />
+            <AppInput v-model="profileForm.legal_name" label="Razon social" />
+            <AppInput
+              v-model="profileForm.nit"
+              label="NIT"
+              placeholder="900123456"
+              inputmode="numeric"
+              :suffix="nitDigitPreview !== null ? `DV ${nitDigitPreview}` : ''"
+              @input="onNitInput"
+            />
+            <AppFieldGroup title="Vista previa NIT" compact>
+              <p class="text-sm text-[#374151]"><span class="font-medium text-[#111827]">Digito de verificacion:</span> {{ nitDigitPreview ?? '-' }}</p>
+              <p class="text-sm text-[#374151]"><span class="font-medium text-[#111827]">Formato:</span> {{ nitFormattedPreview || '-' }}</p>
+            </AppFieldGroup>
+          </AppFormGrid>
+          <AppInput v-model="profileForm.slogan" label="Slogan" />
+        </AppFormSection>
+
+        <AppFormSection title="Contacto" description="Canales principales de comunicacion.">
+          <AppFormGrid :columns="3">
+            <AppInput v-model="profileForm.phone" label="Telefono" />
+            <AppInput v-model="profileForm.email" label="Email" type="email" />
+            <AppInput v-model="profileForm.website" label="Website" placeholder="https://..." />
+          </AppFormGrid>
+        </AppFormSection>
+
+        <AppFormSection title="Ubicacion" description="Direccion comercial para documentos y comprobantes.">
+          <AppFormGrid :columns="2">
+            <AppInput v-model="profileForm.address" label="Direccion" class="md:col-span-2" />
+            <AppInput v-model="profileForm.city" label="Ciudad" />
+            <AppInput v-model="profileForm.department" label="Departamento" />
+            <AppInput v-model="profileForm.country" label="Pais" class="md:col-span-2" />
+          </AppFormGrid>
+        </AppFormSection>
+
+        <AppFormSection title="Logo" description="Se usa en documentos y vistas compartidas.">
+          <AppFieldGroup tone="info" compact>
+            <div class="flex flex-wrap items-start gap-4">
+              <div class="h-24 w-24 overflow-hidden rounded-md border border-[#E5E7EB] bg-white">
+                <img
+                  v-if="logoPreviewUrl"
+                  :src="logoPreviewUrl"
+                  alt="Logo cuenta"
+                  class="h-full w-full object-contain"
+                >
+                <div v-else class="flex h-full items-center justify-center text-xs text-[#9CA3AF]">Sin logo</div>
+              </div>
+              <div class="space-y-2">
+                <input
+                  ref="logoInputRef"
+                  type="file"
+                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                  class="hidden"
+                  @change="onLogoSelected"
+                >
+                <button type="button" class="btn-secondary text-sm" @click="openLogoPicker">Cambiar logo</button>
+                <AppFieldHint message="Maximo 2MB. Formatos permitidos: PNG, JPG, JPEG, SVG y WEBP." />
+              </div>
             </div>
-            <label class="text-sm text-gray-700 md:col-span-2">
-              Slogan
-              <input v-model="profileForm.slogan" type="text" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-            </label>
-          </div>
-        </section>
+          </AppFieldGroup>
+          <AppInlineAlert v-if="logoError" type="error" :message="logoError" />
+        </AppFormSection>
 
-        <section class="space-y-3">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Contacto</h3>
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <label class="text-sm text-gray-700">
-              Telefono
-              <input v-model="profileForm.phone" type="text" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-            </label>
-            <label class="text-sm text-gray-700">
-              Email
-              <input v-model="profileForm.email" type="email" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-            </label>
-            <label class="text-sm text-gray-700">
-              Website
-              <input v-model="profileForm.website" type="text" class="mt-1 block w-full rounded-md border-gray-300 text-sm" placeholder="https://...">
-            </label>
-          </div>
-        </section>
-
-        <section class="space-y-3">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Ubicacion</h3>
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <label class="text-sm text-gray-700 md:col-span-2">
-              Direccion
-              <input v-model="profileForm.address" type="text" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-            </label>
-            <label class="text-sm text-gray-700">
-              Ciudad
-              <input v-model="profileForm.city" type="text" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-            </label>
-            <label class="text-sm text-gray-700">
-              Departamento
-              <input v-model="profileForm.department" type="text" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-            </label>
-            <label class="text-sm text-gray-700 md:col-span-2">
-              Pais
-              <input v-model="profileForm.country" type="text" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-            </label>
-          </div>
-        </section>
-
-        <section class="space-y-3">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Logo</h3>
-          <div class="flex flex-wrap items-start gap-4 rounded-md border border-gray-200 bg-gray-50 p-3">
-            <div class="h-24 w-24 overflow-hidden rounded-md border border-gray-200 bg-white">
-              <img
-                v-if="logoPreviewUrl"
-                :src="logoPreviewUrl"
-                alt="Logo cuenta"
-                class="h-full w-full object-contain"
-              >
-              <div v-else class="flex h-full items-center justify-center text-xs text-gray-400">Sin logo</div>
-            </div>
-            <div class="space-y-2">
-              <input
-                ref="logoInputRef"
-                type="file"
-                accept="image/png,image/jpeg,image/svg+xml,image/webp"
-                class="hidden"
-                @change="onLogoSelected"
-              >
-              <button type="button" class="btn-secondary text-sm" @click="openLogoPicker">Cambiar logo</button>
-              <p class="text-xs text-gray-500">Maximo 2MB. Formatos: PNG, JPG, JPEG, SVG, WEBP.</p>
-            </div>
-          </div>
-        </section>
-
-        <section class="space-y-2 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-          <p><span class="font-semibold">Tu prefijo de referencia:</span> {{ profilePrefix }}</p>
+        <AppInlineAlert
+          type="info"
+          :message="`Tu prefijo de referencia: ${profilePrefix}`"
+        >
           <p><span class="font-semibold">Ejemplo de codigo:</span> {{ sampleReferenceCode }}</p>
-        </section>
+        </AppInlineAlert>
 
-        <div class="flex justify-end">
-          <button class="btn-primary" type="submit" :disabled="savingProfile || loadingProfile">
-            {{ savingProfile ? 'Guardando...' : loadingProfile ? 'Cargando...' : 'Guardar perfil' }}
-          </button>
-        </div>
+        <AppFormActions
+          submit-label="Guardar perfil"
+          cancel-label="Restablecer"
+          :loading="savingProfile || loadingProfile"
+          :submit-disabled="savingProfile || loadingProfile"
+          @submit="saveProfile"
+          @cancel="loadProfile"
+        />
       </form>
     </div>
   </div>
@@ -137,6 +108,15 @@ import { usePermissions } from '../composables/usePermissions'
 import { useToast } from '../composables/useToast'
 import { calculateNitDigit, formatNit } from '../utils/nitUtils'
 import { generateReferenceCode } from '../utils/referenceUtils'
+import {
+  AppInput,
+  AppFieldHint,
+  AppFieldGroup,
+  AppFormSection,
+  AppFormGrid,
+  AppFormActions,
+  AppInlineAlert,
+} from '@/components/ui/forms'
 
 const accountStore = useAccountStore()
 const { can } = usePermissions()
@@ -147,6 +127,7 @@ const savingProfile = ref(false)
 const logoInputRef = ref(null)
 const selectedLogoFile = ref(null)
 const selectedLogoPreviewUrl = ref('')
+const logoError = ref('')
 
 const profileForm = ref({
   commercial_name: '',
@@ -257,15 +238,16 @@ const revokeSelectedLogoPreview = () => {
 const onLogoSelected = (event) => {
   const file = event.target.files?.[0]
   if (!file) return
+  logoError.value = ''
 
   if (!ALLOWED_LOGO_TYPES.has(file.type)) {
-    toast.error('Formato de logo no permitido. Usa PNG, JPG, JPEG, SVG o WEBP.')
+    logoError.value = 'Formato de logo no permitido. Usa PNG, JPG, JPEG, SVG o WEBP.'
     event.target.value = ''
     return
   }
 
   if (file.size > MAX_LOGO_BYTES) {
-    toast.error('El logo supera 2MB. Selecciona un archivo mas liviano.')
+    logoError.value = 'El logo supera 2MB. Selecciona un archivo mas liviano.'
     event.target.value = ''
     return
   }
@@ -353,6 +335,7 @@ const saveProfile = async () => {
     if (logoInputRef.value) logoInputRef.value.value = ''
     selectedLogoFile.value = null
     revokeSelectedLogoPreview()
+    logoError.value = ''
 
     toast.success('Perfil actualizado correctamente.')
   } catch (err) {

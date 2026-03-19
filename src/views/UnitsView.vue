@@ -8,15 +8,11 @@
       </button>
     </div>
 
-    <div v-if="feedbackMessage" class="rounded-md border px-4 py-3 text-sm" :class="feedbackType === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
-      {{ feedbackMessage }}
-    </div>
-
     <!-- Venue Filter -->
     <div class="card !py-4">
       <div class="w-full md:w-64">
         <label class="block text-sm font-medium text-gray-700 mb-2">Filtrar por Sede</label>
-        <select v-model="selectedVenue" @change="fetchFilteredUnits" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+        <select v-model="selectedVenue" @change="fetchFilteredUnits" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary/30 focus:border-primary sm:text-sm rounded-md">
           <option value="">Todas las sedes</option>
           <option v-for="venue in venuesStore.venues" :key="venue.id" :value="venue.id">{{ venue.name }}</option>
         </select>
@@ -55,8 +51,8 @@
               </td>
               <td class="px-6 py-4 text-gray-600">{{ getActiveReservations(unit.id) }}</td>
               <td class="px-6 py-4 text-right">
-                <button v-if="can('units', 'edit')" @click="openEditModal(unit)" class="text-gray-400 hover:text-indigo-600 px-2 py-1 transition-colors">Editar</button>
-                <button v-if="can('units', 'edit')" @click="toggleActive(unit)" class="text-gray-400 hover:text-indigo-600 px-2 py-1 transition-colors ml-2">
+                <button v-if="can('units', 'edit')" @click="openEditModal(unit)" class="text-gray-400 hover:text-primary px-2 py-1 transition-colors">Editar</button>
+                <button v-if="can('units', 'edit')" @click="toggleActive(unit)" class="text-gray-400 hover:text-primary px-2 py-1 transition-colors ml-2">
                   {{ unit.is_active ? 'Desactivar' : 'Activar' }}
                 </button>
                 <button v-if="can('units', 'delete')" @click="removeUnit(unit)" class="text-gray-400 hover:text-red-600 px-2 py-1 transition-colors ml-2">Eliminar</button>
@@ -68,45 +64,28 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    <BaseModal :isOpen="showModal" @close="closeModal" :title="editingUnit ? 'Editar Unidad' : 'Nueva Unidad'">
-      <form @submit.prevent="submitForm" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Sede</label>
-          <select
+    <BaseModal :isOpen="showModal" @close="closeModal" :title="editingUnit ? 'Editar unidad' : 'Nueva unidad'">
+      <form @submit.prevent="submitForm" class="space-y-5">
+        <AppFormSection title="Datos de la unidad" :divider="false">
+          <AppSelect
             v-model="form.venue_id"
-            required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          >
-            <option value="">Seleccionar sede</option>
-            <option v-for="venue in venuesStore.venues" :key="venue.id" :value="venue.id">{{ venue.name }}</option>
-          </select>
-        </div>
+            label="Sede"
+            :options="venueOptions"
+            placeholder="Seleccionar sede"
+          />
+          <AppInput v-model="form.name" label="Nombre" required />
+          <AppTextarea v-model="form.description" label="Descripción" :rows="2" :autoResize="true" />
+          <AppToggle v-model="form.is_active" label="Unidad activa" />
+        </AppFormSection>
 
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Nombre</label>
-          <input
-            v-model="form.name"
-            type="text"
-            required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          >
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Descripción</label>
-          <textarea
-            v-model="form.description"
-            rows="3"
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          ></textarea>
-        </div>
-
-        <div class="flex justify-end pt-4 border-t">
-          <button type="button" @click="closeModal" class="btn-secondary mr-3">Cancelar</button>
-          <button type="submit" :disabled="submitting" class="btn-primary">
-            {{ submitting ? 'Guardando...' : 'Guardar' }}
-          </button>
-        </div>
+        <AppFormActions
+          :submit-label="editingUnit ? 'Actualizar unidad' : 'Guardar unidad'"
+          cancel-label="Cancelar"
+          :loading="submitting"
+          :submit-disabled="submitting"
+          @submit="submitForm"
+          @cancel="closeModal"
+        />
       </form>
     </BaseModal>
 
@@ -131,18 +110,19 @@ import { useReservationsStore } from '../stores/reservations'
 import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
 import { usePermissions } from '../composables/usePermissions'
+import { useToast } from '../composables/useToast'
+import { AppInput, AppSelect, AppTextarea, AppToggle, AppFormSection, AppFormActions } from '@/components/ui/forms'
 
 const store = useUnitsStore()
 const venuesStore = useVenuesStore()
 const reservationsStore = useReservationsStore()
 const { can } = usePermissions()
+const toast = useToast()
 
 const selectedVenue = ref('')
 const showModal = ref(false)
 const editingUnit = ref(null)
 const submitting = ref(false)
-const feedbackMessage = ref('')
-const feedbackType = ref('success')
 const showDeleteModal = ref(false)
 const unitToDelete = ref(null)
 const deleteErrorMessage = ref('')
@@ -152,23 +132,18 @@ const deleteMessage = ref('')
 const form = ref({
   venue_id: '',
   name: '',
-  description: ''
+  description: '',
+  is_active: true
 })
+
+const venueOptions = ref([])
 
 onMounted(async () => {
   await venuesStore.fetchVenues()
+  venueOptions.value = venuesStore.venues.map((venue) => ({ value: venue.id, label: venue.name }))
   await reservationsStore.fetchReservations()
   await fetchFilteredUnits()
 })
-
-const setFeedback = (type, message) => {
-  feedbackType.value = type
-  feedbackMessage.value = message
-}
-
-const clearFeedback = () => {
-  feedbackMessage.value = ''
-}
 
 const fetchFilteredUnits = async () => {
   await store.fetchUnits(selectedVenue.value || null)
@@ -183,15 +158,13 @@ const getActiveReservations = (unitId) => {
 
 const openCreateModal = () => {
   editingUnit.value = null
-  form.value = { venue_id: selectedVenue.value, name: '', description: '' }
-  clearFeedback()
+  form.value = { venue_id: selectedVenue.value, name: '', description: '', is_active: true }
   showModal.value = true
 }
 
 const openEditModal = (unit) => {
   editingUnit.value = unit
-  form.value = { ...unit }
-  clearFeedback()
+  form.value = { ...unit, is_active: unit.is_active !== false }
   showModal.value = true
 }
 
@@ -202,35 +175,32 @@ const closeModal = () => {
 
 const submitForm = async () => {
   submitting.value = true
-  clearFeedback()
   try {
     if (editingUnit.value) {
       await store.updateUnit(editingUnit.value.id, form.value)
-      setFeedback('success', 'Unidad actualizada correctamente.')
+      toast.success('Unidad actualizada correctamente.')
     } else {
       await store.createUnit(form.value)
-      setFeedback('success', 'Unidad creada correctamente.')
+      toast.success('Unidad creada correctamente.')
     }
     closeModal()
   } catch (err) {
-    setFeedback('error', err.message)
+    toast.error(err.message || 'No se pudo guardar la unidad.')
   } finally {
     submitting.value = false
   }
 }
 
 const toggleActive = async (unit) => {
-  clearFeedback()
   try {
     await store.updateUnit(unit.id, { is_active: !unit.is_active })
-    setFeedback('success', `Unidad ${unit.is_active ? 'desactivada' : 'activada'} correctamente.`)
+    toast.success(`Unidad ${unit.is_active ? 'desactivada' : 'activada'} correctamente.`)
   } catch (err) {
-    setFeedback('error', err.message)
+    toast.error(err.message || 'No se pudo actualizar la unidad.')
   }
 }
 
 const removeUnit = async (unit) => {
-  clearFeedback()
   unitToDelete.value = unit
   deleteMessage.value = `¿Estás seguro de que deseas eliminar la unidad "${unit.name}"?`
   deleteErrorMessage.value = ''
@@ -254,7 +224,7 @@ const confirmDeleteUnit = async () => {
     showDeleteModal.value = false
     unitToDelete.value = null
     deleteErrorMessage.value = ''
-    setFeedback('success', 'Unidad eliminada correctamente.')
+    toast.success('Unidad eliminada correctamente.')
   } catch (err) {
     deleteErrorMessage.value = err.message
   } finally {

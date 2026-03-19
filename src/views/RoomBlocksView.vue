@@ -5,10 +5,6 @@
       <button v-if="can('occupancies', 'create')" class="btn-primary" @click="openCreateModal">+ Nuevo bloqueo</button>
     </div>
 
-    <div v-if="feedbackMessage" class="rounded-md border px-4 py-3 text-sm" :class="feedbackType === 'error' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'">
-      {{ feedbackMessage }}
-    </div>
-
     <div class="card !py-4 flex flex-wrap items-center gap-4 bg-white">
       <select v-model="selectedVenueId" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm md:w-72">
         <option value="">Todas las sedes</option>
@@ -56,7 +52,7 @@
               <td class="px-6 py-4 text-gray-700">{{ block.reason || '-' }}</td>
               <td class="px-6 py-4 text-right">
                 <div class="inline-flex items-center gap-3" v-if="can('occupancies', 'edit') || can('occupancies', 'delete')">
-                  <button v-if="can('occupancies', 'edit')" class="text-sm font-medium text-indigo-600 hover:text-indigo-800" @click="openEditModal(block)">Editar</button>
+                  <button v-if="can('occupancies', 'edit')" class="text-sm font-medium text-primary hover:text-primary-dark" @click="openEditModal(block)">Editar</button>
                   <button v-if="can('occupancies', 'delete')" class="text-sm font-medium text-red-600 hover:text-red-800" @click="openDeleteModal(block)">Eliminar</button>
                 </div>
               </td>
@@ -67,54 +63,43 @@
     </div>
 
     <BaseModal :isOpen="showModal" :title="editingBlock ? 'Editar bloqueo' : 'Nuevo bloqueo'" @close="closeModal">
-      <form class="space-y-4" @submit.prevent="submitForm">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Unidad</label>
-          <select v-model="form.unit_id" required class="mt-1 block w-full rounded-md border-gray-300">
-            <option value="">Seleccionar unidad</option>
-            <option v-for="unit in units" :key="unit.id" :value="unit.id">
-              {{ unit.name }} - {{ venueNameById(unit.venue_id) }}
-            </option>
-          </select>
-        </div>
+      <form class="space-y-5" @submit.prevent="submitForm">
+        <AppFormSection title="Detalles del bloqueo" :divider="false">
+          <AppSelect
+            v-model="form.unit_id"
+            label="Unidad"
+            :options="unitOptions"
+            placeholder="Seleccionar unidad"
+            required
+          />
 
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Fecha inicio</label>
-            <input v-model="form.start_date" type="date" required class="mt-1 block w-full rounded-md border-gray-300">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Fecha fin</label>
-            <input v-model="form.end_date" type="date" required class="mt-1 block w-full rounded-md border-gray-300">
-          </div>
-        </div>
+          <AppSelect
+            v-model="form.occupancy_type"
+            label="Tipo de bloqueo"
+            :options="blockTypeOptions"
+            required
+          />
 
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Motivo</label>
-          <input v-model="form.reason" type="text" class="mt-1 block w-full rounded-md border-gray-300" placeholder="Mantenimiento, uso interno...">
-        </div>
+          <AppFormGrid :columns="2">
+            <AppDatePicker v-model="form.start_date" label="Fecha inicio" />
+            <AppDatePicker v-model="form.end_date" label="Fecha fin" />
+          </AppFormGrid>
 
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Tipo de ocupación</label>
-          <select v-model="form.occupancy_type" class="mt-1 block w-full rounded-md border-gray-300">
-            <option value="maintenance">Mantenimiento</option>
-            <option value="owner_use">Uso propietario</option>
-            <option value="external">Externo</option>
-            <option value="inquiry_hold">Hold de consulta</option>
-          </select>
-        </div>
+          <p v-if="blockedDays > 0" class="text-sm text-[#6B7280]">{{ blockedDays }} días bloqueados</p>
 
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Notas</label>
-          <textarea v-model="form.notes" rows="3" class="mt-1 block w-full rounded-md border-gray-300"></textarea>
-        </div>
+          <AppTextarea v-model="form.notes" label="Notas o motivo" :rows="2" :autoResize="true" hint="Opcional" />
+        </AppFormSection>
 
-        <p v-if="formError" class="text-sm text-red-600">{{ formError }}</p>
+        <AppInlineAlert v-if="formError" type="error" :message="formError" />
 
-        <div class="flex justify-end gap-2 border-t pt-4">
-          <button type="button" class="btn-secondary" @click="closeModal">Cancelar</button>
-          <button type="submit" class="btn-primary" :disabled="submitting">{{ submitting ? 'Guardando...' : 'Guardar bloqueo' }}</button>
-        </div>
+        <AppFormActions
+          :submit-label="editingBlock ? 'Actualizar bloqueo' : 'Guardar bloqueo'"
+          cancel-label="Cancelar"
+          :loading="submitting"
+          :submit-disabled="submitting"
+          @submit="submitForm"
+          @cancel="closeModal"
+        />
       </form>
     </BaseModal>
 
@@ -140,20 +125,28 @@ import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
 import { useRoomBlocksStore } from '../stores/roomBlocks'
 import { usePermissions } from '../composables/usePermissions'
 import { useAccountStore } from '../stores/account'
+import { useToast } from '../composables/useToast'
+import {
+  AppSelect,
+  AppDatePicker,
+  AppTextarea,
+  AppFormSection,
+  AppFormGrid,
+  AppFormActions,
+  AppInlineAlert
+} from '@/components/ui/forms'
 
 const route = useRoute()
 const router = useRouter()
 const store = useRoomBlocksStore()
 const { can } = usePermissions()
 const accountStore = useAccountStore()
+const toast = useToast()
 
 const venues = ref([])
 const units = ref([])
 const selectedVenueId = ref('')
 const searchText = ref('')
-
-const feedbackMessage = ref('')
-const feedbackType = ref('success')
 
 const showModal = ref(false)
 const editingBlock = ref(null)
@@ -166,6 +159,29 @@ const form = ref({
   occupancy_type: 'maintenance',
   reason: '',
   notes: ''
+})
+
+const blockTypeOptions = [
+  { value: 'maintenance', label: 'Mantenimiento' },
+  { value: 'owner_use', label: 'Uso del propietario' },
+  { value: 'inquiry_hold', label: 'Hold de consulta' },
+  { value: 'external', label: 'Externo' },
+]
+
+const unitOptions = computed(() => {
+  return units.value.map((unit) => ({
+    value: unit.id,
+    label: `${unit.name} - ${venueNameById(unit.venue_id)}`
+  }))
+})
+
+const blockedDays = computed(() => {
+  if (!form.value.start_date || !form.value.end_date) return 0
+  const from = new Date(form.value.start_date)
+  const to = new Date(form.value.end_date)
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return 0
+  const diff = Math.ceil((to - from) / (1000 * 60 * 60 * 24))
+  return diff > 0 ? diff : 0
 })
 
 const showDeleteModal = ref(false)
@@ -260,8 +276,7 @@ const openEditModalFromRoute = (blockId) => {
 
   const block = store.roomBlocks.find(item => item.id === blockId)
   if (!block) {
-    feedbackType.value = 'error'
-    feedbackMessage.value = 'No se encontró el bloqueo solicitado.'
+    toast.error('No se encontró el bloqueo solicitado.')
     return
   }
 
@@ -288,12 +303,10 @@ const submitForm = async () => {
 
     if (editingBlock.value) {
       await store.updateRoomBlock(editingBlock.value.id, form.value)
-      feedbackType.value = 'success'
-      feedbackMessage.value = 'Bloqueo actualizado correctamente.'
+      toast.success('Bloqueo actualizado correctamente.')
     } else {
       await store.createRoomBlock(form.value)
-      feedbackType.value = 'success'
-      feedbackMessage.value = 'Bloqueo creado correctamente.'
+      toast.success('Bloqueo creado correctamente.')
     }
 
     showModal.value = false
@@ -328,8 +341,7 @@ const confirmDelete = async () => {
   try {
     await store.deleteRoomBlock(blockToDelete.value.id)
     showDeleteModal.value = false
-    feedbackType.value = 'success'
-    feedbackMessage.value = 'Bloqueo eliminado correctamente.'
+    toast.success('Bloqueo eliminado correctamente.')
   } catch (err) {
     deleteError.value = err.message
   } finally {

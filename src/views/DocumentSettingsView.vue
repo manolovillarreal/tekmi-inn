@@ -11,8 +11,7 @@
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <div class="space-y-6 xl:col-span-5">
         <div class="card space-y-6">
-          <section class="space-y-3">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Tema de color</h2>
+          <AppFormSection title="Tema de color" :divider="false">
             <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
               <button
                 v-for="option in themeOptions"
@@ -46,10 +45,9 @@
               </label>
             </div>
             <p class="text-xs text-gray-500">Los colores solo son editables cuando el tema es Personalizada.</p>
-          </section>
+          </AppFormSection>
 
-          <section class="space-y-3 border-t border-gray-200 pt-4">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Header</h2>
+          <AppFormSection title="Header" description="Configura estructura, logo y campos visibles.">
             <div class="grid grid-cols-1 gap-2 md:grid-cols-3">
               <button
                 v-for="layout in headerLayouts"
@@ -63,26 +61,26 @@
               </button>
             </div>
 
-            <label class="flex items-center gap-2 text-sm text-gray-700">
-              <input v-model="form.header_show_logo" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/30">
-              Mostrar logo
-            </label>
+            <AppToggle v-model="form.header_show_logo" label="Mostrar logo" size="sm" />
 
-            <label v-if="form.header_show_logo" class="text-sm text-gray-700">
-              Tamano de logo
-              <select v-model="form.header_logo_size" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-                <option value="small">small</option>
-                <option value="medium">medium</option>
-                <option value="large">large</option>
-              </select>
-            </label>
+            <AppSelect
+              v-if="form.header_show_logo"
+              v-model="form.header_logo_size"
+              label="Tamano de logo"
+              :options="logoSizeOptions"
+            />
 
-            <div class="grid grid-cols-2 gap-2">
-              <label v-for="field in profileFields" :key="`header-${field.key}`" class="inline-flex items-center gap-2 text-xs text-gray-700">
-                <input v-model="form.header_fields[field.key]" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/30">
-                {{ field.label }}
-              </label>
-            </div>
+            <AppFieldGroup title="Campos visibles" compact>
+              <div class="grid grid-cols-2 gap-3">
+                <AppToggle
+                  v-for="field in profileFields"
+                  :key="`header-${field.key}`"
+                  v-model="form.header_fields[field.key]"
+                  :label="field.label"
+                  size="sm"
+                />
+              </div>
+            </AppFieldGroup>
 
             <div>
               <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-600">Variables disponibles</p>
@@ -99,14 +97,10 @@
               </div>
             </div>
 
-            <label class="text-sm text-gray-700">
-              Texto adicional
-              <textarea v-model="form.header_extra_text" rows="3" class="mt-1 block w-full rounded-md border-gray-300 text-sm"></textarea>
-            </label>
-          </section>
+            <AppTextarea v-model="form.header_extra_text" label="Texto adicional" :rows="3" :autoResize="true" />
+          </AppFormSection>
 
-          <section class="space-y-3 border-t border-gray-200 pt-4">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Footer</h2>
+          <AppFormSection title="Footer" description="Selecciona layout y contenido del pie de pagina.">
             <div class="grid grid-cols-1 gap-2 md:grid-cols-3">
               <button
                 v-for="layout in footerLayouts"
@@ -120,12 +114,17 @@
               </button>
             </div>
 
-            <div class="grid grid-cols-2 gap-2">
-              <label v-for="field in profileFields" :key="`footer-${field.key}`" class="inline-flex items-center gap-2 text-xs text-gray-700">
-                <input v-model="form.footer_fields[field.key]" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/30">
-                {{ field.label }}
-              </label>
-            </div>
+            <AppFieldGroup title="Campos visibles" compact>
+              <div class="grid grid-cols-2 gap-3">
+                <AppToggle
+                  v-for="field in profileFields"
+                  :key="`footer-${field.key}`"
+                  v-model="form.footer_fields[field.key]"
+                  :label="field.label"
+                  size="sm"
+                />
+              </div>
+            </AppFieldGroup>
 
             <div>
               <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-600">Variables disponibles</p>
@@ -142,36 +141,32 @@
               </div>
             </div>
 
-            <label v-if="form.footer_layout === 3" class="text-sm text-gray-700">
-              Texto libre del footer
-              <textarea v-model="form.footer_free_text" rows="4" class="mt-1 block w-full rounded-md border-gray-300 text-sm"></textarea>
-            </label>
-          </section>
+            <AppTextarea
+              v-if="form.footer_layout === 3"
+              v-model="form.footer_free_text"
+              label="Texto libre del footer"
+              :rows="4"
+              :autoResize="true"
+            />
+          </AppFormSection>
 
-          <section class="space-y-3 border-t border-gray-200 pt-4">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Secciones opcionales</h2>
-            <label class="flex items-center gap-2 text-sm text-gray-700">
-              <input v-model="form.show_conditions" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/30">
-              Incluir condiciones del alojamiento
-            </label>
+          <AppFormSection title="Secciones opcionales" description="Controla campos adicionales en el documento.">
+            <AppToggle v-model="form.show_conditions" label="Incluir condiciones del alojamiento" size="sm" />
             <RouterLink to="/configuracion" class="text-sm font-medium text-primary hover:text-primary-dark">Editar condiciones</RouterLink>
 
-            <label class="text-sm text-gray-700">
-              Etiqueta campo personalizado
-              <input v-model="form.custom_field_label" type="text" class="mt-1 block w-full rounded-md border-gray-300 text-sm" placeholder="Informacion adicional">
-            </label>
+            <AppInput v-model="form.custom_field_label" label="Etiqueta campo personalizado" placeholder="Informacion adicional" />
 
-            <label class="text-sm text-gray-700">
-              Contenido campo personalizado
-              <textarea v-model="form.custom_field_content" rows="4" class="mt-1 block w-full rounded-md border-gray-300 text-sm"></textarea>
-            </label>
-          </section>
+            <AppTextarea v-model="form.custom_field_content" label="Contenido campo personalizado" :rows="4" :autoResize="true" />
+          </AppFormSection>
 
-          <div class="flex justify-end border-t border-gray-200 pt-4">
-            <button class="btn-primary" :disabled="saving || loading" @click="saveSettings">
-              {{ saving ? 'Guardando...' : 'Guardar configuracion' }}
-            </button>
-          </div>
+          <AppFormActions
+            submit-label="Guardar configuracion"
+            cancel-label="Recargar"
+            :loading="saving || loading"
+            :submit-disabled="saving || loading"
+            @submit="saveSettings"
+            @cancel="loadData"
+          />
         </div>
       </div>
 
@@ -244,6 +239,15 @@ import {
   DEFAULT_DOCUMENT_SETTINGS,
   normalizeDocumentSettings,
 } from '../utils/documentThemes'
+import {
+  AppInput,
+  AppSelect,
+  AppTextarea,
+  AppToggle,
+  AppFieldGroup,
+  AppFormSection,
+  AppFormActions,
+} from '@/components/ui/forms'
 
 const accountStore = useAccountStore()
 const { can } = usePermissions()
@@ -289,6 +293,12 @@ const footerLayouts = [
   { value: 1, label: 'Layout 1: centrado' },
   { value: 2, label: 'Layout 2: dos columnas' },
   { value: 3, label: 'Layout 3: texto libre' },
+]
+
+const logoSizeOptions = [
+  { value: 'small', label: 'Pequeno' },
+  { value: 'medium', label: 'Mediano' },
+  { value: 'large', label: 'Grande' },
 ]
 
 const previewSettings = computed(() => ({
