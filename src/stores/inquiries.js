@@ -3,6 +3,16 @@ import { ref } from 'vue'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from './account'
 import { getSourceLabel } from '../utils/sourceUtils'
+import { generateInquiryNumber } from '../utils/referenceUtils'
+import { isValidInquiryTransition } from '../utils/inquiryUtils'
+
+const INQUIRY_SELECT = `
+  *,
+  source_type_info:source_types!inquiries_source_type_id_fkey(id, name, label_es, is_active),
+  source_detail_info:source_details!inquiries_source_detail_id_fkey(id, source_type_id, name, label_es, suggested_commission_percentage, suggested_discount_percentage, is_active),
+  reservation_info:reservations!inquiries_reservation_id_fkey(id, reservation_number),
+  inquiry_units(unit_id)
+`
 
 const normalizeDate = (value) => {
   if (!value) return null
@@ -23,6 +33,16 @@ export const useInquiriesStore = defineStore('inquiries', () => {
   const loading = ref(false)
   const error = ref(null)
 
+  const insertStatusLog = async ({ accountId, inquiryId, fromStatus = null, toStatus, note = null }) => {
+    await supabase.from('inquiry_status_logs').insert({
+      account_id: accountId,
+      inquiry_id: inquiryId,
+      from_status: fromStatus,
+      to_status: toStatus,
+      note
+    })
+  }
+
   const fetchInquiries = async () => {
     loading.value = true
     error.value = null
@@ -30,14 +50,15 @@ export const useInquiriesStore = defineStore('inquiries', () => {
       const accountId = accountStore.getRequiredAccountId()
       const { data, error: supaError } = await supabase
         .from('inquiries')
-        .select('*, source_type_info:source_types!inquiries_source_type_id_fkey(id, name, label_es, is_active), source_detail_info:source_details!inquiries_source_detail_id_fkey(id, source_type_id, name, label_es, suggested_commission_percentage, suggested_discount_percentage, is_active)')
+        .select(INQUIRY_SELECT)
         .eq('account_id', accountId)
         .order('created_at', { ascending: false })
 
       if (supaError) throw supaError
       inquiries.value = (data || []).map((item) => ({
         ...item,
-        source_display_label: getSourceLabel(item)
+        source_display_label: getSourceLabel(item),
+        unit_ids: (item.inquiry_units || []).map(u => u.unit_id)
       }))
     } catch (err) {
       error.value = err.message
@@ -49,31 +70,95 @@ export const useInquiriesStore = defineStore('inquiries', () => {
 
   const createInquiry = async (payload) => {
     const accountId = accountStore.getRequiredAccountId()
+
+    // Generate inquiry_number
+    const yearMonth = (() => {
+      const now = new Date()
+      return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`
+    })()
+    const pattern = `INQ-${yearMonth}-%`
+    const { data: prev } = await supabase
+      .from('inquiries')
+      .select('inquiry_number')
+      .eq('account_id', accountId)
+      .like('inquiry_number', pattern)
+      .order('inquiry_number', { ascending: false })
+      .limit(1)
+    const inquiryNumber = generateInquiryNumber({ date: new Date(), previousInquiryNumber: prev?.[0]?.inquiry_number || null })
+
+    const adults = payload.adults != null ? Number(payload.adults) : 1
+    const children = payload.children != null ? Number(payload.children) : 0
+
+    // Decide status: cotizada if quote_expires_at is set
+    let status = payload.status || 'nueva'
+    const shouldAutoQuote = !!payload.quote_expires_at && status === 'nueva'
+    if (shouldAutoQuote) {
+      status = 'cotizada'
+    }
+
     const inquiryPayload = {
       account_id: accountId,
+      inquiry_number: inquiryNumber,
       guest_name: payload.guest_name || null,
       guest_phone: payload.guest_phone || null,
       check_in: normalizeDate(payload.check_in),
       check_out: normalizeDate(payload.check_out),
-      guests_count: payload.guests_count ? Number(payload.guests_count) : null,
+      adults,
+      children,
+      guests_count: adults + children,
       price_per_night: payload.price_per_night === '' || payload.price_per_night == null ? null : Number(payload.price_per_night),
       commission_name: payload.commission_name || null,
       commission_percentage: payload.commission_percentage === '' || payload.commission_percentage == null ? 0 : Number(payload.commission_percentage),
       discount_percentage: payload.discount_percentage === '' || payload.discount_percentage == null ? 0 : Number(payload.discount_percentage),
+      quote_expires_at: payload.quote_expires_at ? new Date(payload.quote_expires_at).toISOString() : null,
       source: payload.source || null,
       source_type_id: payload.source_type_id || null,
       source_detail_id: payload.source_detail_id || null,
-      status: payload.status || 'new',
+      status,
       notes: payload.notes || null
     }
 
     const { data, error: supaError } = await supabase
       .from('inquiries')
       .insert(inquiryPayload)
-      .select('*, source_type_info:source_types!inquiries_source_type_id_fkey(id, name, label_es, is_active), source_detail_info:source_details!inquiries_source_detail_id_fkey(id, source_type_id, name, label_es, suggested_commission_percentage, suggested_discount_percentage, is_active)')
+      .select(INQUIRY_SELECT)
       .single()
 
     if (supaError) throw supaError
+
+    // Save unit associations
+    const unitIds = Array.isArray(payload.unit_ids) ? payload.unit_ids : []
+    if (unitIds.length > 0) {
+      await supabase.from('inquiry_units').insert(
+        unitIds.map(uid => ({ account_id: accountId, inquiry_id: data.id, unit_id: uid }))
+      )
+    }
+
+    // Track status flow for audit. If auto-quoted, register the intermediate 'contactada'.
+    if (shouldAutoQuote) {
+      await insertStatusLog({
+        accountId,
+        inquiryId: data.id,
+        fromStatus: 'nueva',
+        toStatus: 'contactada',
+        note: 'Paso automático al generar cotización.'
+      })
+      await insertStatusLog({
+        accountId,
+        inquiryId: data.id,
+        fromStatus: 'contactada',
+        toStatus: 'cotizada',
+        note: 'Cotización creada automáticamente por vencimiento definido.'
+      })
+    } else {
+      await insertStatusLog({
+        accountId,
+        inquiryId: data.id,
+        fromStatus: null,
+        toStatus: status,
+        note: 'Creación inicial.'
+      })
+    }
 
     await fetchInquiries()
     return data
@@ -81,13 +166,53 @@ export const useInquiriesStore = defineStore('inquiries', () => {
 
   const updateInquiry = async (id, payload) => {
     const accountId = accountStore.getRequiredAccountId()
+
+    const { data: existing, error: existingError } = await supabase
+      .from('inquiries')
+      .select('id, status')
+      .eq('account_id', accountId)
+      .eq('id', id)
+      .single()
+
+    if (existingError) throw existingError
+
+    // Decide status auto-promotion if quote_expires_at is being set
+    let statusOverride = payload.status
+    if (payload.quote_expires_at && !payload.status && existing.status === 'nueva') {
+      statusOverride = 'cotizada'
+    }
+
+    if (statusOverride && statusOverride !== existing.status && !isValidInquiryTransition(existing.status, statusOverride)) {
+      throw new Error(`Transición de estado inválida: ${existing.status} → ${statusOverride}.`)
+    }
+
     const updatePayload = {
-      ...payload,
-      check_in: payload.check_in === undefined ? undefined : normalizeDate(payload.check_in),
-      check_out: payload.check_out === undefined ? undefined : normalizeDate(payload.check_out),
-      price_per_night: payload.price_per_night === undefined ? undefined : (payload.price_per_night === '' || payload.price_per_night == null ? null : Number(payload.price_per_night)),
-      commission_percentage: payload.commission_percentage === undefined ? undefined : (payload.commission_percentage === '' || payload.commission_percentage == null ? 0 : Number(payload.commission_percentage)),
-      discount_percentage: payload.discount_percentage === undefined ? undefined : (payload.discount_percentage === '' || payload.discount_percentage == null ? 0 : Number(payload.discount_percentage))
+      ...(payload.guest_name !== undefined && { guest_name: payload.guest_name || null }),
+      ...(payload.guest_phone !== undefined && { guest_phone: payload.guest_phone || null }),
+      ...(payload.check_in !== undefined && { check_in: normalizeDate(payload.check_in) }),
+      ...(payload.check_out !== undefined && { check_out: normalizeDate(payload.check_out) }),
+      ...(payload.adults !== undefined && { adults: Number(payload.adults || 1) }),
+      ...(payload.children !== undefined && { children: Number(payload.children || 0) }),
+      ...(payload.price_per_night !== undefined && {
+        price_per_night: payload.price_per_night === '' || payload.price_per_night == null ? null : Number(payload.price_per_night)
+      }),
+      ...(payload.commission_name !== undefined && { commission_name: payload.commission_name || null }),
+      ...(payload.commission_percentage !== undefined && {
+        commission_percentage: payload.commission_percentage === '' || payload.commission_percentage == null ? 0 : Number(payload.commission_percentage)
+      }),
+      ...(payload.discount_percentage !== undefined && {
+        discount_percentage: payload.discount_percentage === '' || payload.discount_percentage == null ? 0 : Number(payload.discount_percentage)
+      }),
+      ...(payload.quote_expires_at !== undefined && {
+        quote_expires_at: payload.quote_expires_at ? new Date(payload.quote_expires_at).toISOString() : null
+      }),
+      ...(payload.source !== undefined && { source: payload.source || null }),
+      ...(payload.source_type_id !== undefined && { source_type_id: payload.source_type_id || null }),
+      ...(payload.source_detail_id !== undefined && { source_detail_id: payload.source_detail_id || null }),
+      ...(payload.reference_code !== undefined && { reference_code: payload.reference_code || null }),
+      ...(payload.notes !== undefined && { notes: payload.notes || null }),
+      ...(statusOverride !== undefined && { status: statusOverride }),
+      ...(payload.reservation_id !== undefined && { reservation_id: payload.reservation_id || null })
     }
 
     const { data, error: supaError } = await supabase
@@ -95,13 +220,54 @@ export const useInquiriesStore = defineStore('inquiries', () => {
       .update(updatePayload)
       .eq('account_id', accountId)
       .eq('id', id)
-      .select('*, source_type_info:source_types!inquiries_source_type_id_fkey(id, name, label_es, is_active), source_detail_info:source_details!inquiries_source_detail_id_fkey(id, source_type_id, name, label_es, suggested_commission_percentage, suggested_discount_percentage, is_active)')
+      .select(INQUIRY_SELECT)
       .single()
 
     if (supaError) throw supaError
 
+    // Sync unit associations if provided
+    if (Array.isArray(payload.unit_ids)) {
+      await supabase.from('inquiry_units').delete().eq('account_id', accountId).eq('inquiry_id', id)
+      if (payload.unit_ids.length > 0) {
+        await supabase.from('inquiry_units').insert(
+          payload.unit_ids.map(uid => ({ account_id: accountId, inquiry_id: id, unit_id: uid }))
+        )
+      }
+    }
+
+    if (statusOverride && statusOverride !== existing.status) {
+      if (statusOverride === 'cotizada' && existing.status === 'nueva') {
+        await insertStatusLog({
+          accountId,
+          inquiryId: id,
+          fromStatus: 'nueva',
+          toStatus: 'contactada',
+          note: 'Paso automático previo a cotizada.'
+        })
+        await insertStatusLog({
+          accountId,
+          inquiryId: id,
+          fromStatus: 'contactada',
+          toStatus: 'cotizada',
+          note: payload.quote_expires_at ? 'Cotización generada con fecha de vencimiento.' : 'Cambio de estado.'
+        })
+      } else {
+        await insertStatusLog({
+          accountId,
+          inquiryId: id,
+          fromStatus: existing.status,
+          toStatus: statusOverride,
+          note: 'Cambio manual de estado.'
+        })
+      }
+    }
+
     await fetchInquiries()
-    return data
+    return {
+      ...data,
+      source_display_label: getSourceLabel(data),
+      unit_ids: (data.inquiry_units || []).map(u => u.unit_id)
+    }
   }
 
   const updateInquiryStatus = async (id, status) => {
@@ -125,7 +291,7 @@ export const useInquiriesStore = defineStore('inquiries', () => {
     const accountId = accountStore.getRequiredAccountId()
     const { data, error: supaError } = await supabase
       .from('inquiries')
-      .select('*, source_type_info:source_types!inquiries_source_type_id_fkey(id, name, label_es, is_active), source_detail_info:source_details!inquiries_source_detail_id_fkey(id, source_type_id, name, label_es, suggested_commission_percentage, suggested_discount_percentage, is_active)')
+      .select(INQUIRY_SELECT)
       .eq('account_id', accountId)
       .eq('id', id)
       .single()
@@ -133,7 +299,8 @@ export const useInquiriesStore = defineStore('inquiries', () => {
     if (supaError) throw supaError
     return {
       ...data,
-      source_display_label: getSourceLabel(data)
+      source_display_label: getSourceLabel(data),
+      unit_ids: (data.inquiry_units || []).map(u => u.unit_id)
     }
   }
 

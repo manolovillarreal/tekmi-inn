@@ -3,7 +3,12 @@
     <div class="flex items-center justify-between">
       <router-link to="/consultas" class="text-sm font-medium text-gray-500 hover:text-gray-900">← Volver a Consultas</router-link>
       <div class="flex items-center gap-2">
-        <button v-if="can('inquiries', 'convert')" class="btn-secondary text-sm" @click="goToPrefilledReservation" :disabled="!inquiry">Convertir a reserva</button>
+        <button
+          v-if="can('inquiries', 'convert') && inquiry && inquiry.status !== 'convertida' && inquiry.status !== 'perdida'"
+          class="btn-primary text-sm"
+          @click="openConversionModal"
+          :disabled="!inquiry"
+        >Convertir en reserva</button>
         <button v-if="can('inquiries', 'edit')" class="btn-secondary text-sm" @click="openEditModal" :disabled="!inquiry">Editar</button>
       </div>
     </div>
@@ -23,19 +28,35 @@
       <div class="space-y-6 lg:col-span-2">
         <div class="card">
           <div class="mb-4 flex items-center justify-between">
-            <h1 class="text-2xl font-semibold text-gray-900">{{ inquiry.guest_name || 'Sin nombre' }}</h1>
-            <span class="rounded-full border px-3 py-1 text-xs font-medium" :class="statusClasses(inquiry.status)">{{ statusLabel(inquiry.status) }}</span>
+            <div>
+              <p class="mb-0.5 font-mono text-xs text-gray-400">{{ inquiry.inquiry_number || '' }}</p>
+              <h1 class="text-2xl font-semibold text-gray-900">{{ inquiry.guest_name || 'Sin nombre' }}</h1>
+            </div>
+            <span
+              class="rounded-full border px-3 py-1 text-xs font-medium"
+              :style="getInquiryStatusStyle(inquiry.status)"
+            >{{ getInquiryStatusLabel(inquiry.status) }}</span>
           </div>
 
           <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-            <p><span class="font-medium text-gray-700">Telefono:</span> {{ inquiry.guest_phone || '-' }}</p>
+            <p><span class="font-medium text-gray-700">Teléfono:</span> {{ inquiry.guest_phone || '-' }}</p>
             <p><span class="font-medium text-gray-700">Origen:</span> {{ inquiry.source_display_label || inquiry.source || '-' }}</p>
             <p><span class="font-medium text-gray-700">Check-in:</span> {{ formatDate(inquiry.check_in) }}</p>
             <p><span class="font-medium text-gray-700">Check-out:</span> {{ formatDate(inquiry.check_out) }}</p>
-            <p><span class="font-medium text-gray-700">Personas:</span> {{ inquiry.guests_count || '-' }}</p>
+            <p><span class="font-medium text-gray-700">Adultos:</span> {{ inquiry.adults || '-' }}</p>
+            <p><span class="font-medium text-gray-700">Niños:</span> {{ inquiry.children ?? '-' }}</p>
             <p><span class="font-medium text-gray-700">Creada:</span> {{ formatDateTime(inquiry.created_at) }}</p>
             <p v-if="inquiry.price_per_night != null"><span class="font-medium text-gray-700">Precio por noche:</span> ${{ formatCurrency(inquiry.price_per_night) }}</p>
             <p v-if="inquiry.price_per_night != null"><span class="font-medium text-gray-700">Total cliente:</span> ${{ formatCurrency(inquiryCustomerTotal) }}</p>
+            <p v-if="inquiry.quote_expires_at">
+              <span class="font-medium text-gray-700">Cotización válida hasta:</span>
+              <span :class="isQuoteExpired ? 'text-orange-600 font-medium' : ''"> {{ formatDate(inquiry.quote_expires_at) }}</span>
+              <span v-if="isQuoteExpired" class="ml-1 text-xs text-orange-500">⚠ Vencida</span>
+            </p>
+            <p v-if="inquiry.status === 'convertida' && inquiry.reservation_info">
+              <span class="font-medium text-gray-700">Reserva creada:</span>
+              <router-link :to="`/reservas/${inquiry.reservation_info.id}`" class="ml-1 font-mono text-sm text-primary hover:underline">{{ inquiry.reservation_info.reservation_number }}</router-link>
+            </p>
           </div>
 
           <div class="mt-4 rounded-md bg-gray-50 p-3 text-sm text-gray-700">
@@ -47,11 +68,19 @@
 
       <div class="space-y-6">
         <div class="card">
-          <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-900">Gestion de estado</h2>
+          <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-900">Gestión de estado</h2>
           <div class="space-y-2" v-if="can('inquiries', 'edit')">
-            <button v-for="status in inquiryStatuses" :key="status" class="w-full rounded-md border px-3 py-2 text-left text-sm" :class="inquiry.status === status ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'" @click="changeStatus(status)">
-              {{ statusLabel(status) }}
+            <button
+              v-for="status in availableTransitions"
+              :key="status"
+              class="w-full rounded-md border px-3 py-2 text-left text-sm border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+              @click="changeStatus(status)"
+            >
+              {{ getInquiryStatusLabel(status) }}
             </button>
+            <p v-if="availableTransitions.length === 0" class="text-sm text-gray-500 italic">
+              {{ inquiry.status === 'convertida' || inquiry.status === 'perdida' ? 'Estado final — no se puede cambiar.' : 'Sin transiciones disponibles.' }}
+            </p>
           </div>
           <p v-else class="text-sm text-gray-500">No tienes permisos para editar estado.</p>
         </div>
@@ -91,12 +120,32 @@
             <input v-model="editForm.check_out" type="date" class="mt-1 block w-full rounded-md border-gray-300">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700">Personas</label>
-            <input v-model="editForm.guests_count" type="number" min="1" class="mt-1 block w-full rounded-md border-gray-300">
+            <label class="block text-sm font-medium text-gray-700">Adultos</label>
+            <input v-model="editForm.adults" type="number" min="1" class="mt-1 block w-full rounded-md border-gray-300">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Niños</label>
+            <input v-model="editForm.children" type="number" min="0" class="mt-1 block w-full rounded-md border-gray-300">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700">Precio por noche</label>
             <input v-model="editForm.price_per_night" type="number" min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Cotización válida hasta</label>
+            <input v-model="editForm.quote_expires_at" type="date" class="mt-1 block w-full rounded-md border-gray-300">
+          </div>
+        </div>
+
+        <!-- Unidades -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">¿Qué unidades te interesan? <span class="text-gray-400 font-normal">(opcional)</span></label>
+          <div class="max-h-40 space-y-1 overflow-y-auto rounded-md border border-gray-200 bg-gray-50 p-3">
+            <p v-if="units.length === 0" class="text-sm text-gray-500">No hay unidades activas.</p>
+            <label v-for="unit in units" :key="unit.id" class="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-white">
+              <input type="checkbox" :value="unit.id" v-model="editForm.unit_ids" class="rounded border-gray-300">
+              <span>{{ unit.name }}<span v-if="venueNameById(unit.venue_id)" class="text-gray-400"> · {{ venueNameById(unit.venue_id) }}</span></span>
+            </label>
           </div>
         </div>
 
@@ -216,6 +265,14 @@
       @close="closeDeleteModal"
       @confirm="confirmDelete"
     />
+
+    <InquiryConversionModal
+      v-if="inquiry"
+      :isOpen="showConversionModal"
+      :inquiry="inquiry"
+      @close="showConversionModal = false"
+      @converted="onReservationCreated"
+    />
   </div>
 </template>
 
@@ -226,9 +283,15 @@ import { supabase } from '../services/supabase'
 import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
 import SourceSelector from '../components/sources/SourceSelector.vue'
+import InquiryConversionModal from '../components/inquiries/InquiryConversionModal.vue'
 import { useInquiriesStore } from '../stores/inquiries'
 import { usePermissions } from '../composables/usePermissions'
 import { useAccountStore } from '../stores/account'
+import {
+  getInquiryStatusLabel,
+  getInquiryStatusStyle,
+  getAvailableInquiryTransitions
+} from '../utils/inquiryUtils'
 
 const route = useRoute()
 const router = useRouter()
@@ -241,7 +304,14 @@ const inquiry = ref(null)
 const feedbackMessage = ref('')
 const feedbackType = ref('success')
 
-const inquiryStatuses = ['new', 'contacted', 'quoted', 'converted', 'lost']
+const availableTransitions = computed(() => getAvailableInquiryTransitions(inquiry.value?.status))
+const isQuoteExpired = computed(() => {
+  if (inquiry.value?.status !== 'cotizada') return false
+  if (!inquiry.value?.quote_expires_at) return false
+  return new Date(inquiry.value.quote_expires_at) < new Date()
+})
+
+const showConversionModal = ref(false)
 
 const showEditModal = ref(false)
 const editForm = ref({})
@@ -306,26 +376,6 @@ onMounted(async () => {
   await Promise.all([loadInquiry(), fetchMasterData()])
 })
 
-const statusLabel = (status) => {
-  return {
-    new: 'Nueva',
-    contacted: 'Contactada',
-    quoted: 'Cotizada',
-    converted: 'Convertida',
-    lost: 'Perdida'
-  }[status] || status
-}
-
-const statusClasses = (status) => {
-  return {
-    new: 'border-slate-200 bg-slate-100 text-slate-700',
-    contacted: 'border-blue-200 bg-blue-50 text-blue-700',
-    quoted: 'border-amber-200 bg-amber-50 text-amber-700',
-    converted: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    lost: 'border-red-200 bg-red-50 text-red-700'
-  }[status] || 'border-slate-200 bg-slate-100 text-slate-700'
-}
-
 const formatDate = (value) => {
   if (!value) return '-'
   return new Date(value).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
@@ -366,9 +416,7 @@ const fetchMasterData = async () => {
   units.value = unitsData || []
 }
 
-const venueNameById = (venueId) => {
-  return venues.value.find(venue => venue.id === venueId)?.name || 'Sin sede'
-}
+const venueNameById = (venueId) => venues.value.find(v => v.id === venueId)?.name || ''
 
 const changeStatus = async (status) => {
   if (!inquiry.value || inquiry.value.status === status) return
@@ -390,8 +438,11 @@ const openEditModal = () => {
     guest_phone: inquiry.value?.guest_phone || '',
     check_in: inquiry.value?.check_in || '',
     check_out: inquiry.value?.check_out || '',
-    guests_count: inquiry.value?.guests_count || 1,
+    adults: inquiry.value?.adults ?? 1,
+    children: inquiry.value?.children ?? 0,
+    unit_ids: [...(inquiry.value?.unit_ids || [])],
     price_per_night: inquiry.value?.price_per_night ?? '',
+    quote_expires_at: inquiry.value?.quote_expires_at ? inquiry.value.quote_expires_at.slice(0, 10) : '',
     commission_name: inquiry.value?.commission_name || '',
     commission_percentage: inquiry.value?.commission_percentage ?? '',
     discount_percentage: inquiry.value?.discount_percentage ?? '',
@@ -527,15 +578,18 @@ const confirmDelete = async () => {
   }
 }
 
-const goToPrefilledReservation = async () => {
-  if (!inquiry.value) return
+const openConversionModal = () => {
+  showConversionModal.value = true
+}
 
+const onReservationCreated = async (reservationId) => {
+  showConversionModal.value = false
+  // Refresh inquiry to show updated status and reservation link
   try {
-    await store.updateInquiryStatus(inquiry.value.id, 'quoted')
-    router.push({ path: '/reservar', query: { inquiryId: inquiry.value.id } })
+    inquiry.value = await store.getInquiryById(route.params.id)
   } catch (err) {
-    feedbackType.value = 'error'
-    feedbackMessage.value = err.message
+    // swallow — navigation handled in modal
   }
 }
+
 </script>

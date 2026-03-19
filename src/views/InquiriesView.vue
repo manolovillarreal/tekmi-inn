@@ -13,18 +13,19 @@
       <input
         v-model="filters.search"
         type="text"
-        placeholder="Buscar por nombre o teléfono..."
+        placeholder="Buscar por nombre, teléfono o número..."
         class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm md:w-72"
       >
 
-      <select v-model="filters.status" class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm md:w-56">
-        <option value="">Todos los estados</option>
-        <option value="new">Nueva</option>
-        <option value="contacted">Contactada</option>
-        <option value="quoted">Cotizada</option>
-        <option value="converted">Convertida</option>
-        <option value="lost">Perdida</option>
+      <select v-model="filters.status" multiple class="rounded-md border border-gray-300 px-3 py-2 text-sm min-w-44">
+        <option v-for="(label, key) in INQUIRY_STATUS_LABELS" :key="key" :value="key">{{ label }}</option>
       </select>
+
+      <div class="flex items-center gap-2">
+        <input v-model="filters.dateFrom" type="date" class="rounded-md border border-gray-300 px-3 py-2 text-sm">
+        <span class="text-gray-400 text-xs">–</span>
+        <input v-model="filters.dateTo" type="date" class="rounded-md border border-gray-300 px-3 py-2 text-sm">
+      </div>
 
       <button v-if="hasFilters" class="text-sm font-medium text-gray-500 underline" @click="clearFilters">Limpiar filtros</button>
     </div>
@@ -34,41 +35,52 @@
         <table class="w-full border-collapse text-left text-sm">
           <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
             <tr>
-              <th class="px-6 py-4">Huesped</th>
-              <th class="px-6 py-4">Fechas</th>
-              <th class="px-6 py-4">Noches</th>
-              <th class="px-6 py-4">Personas</th>
-              <th class="px-6 py-4">Origen</th>
-              <th class="px-6 py-4">Estado</th>
-              <th class="px-6 py-4 text-right">Acciones</th>
+              <th class="px-4 py-4">Número</th>
+              <th class="px-4 py-4">Huésped</th>
+              <th class="px-4 py-4">Check-in</th>
+              <th class="px-4 py-4">Check-out</th>
+              <th class="px-4 py-4">Noches</th>
+              <th class="px-4 py-4">Personas</th>
+              <th class="px-4 py-4">Estado</th>
+              <th class="px-4 py-4">Origen</th>
+              <th class="px-4 py-4 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
             <tr v-if="store.loading">
-              <td colspan="7" class="px-6 py-10 text-center text-gray-400">Cargando consultas...</td>
+              <td colspan="9" class="px-6 py-10 text-center text-gray-400">Cargando consultas...</td>
             </tr>
             <tr v-else-if="filteredInquiries.length === 0">
-              <td colspan="7" class="px-6 py-10 text-center text-gray-500 italic">No hay consultas para mostrar.</td>
+              <td colspan="9" class="px-6 py-10 text-center text-gray-500 italic">No hay consultas para mostrar.</td>
             </tr>
             <tr v-for="inquiry in filteredInquiries" :key="inquiry.id" class="hover:bg-gray-50">
-              <td class="px-6 py-4">
+              <td class="px-4 py-4">
+                <span class="font-mono text-xs text-gray-500">{{ inquiry.inquiry_number || '-' }}</span>
+              </td>
+              <td class="px-4 py-4">
                 <p class="font-medium text-gray-900">{{ inquiry.guest_name || 'Sin nombre' }}</p>
-                <p class="text-xs text-gray-500">{{ inquiry.guest_phone || 'Sin telefono' }}</p>
+                <p class="text-xs text-gray-500">{{ inquiry.guest_phone || 'Sin teléfono' }}</p>
               </td>
-              <td class="px-6 py-4 text-gray-700">
-                <span class="block">{{ formatDate(inquiry.check_in) }}</span>
-                <span class="block text-xs text-gray-500">hasta {{ formatDate(inquiry.check_out) }}</span>
+              <td class="px-4 py-4 text-gray-700">{{ formatDate(inquiry.check_in) }}</td>
+              <td class="px-4 py-4 text-gray-700">{{ formatDate(inquiry.check_out) }}</td>
+              <td class="px-4 py-4 text-gray-700">{{ getNights(inquiry.check_in, inquiry.check_out) }}</td>
+              <td class="px-4 py-4 text-gray-700">{{ getPersonas(inquiry) }}</td>
+              <td class="px-4 py-4">
+                <div class="flex flex-wrap items-center gap-1">
+                  <span
+                    class="rounded-full border px-2 py-0.5 text-xs font-medium"
+                    :style="getInquiryStatusStyle(inquiry.status)"
+                  >{{ getInquiryStatusLabel(inquiry.status) }}</span>
+                  <span
+                    v-if="isQuoteExpired(inquiry)"
+                    title="Cotización vencida"
+                    class="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700"
+                  >⚠ Venc.</span>
+                </div>
               </td>
-              <td class="px-6 py-4 text-gray-700">{{ getNights(inquiry.check_in, inquiry.check_out) }}</td>
-              <td class="px-6 py-4 text-gray-700">{{ inquiry.guests_count || '-' }}</td>
-              <td class="px-6 py-4 text-gray-700">{{ inquiry.source_display_label || inquiry.source || '-' }}</td>
-              <td class="px-6 py-4">
-                <span class="rounded-full border px-2 py-1 text-xs font-medium" :class="statusClasses(inquiry.status)">
-                  {{ statusLabel(inquiry.status) }}
-                </span>
-              </td>
-              <td class="px-6 py-4 text-right">
-                <router-link :to="`/consultas/${inquiry.id}`" class="text-sm font-medium text-indigo-600 hover:text-indigo-800">Ver detalle</router-link>
+              <td class="px-4 py-4 text-gray-700">{{ inquiry.source_display_label || inquiry.source || '-' }}</td>
+              <td class="px-4 py-4 text-right">
+                <router-link :to="`/consultas/${inquiry.id}`" class="text-sm font-medium text-primary hover:text-primary-dark">Ver detalle</router-link>
               </td>
             </tr>
           </tbody>
@@ -80,11 +92,11 @@
       <form class="space-y-4" @submit.prevent="submitCreate">
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label class="block text-sm font-medium text-gray-700">Nombre</label>
-            <input v-model="createForm.guest_name" type="text" class="mt-1 block w-full rounded-md border-gray-300">
+            <label class="block text-sm font-medium text-gray-700">Nombre <span class="text-red-500">*</span></label>
+            <input v-model="createForm.guest_name" type="text" required class="mt-1 block w-full rounded-md border-gray-300">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700">Telefono</label>
+            <label class="block text-sm font-medium text-gray-700">Teléfono</label>
             <input v-model="createForm.guest_phone" type="text" class="mt-1 block w-full rounded-md border-gray-300">
           </div>
           <div>
@@ -96,12 +108,12 @@
             <input v-model="createForm.check_out" type="date" class="mt-1 block w-full rounded-md border-gray-300">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700">Personas</label>
-            <input v-model="createForm.guests_count" type="number" min="1" class="mt-1 block w-full rounded-md border-gray-300">
+            <label class="block text-sm font-medium text-gray-700">Adultos</label>
+            <input v-model="createForm.adults" type="number" min="1" class="mt-1 block w-full rounded-md border-gray-300">
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700">Precio por noche</label>
-            <input v-model="createForm.price_per_night" type="number" min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300">
+            <label class="block text-sm font-medium text-gray-700">Niños</label>
+            <input v-model="createForm.children" type="number" min="0" class="mt-1 block w-full rounded-md border-gray-300">
           </div>
         </div>
 
@@ -110,6 +122,30 @@
           @update:modelValue="updateCreateSourceSelection"
           @suggestions="applyCreateSourceSuggestions"
         />
+
+        <!-- Unidades de interés -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">¿Qué unidades te interesan? <span class="text-gray-400 font-normal">(opcional)</span></label>
+          <div class="max-h-40 space-y-1 overflow-y-auto rounded-md border border-gray-200 bg-gray-50 p-3">
+            <p v-if="units.length === 0" class="text-sm text-gray-500">No hay unidades activas.</p>
+            <label v-for="unit in units" :key="unit.id" class="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-white">
+              <input type="checkbox" :value="unit.id" v-model="createForm.unit_ids" class="rounded border-gray-300">
+              <span>{{ unit.name }}<span v-if="venueNameById(unit.venue_id)" class="text-gray-400"> · {{ venueNameById(unit.venue_id) }}</span></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Precio y vencimiento -->
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Precio por noche</label>
+            <input v-model="createForm.price_per_night" type="number" min="0" step="0.01" class="mt-1 block w-full rounded-md border-gray-300">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Cotización válida hasta</label>
+            <input v-model="createForm.quote_expires_at" type="date" class="mt-1 block w-full rounded-md border-gray-300">
+          </div>
+        </div>
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
@@ -157,38 +193,68 @@ import BaseModal from '../components/ui/BaseModal.vue'
 import SourceSelector from '../components/sources/SourceSelector.vue'
 import { useInquiriesStore } from '../stores/inquiries'
 import { usePermissions } from '../composables/usePermissions'
+import { useAccountStore } from '../stores/account'
+import { supabase } from '../services/supabase'
+import {
+  INQUIRY_STATUS_LABELS,
+  getInquiryStatusLabel,
+  getInquiryStatusStyle
+} from '../utils/inquiryUtils'
 
 const store = useInquiriesStore()
 const { can } = usePermissions()
+const accountStore = useAccountStore()
 
-const filters = ref({ search: '', status: '' })
+const filters = ref({ search: '', status: [], dateFrom: '', dateTo: '' })
 const feedbackMessage = ref('')
 const feedbackType = ref('success')
 
 const showCreateModal = ref(false)
 const creating = ref(false)
 const createError = ref('')
-const createForm = ref({
-  guest_name: '',
-  guest_phone: '',
-  check_in: '',
-  check_out: '',
-  guests_count: 1,
-  price_per_night: '',
-  commission_name: '',
-  commission_percentage: '',
-  discount_percentage: '',
-  source: 'whatsapp',
-  source_type_id: '',
-  source_detail_id: '',
-  notes: ''
-})
+
+const venues = ref([])
+const units = ref([])
+
+const createForm = ref(buildEmptyForm())
+
+function buildEmptyForm() {
+  return {
+    guest_name: '',
+    guest_phone: '',
+    check_in: '',
+    check_out: '',
+    adults: 1,
+    children: 0,
+    unit_ids: [],
+    price_per_night: '',
+    quote_expires_at: '',
+    commission_name: '',
+    commission_percentage: '',
+    discount_percentage: '',
+    source: null,
+    source_type_id: '',
+    source_detail_id: '',
+    notes: ''
+  }
+}
 
 onMounted(async () => {
-  await store.fetchInquiries()
+  const accountId = accountStore.getRequiredAccountId()
+  const [, { data: venuesData }, { data: unitsData }] = await Promise.all([
+    store.fetchInquiries(),
+    supabase.from('venues').select('id, name').eq('account_id', accountId).order('name'),
+    supabase.from('units').select('id, name, venue_id').eq('account_id', accountId).eq('is_active', true).order('name')
+  ])
+  venues.value = venuesData || []
+  units.value = unitsData || []
 })
 
-const hasFilters = computed(() => !!filters.value.search || !!filters.value.status)
+const venueNameById = (venueId) => venues.value.find(v => v.id === venueId)?.name || ''
+
+const hasFilters = computed(() =>
+  !!filters.value.search || filters.value.status.length > 0 || !!filters.value.dateFrom || !!filters.value.dateTo
+)
 const createNights = computed(() => getNumericNights(createForm.value.check_in, createForm.value.check_out))
 const createSubtotal = computed(() => Number(createForm.value.price_per_night || 0) * createNights.value)
 const createDiscountAmount = computed(() => createSubtotal.value * Number(createForm.value.discount_percentage || 0) / 100)
@@ -201,11 +267,14 @@ const showCreateCalculationPanel = computed(() => {
 
 const filteredInquiries = computed(() => {
   return store.inquiries.filter(inquiry => {
-    if (filters.value.status && inquiry.status !== filters.value.status) return false
+    if (filters.value.status.length > 0 && !filters.value.status.includes(inquiry.status)) return false
+
+    if (filters.value.dateFrom && inquiry.check_in && inquiry.check_in < filters.value.dateFrom) return false
+    if (filters.value.dateTo && inquiry.check_in && inquiry.check_in > filters.value.dateTo) return false
 
     if (filters.value.search) {
       const q = filters.value.search.toLowerCase()
-      const haystack = `${inquiry.guest_name || ''} ${inquiry.guest_phone || ''}`.toLowerCase()
+      const haystack = `${inquiry.guest_name || ''} ${inquiry.guest_phone || ''} ${inquiry.inquiry_number || ''}`.toLowerCase()
       if (!haystack.includes(q)) return false
     }
 
@@ -214,27 +283,21 @@ const filteredInquiries = computed(() => {
 })
 
 const clearFilters = () => {
-  filters.value = { search: '', status: '' }
+  filters.value = { search: '', status: [], dateFrom: '', dateTo: '' }
 }
 
-const statusLabel = (status) => {
-  return {
-    new: 'Nueva',
-    contacted: 'Contactada',
-    quoted: 'Cotizada',
-    converted: 'Convertida',
-    lost: 'Perdida'
-  }[status] || status
+const isQuoteExpired = (inquiry) => {
+  if (inquiry.status !== 'cotizada') return false
+  if (!inquiry.quote_expires_at) return false
+  return new Date(inquiry.quote_expires_at) < new Date()
 }
 
-const statusClasses = (status) => {
-  return {
-    new: 'border-slate-200 bg-slate-100 text-slate-700',
-    contacted: 'border-blue-200 bg-blue-50 text-blue-700',
-    quoted: 'border-amber-200 bg-amber-50 text-amber-700',
-    converted: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    lost: 'border-red-200 bg-red-50 text-red-700'
-  }[status] || 'border-slate-200 bg-slate-100 text-slate-700'
+const getPersonas = (inquiry) => {
+  const adults = Number(inquiry.adults || 0)
+  const children = Number(inquiry.children || 0)
+  const total = adults + children
+  if (total === 0) return inquiry.guests_count || '-'
+  return total
 }
 
 const formatDate = (value) => {
@@ -287,21 +350,7 @@ const applyCreateSourceSuggestions = (payload) => {
 }
 
 const openCreateModal = () => {
-  createForm.value = {
-    guest_name: '',
-    guest_phone: '',
-    check_in: '',
-    check_out: '',
-    guests_count: 1,
-    price_per_night: '',
-    commission_name: '',
-    commission_percentage: '',
-    discount_percentage: '',
-    source: 'whatsapp',
-    source_type_id: '',
-    source_detail_id: '',
-    notes: ''
-  }
+  createForm.value = buildEmptyForm()
   createError.value = ''
   showCreateModal.value = true
 }
@@ -312,6 +361,10 @@ const closeCreateModal = () => {
 }
 
 const submitCreate = async () => {
+  if (!createForm.value.guest_name?.trim()) {
+    createError.value = 'El nombre es obligatorio.'
+    return
+  }
   creating.value = true
   createError.value = ''
 
@@ -320,6 +373,7 @@ const submitCreate = async () => {
     showCreateModal.value = false
     feedbackType.value = 'success'
     feedbackMessage.value = 'Consulta creada correctamente.'
+    setTimeout(() => { feedbackMessage.value = '' }, 4000)
   } catch (err) {
     createError.value = err.message
   } finally {

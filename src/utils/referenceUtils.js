@@ -47,3 +47,26 @@ export const generateReferenceCode = (prefix) => {
 }
 
 export { ALLOWED_ALPHABET }
+
+// --- Inquiry numbers ---
+
+/**
+ * Generates the next inquiry number for an account in the given month.
+ *
+ * @param {{ date?: Date, previousInquiryNumber?: string|null }} options
+ * @returns {string}  e.g. "INQ-202506-0001"
+ */
+export const generateInquiryNumber = ({ date = new Date(), previousInquiryNumber = null } = {}) => {
+  const yearMonth = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}`
+
+  let nextSequence = 1
+  if (previousInquiryNumber) {
+    const parts = previousInquiryNumber.split('-')
+    const currentSeq = Number(parts[2] || '0')
+    if (!Number.isNaN(currentSeq)) {
+      nextSequence = currentSeq + 1
+    }
+  }
+
+  return `INQ-${yearMonth}-${String(nextSequence).padStart(4, '0')}`
+}

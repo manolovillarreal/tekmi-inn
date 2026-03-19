@@ -12,6 +12,7 @@ import {
 } from '../utils/reservationUtils'
 import { getSourceLabel } from '../utils/sourceUtils'
 import { getNextReservationNumber, syncReservationOccupancy } from '../services/reservationService'
+import { generateAccountPrefix, generateReferenceCode } from '../utils/referenceUtils'
 
 const normalizeDate = (value) => {
   if (!value) return null
@@ -272,6 +273,7 @@ export const useReservationsStore = defineStore('reservations', () => {
       }
 
       const reservationNumber = await getNextReservationNumber()
+      const referenceCode = reservationData.reference_code || generateReferenceCode(generateAccountPrefix(accountId))
       const adults = Number(reservationData.adults || 1)
       const children = Number(reservationData.children || 0)
       const nights = getDaysDifference(normalizedCheckIn, normalizedCheckOut)
@@ -299,7 +301,8 @@ export const useReservationsStore = defineStore('reservations', () => {
         source: reservationData.source || null,
         source_type_id: reservationData.source_type_id || null,
         source_detail_id: reservationData.source_detail_id || null,
-        payment_deadline: null,
+        payment_deadline: normalizeDate(reservationData.payment_deadline),
+        reference_code: referenceCode,
         notes: reservationData.notes || null
       }
 
@@ -334,7 +337,9 @@ export const useReservationsStore = defineStore('reservations', () => {
         await supabase
           .from('inquiries')
           .update({
-            status: 'converted',
+            status: 'convertida',
+            reservation_id: data.id,
+            reference_code: referenceCode,
             notes: reservationData.inquiry_conversion_note || 'Convertida manualmente a reserva.'
           })
           .eq('account_id', accountId)
