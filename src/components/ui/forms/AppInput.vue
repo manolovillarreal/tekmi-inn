@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="space-y-1">
     <label v-if="label" :for="inputId" class="block text-sm font-medium transition-colors" :class="labelClass">
       {{ label }}
@@ -27,7 +27,7 @@
         :disabled="disabled || loading"
         :readonly="readonly"
         :maxlength="maxLength || null"
-        class="block w-full rounded-md border bg-[#FFFFFF] text-sm text-[#111827] placeholder:text-[#9CA3AF] transition outline-none"
+        class="block min-h-[44px] w-full rounded-md border bg-[#FFFFFF] py-2.5 text-sm text-[#111827] placeholder:text-[#9CA3AF] transition outline-none"
         :class="inputClass"
         @input="onInput"
         @focus="onFocus"
@@ -81,6 +81,7 @@ const props = defineProps({
   label: { type: String, default: '' },
   placeholder: { type: String, default: '' },
   type: { type: String, default: 'text' },
+  inputmode: { type: String, default: '' },
   required: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
@@ -171,3 +172,5 @@ const onBlur = (event) => {
   emit('blur', event)
 }
 </script>
+
+

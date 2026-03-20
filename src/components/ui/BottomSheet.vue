@@ -1,11 +1,11 @@
-<template>
+﻿<template>
   <Transition name="sheet-fade">
     <div v-if="modelValue" class="fixed inset-0 z-50" role="dialog" aria-modal="true">
       <div class="absolute inset-0 bg-black/40" @click="closeSheet"></div>
 
       <div
         v-if="isMobile"
-        class="absolute inset-x-0 bottom-0 rounded-t-2xl border border-[#E5E7EB] bg-white shadow-xl"
+        class="absolute inset-x-0 bottom-0 rounded-t-2xl border border-[#E5E7EB] bg-white"
         :class="mobileHeightClass"
         :style="{ paddingBottom: 'env(safe-area-inset-bottom)' }"
       >
@@ -18,7 +18,7 @@
             <slot />
           </div>
 
-          <div v-if="$slots.footer" class="mt-4 border-t border-[#E5E7EB] pt-3">
+          <div v-if="$slots.footer" class="safe-area-bottom mt-4 border-t border-[#E5E7EB] pt-3">
             <slot name="footer" />
           </div>
         </div>
@@ -34,7 +34,7 @@
               <slot />
             </div>
 
-            <div v-if="$slots.footer" class="mt-4 border-t border-[#E5E7EB] pt-3">
+            <div v-if="$slots.footer" class="safe-area-bottom mt-4 border-t border-[#E5E7EB] pt-3">
               <slot name="footer" />
             </div>
           </div>
@@ -66,7 +66,7 @@ const { isMobile } = useBreakpoint()
 const closeSheet = () => emit('update:modelValue', false)
 
 const mobileHeightClass = computed(() => {
-  if (props.height === 'full') return 'h-[90vh]'
+  if (props.height === 'full') return 'h-[100dvh]'
   if (props.height === 'half') return 'h-[50vh]'
   return 'max-h-[80vh]'
 })
@@ -88,3 +88,6 @@ const mobileContentClass = computed(() => {
   opacity: 0;
 }
 </style>
+
+
+

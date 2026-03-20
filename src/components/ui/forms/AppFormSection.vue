@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="space-y-4">
     <header class="flex items-start justify-between gap-3" :class="divider ? 'pb-3 border-b border-[#E5E7EB]' : ''">
       <div>
@@ -11,7 +11,7 @@
         <button
           v-if="collapsible"
           type="button"
-          class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[#E5E7EB] text-[#6B7280] hover:bg-[#F8F9FC]"
+          class="touch-target inline-flex h-11 w-11 items-center justify-center rounded-md border border-[#E5E7EB] text-[#6B7280] hover:bg-[#F8F9FC]"
           @click="toggle"
         >
           <svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4 transition-transform" :class="isOpen ? 'rotate-180' : ''" aria-hidden="true">
@@ -71,3 +71,4 @@ const toggle = () => {
   max-height: 800px;
 }
 </style>
+

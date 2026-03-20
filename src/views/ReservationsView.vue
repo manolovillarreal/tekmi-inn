@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="space-y-6">
     <!-- Header -->
     <div class="flex items-center justify-between">
@@ -11,7 +11,7 @@
 
     <div v-if="isMobile" class="card !py-3 flex items-center justify-between gap-3">
       <p class="text-sm text-gray-600">{{ store.totalCount }} resultados</p>
-      <button type="button" class="btn-secondary text-sm" @click="showFiltersSheet = true">
+      <button type="button" class="btn-secondary touch-target text-sm" @click="showFiltersSheet = true">
         Filtros
       </button>
     </div>
@@ -21,7 +21,7 @@
       
       <!-- Search Guest -->
       <div class="w-full md:w-64">
-        <label class="sr-only">Buscar huésped</label>
+        <label class="sr-only">Buscar huÃ©sped</label>
         <div class="relative">
           <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -29,7 +29,7 @@
           <input 
             v-model="filters.searchData" 
             type="text" 
-            placeholder="Buscar huésped, código o nro..." 
+            placeholder="Buscar huÃ©sped, cÃ³digo o nro..." 
             class="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-shadow"
           >
         </div>
@@ -40,7 +40,7 @@
         <select v-model="filters.status" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
           <option value="">Todos los estados</option>
           <option value="confirmed">Confirmada</option>
-          <option value="in_stay">En estadía</option>
+          <option value="in_stay">En estadÃ­a</option>
           <option value="completed">Finalizada</option>
           <option value="cancelled">Cancelada</option>
         </select>
@@ -122,17 +122,17 @@
           <input
             v-model="filters.searchData"
             type="text"
-            placeholder="Huésped, código o nro"
-            class="mt-1 block w-full rounded-md border-gray-300 text-sm"
+            placeholder="HuÃ©sped, cÃ³digo o nro"
+            class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm"
           >
         </div>
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Estado</label>
-          <select v-model="filters.status" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+          <select v-model="filters.status" class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm">
             <option value="">Todos los estados</option>
             <option value="confirmed">Confirmada</option>
-            <option value="in_stay">En estadía</option>
+            <option value="in_stay">En estadÃ­a</option>
             <option value="completed">Finalizada</option>
             <option value="cancelled">Cancelada</option>
           </select>
@@ -140,7 +140,7 @@
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Origen</label>
-          <select v-model="filters.sourceDetailId" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+          <select v-model="filters.sourceDetailId" class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm">
             <option value="">Cualquier origen</option>
             <option v-for="detail in sourceDetails" :key="detail.id" :value="detail.id">{{ detail.label_es }}</option>
           </select>
@@ -149,11 +149,11 @@
         <div class="grid grid-cols-1 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Ingreso desde</label>
-            <input v-model="filters.checkInFrom" type="date" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+            <input v-model="filters.checkInFrom" type="date" class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Ingreso hasta</label>
-            <input v-model="filters.checkInTo" type="date" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+            <input v-model="filters.checkInTo" type="date" class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm">
           </div>
         </div>
 
@@ -169,7 +169,7 @@
     <router-link
       v-if="can('reservations', 'create') && isMobile"
       to="/reservar"
-      class="fixed bottom-24 right-4 z-30 inline-flex h-12 items-center justify-center rounded-full bg-primary px-5 text-sm font-semibold text-white shadow-lg hover:bg-primary-dark"
+      class="fixed bottom-[calc(72px+env(safe-area-inset-bottom))] right-4 z-30 inline-flex h-12 items-center justify-center rounded-full bg-primary px-5 text-sm font-semibold text-white hover:bg-primary-dark"
     >
       + Reserva
     </router-link>
@@ -344,3 +344,10 @@ const handleStatusUpdated = async () => {
   closeStatusModal()
 }
 </script>
+
+
+
+
+
+
+

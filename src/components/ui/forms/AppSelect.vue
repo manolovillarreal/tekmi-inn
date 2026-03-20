@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="space-y-1">
     <label v-if="label" :for="selectId" class="block text-sm font-medium transition-colors" :class="labelClass">
       {{ label }}
@@ -10,7 +10,7 @@
         :value="selectValue"
         :multiple="multiple"
         :disabled="disabled || loading"
-        class="block w-full rounded-md border bg-[#FFFFFF] pl-3 text-sm text-[#111827] transition outline-none"
+        class="block min-h-[44px] w-full rounded-md border bg-[#FFFFFF] py-2 pl-3 text-sm text-[#111827] transition outline-none"
         :class="selectClass"
         @change="onChange"
         @focus="isFocused = true"
@@ -30,10 +30,10 @@
       <button
         v-if="showClear"
         type="button"
-        class="absolute inset-y-0 right-8 flex items-center pr-1 text-[#6B7280] hover:text-[#111827]"
+        class="touch-target absolute inset-y-0 right-8 flex items-center pr-1 text-[#6B7280] hover:text-[#111827]"
         @click="clearValue"
       >
-        <span class="text-base leading-none">×</span>
+        <span class="text-base leading-none">Ã—</span>
       </button>
 
       <div v-if="loading" class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
@@ -125,3 +125,5 @@ const onChange = (event) => {
   emit('change', next)
 }
 </script>
+
+

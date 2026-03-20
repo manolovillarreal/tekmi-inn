@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="space-y-1">
     <label v-if="label" class="block text-sm font-medium text-[#6B7280]">{{ label }}</label>
 
@@ -10,7 +10,7 @@
         :class="buttonClass"
         @click="decrease"
       >
-        −
+        âˆ’
       </button>
 
       <input
@@ -69,14 +69,14 @@ const isIncreaseDisabled = computed(() => {
 })
 
 const buttonClass = computed(() => {
-  const sizeClass = props.size === 'sm' ? 'h-8 w-8 text-sm' : 'h-10 w-10 text-base'
+  const sizeClass = props.size === 'sm' ? 'h-11 w-11 text-sm' : 'h-11 w-11 text-base'
   return [
     sizeClass,
     'hover:bg-[#F8F9FC] active:bg-[#EEF2FF] active:border-[#4C2FFF] disabled:cursor-not-allowed disabled:bg-[#F8F9FC] disabled:text-[#9CA3AF]'
   ]
 })
 
-const inputClass = computed(() => props.size === 'sm' ? 'h-8 w-12 text-sm' : 'h-10 w-14 text-base')
+const inputClass = computed(() => props.size === 'sm' ? 'h-11 w-12 text-sm' : 'h-11 w-14 text-base')
 
 const decrease = () => {
   if (isDecreaseDisabled.value) return
@@ -88,3 +88,5 @@ const increase = () => {
   emit('update:modelValue', safeValue.value + props.step)
 }
 </script>
+
+

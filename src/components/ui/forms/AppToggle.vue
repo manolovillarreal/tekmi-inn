@@ -1,11 +1,11 @@
-<template>
+﻿<template>
   <label class="inline-flex items-start gap-3" :class="disabled ? 'cursor-not-allowed' : 'cursor-pointer'">
     <button
       type="button"
       role="switch"
       :aria-checked="Boolean(modelValue)"
       :disabled="disabled || loading"
-      class="relative inline-flex items-center rounded-full transition duration-200"
+      class="touch-target relative inline-flex items-center rounded-full transition duration-200"
       :class="trackClass"
       @click="toggle"
     >
@@ -81,3 +81,4 @@ const toggle = () => {
   emit('update:modelValue', !props.modelValue)
 }
 </script>
+

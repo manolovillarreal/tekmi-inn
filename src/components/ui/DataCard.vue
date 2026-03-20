@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <article
     class="rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm"
     :class="onClick ? 'cursor-pointer transition hover:border-[#D1D5DB] hover:shadow' : ''"
@@ -10,7 +10,7 @@
         <p v-if="subtitle" class="mt-1 text-xs text-[#6B7280]">{{ subtitle }}</p>
       </div>
 
-      <span v-if="badge && badge.label" class="rounded-full px-2 py-0.5 text-[11px] font-medium" :class="badgeClass">
+      <span v-if="badge && badge.label" class="rounded-full px-2 py-0.5 text-xs font-medium" :class="badgeClass">
         {{ badge.label }}
       </span>
     </header>
@@ -83,3 +83,5 @@ const handleAction = (action, index) => {
   }
 }
 </script>
+
+

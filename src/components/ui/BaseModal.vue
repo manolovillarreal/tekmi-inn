@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center" :class="wrapperClass">
     <!-- Overlay -->
     <div 
@@ -28,11 +28,11 @@
         </button>
       </div>
       
-      <div class="px-4 py-5 overflow-y-auto flex-1 sm:px-6 sm:py-6">
+      <div class="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
         <slot></slot>
       </div>
       
-      <div v-if="$slots.footer" class="px-4 py-3 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 sm:px-6 sm:py-4">
+      <div v-if="$slots.footer" class="safe-area-bottom flex justify-end gap-3 border-t border-gray-200 bg-gray-50 px-4 py-3 sm:px-6 sm:py-4">
         <slot name="footer"></slot>
       </div>
     </div>
@@ -93,3 +93,5 @@ const close = () => {
   emit('close')
 }
 </script>
+
+

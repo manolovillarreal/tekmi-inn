@@ -1,10 +1,10 @@
-<template>
+﻿<template>
   <nav
     class="fixed inset-x-0 bottom-0 z-40 border-t border-[#E5E7EB] bg-white"
     :style="{ paddingBottom: 'env(safe-area-inset-bottom)' }"
     aria-label="Navegacion principal mobile"
   >
-    <div class="mx-auto flex h-[56px] max-w-screen-sm items-stretch justify-between px-2">
+    <div class="mx-auto flex min-h-[56px] max-w-screen-sm items-stretch justify-between px-2">
       <button
         v-for="item in navItems"
         :key="item.key"
@@ -109,3 +109,4 @@ const handlePress = async (item) => {
   await router.push(item.to)
 }
 </script>
+

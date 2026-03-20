@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="space-y-1">
     <label v-if="label" class="block text-sm font-medium transition-colors" :class="labelClass">
       {{ label }}
@@ -12,7 +12,7 @@
         :max="max || null"
         :placeholder="placeholder"
         :disabled="disabled"
-        class="block w-full rounded-md border bg-[#FFFFFF] px-3 pr-10 py-2 text-sm text-[#111827] transition outline-none"
+        class="block min-h-[44px] w-full rounded-md border bg-[#FFFFFF] px-3 pr-10 py-2 text-sm text-[#111827] transition outline-none"
         :class="inputClass"
         @input="onInput"
         @focus="isFocused = true"
@@ -68,3 +68,4 @@ const onInput = (event) => {
   emit('update:modelValue', value === '' ? null : value)
 }
 </script>
+

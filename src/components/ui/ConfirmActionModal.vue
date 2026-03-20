@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <BaseModal :isOpen="isOpen" :title="title" :size="size" @close="handleClose">
     <div class="space-y-4">
       <p class="text-sm text-gray-600 whitespace-pre-line">{{ message }}</p>
@@ -14,7 +14,7 @@
           :value="modelValue"
           type="text"
           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          placeholder="Escribe el texto de confirmación"
+          placeholder="Escribe el texto de confirmaciÃ³n"
           @input="$emit('update:modelValue', $event.target.value)"
         >
       </div>
@@ -25,12 +25,12 @@
     </div>
 
     <template #footer>
-      <button type="button" class="btn-secondary" :disabled="loading" @click="handleClose">
+      <button type="button" class="btn-secondary touch-target" :disabled="loading" @click="handleClose">
         Cancelar
       </button>
       <button
         type="button"
-        class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+        class="touch-target rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
         :disabled="isConfirmDisabled"
         @click="$emit('confirm')"
       >
@@ -69,3 +69,5 @@ const handleClose = () => {
   emit('close')
 }
 </script>
+
+

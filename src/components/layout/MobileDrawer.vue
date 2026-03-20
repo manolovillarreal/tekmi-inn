@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <Transition name="drawer-fade">
     <div v-if="modelValue" class="fixed inset-0 z-50" role="dialog" aria-modal="true">
       <div class="absolute inset-0 bg-black/40" @click="closeDrawer"></div>
@@ -50,7 +50,7 @@
 
           <footer class="border-t border-[#E5E7EB] px-4 py-3" :style="{ paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' }">
             <p class="truncate text-xs text-[#6B7280]">{{ userEmail || 'sin-email@tekmi.app' }}</p>
-            <button type="button" class="mt-2 text-sm font-medium text-[#111827] underline" @click="logout">
+            <button type="button" class="touch-target mt-2 text-sm font-medium text-[#111827] underline" @click="logout">
               Cerrar sesion
             </button>
           </footer>
@@ -172,3 +172,4 @@ watch(() => route.path, () => {
   transform: translateX(-100%);
 }
 </style>
+

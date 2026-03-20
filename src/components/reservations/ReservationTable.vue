@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="card overflow-hidden !p-0">
     <div v-if="isMobile" class="space-y-3 p-3">
       <div v-if="loading" class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
@@ -13,7 +13,7 @@
         v-else
         :key="res.id"
         :title="res.guest_display_name || 'Desconocido'"
-        :subtitle="`${res.reservation_number || '-'} · ${res.reference_code || '-'}`"
+        :subtitle="`${res.reservation_number || '-'} Â· ${res.reference_code || '-'}`"
         :badge="mobileBadge(res)"
         :meta="mobileMeta(res)"
         :actions="mobileActions(res)"
@@ -26,19 +26,19 @@
         <thead class="bg-gray-50 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
           <tr>
             <th class="px-6 py-4">Nro</th>
-            <th class="px-6 py-4">Código</th>
-            <th class="px-6 py-4">Huésped</th>
+            <th class="px-6 py-4">CÃ³digo</th>
+            <th class="px-6 py-4">HuÃ©sped</th>
             <th class="px-6 py-4">Unidades</th>
             <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" @click="sortBy('check_in')">
               <span class="inline-flex items-center gap-1">
                 <span>Fechas</span>
                 <span class="text-[10px] leading-none text-gray-400" :class="sortKey === 'check_in' ? 'text-gray-700' : ''">
-                  {{ sortKey === 'check_in' ? (sortDir === 'asc' ? '↑' : sortDir === 'desc' ? '↓' : '↕') : '↕' }}
+                  {{ sortKey === 'check_in' ? (sortDir === 'asc' ? 'â†‘' : sortDir === 'desc' ? 'â†“' : 'â†•') : 'â†•' }}
                 </span>
               </span>
             </th>
             <th class="px-6 py-4 text-center">Noches</th>
-            <th class="px-6 py-4">Estadía</th>
+            <th class="px-6 py-4">EstadÃ­a</th>
             <th class="px-6 py-4">Estado</th>
             <th v-if="showFinancialColumns" class="px-6 py-4">Montos</th>
             <th v-if="showFinancialColumns" class="px-6 py-4">Saldo</th>
@@ -68,7 +68,7 @@
               {{ res.reference_code || '-' }}
             </td>
 
-            <!-- Huésped -->
+            <!-- HuÃ©sped -->
             <td class="px-6 py-4 font-medium text-gray-900 border-l-[3px] border-transparent" :class="getLeftBorderClass(res)">
               {{ res.guest_display_name || 'Desconocido' }}
             </td>
@@ -87,7 +87,7 @@
               {{ getReservationNights(res) }}
             </td>
             
-            <!-- Estadía -->
+            <!-- EstadÃ­a -->
             <td class="px-6 py-4 text-gray-600">
               <span class="block">{{ Number(res.adults || 0) + Number(res.children || 0) }} pax</span>
               <span class="block text-xs text-gray-400">{{ Number(res.adults || 0) }} ad / {{ Number(res.children || 0) }} ni</span>
@@ -98,16 +98,16 @@
             <td class="px-6 py-4 whitespace-nowrap">
               <div class="flex items-center gap-2">
                 <ReservationBadge :status="res.status" />
-                <span v-if="isDeadlineOverdue(res)" title="Deadline vencido" class="text-xs">⚠️</span>
+                <span v-if="isDeadlineOverdue(res)" title="Deadline vencido" class="text-xs">âš ï¸</span>
               </div>
             </td>
             
             <!-- Total -->
             <td v-if="showFinancialColumns" class="px-6 py-4 text-gray-900">
-              <span class="block whitespace-nowrap">Total: {{ res.total_amount != null ? `$${formatCurrency(res.total_amount)}` : '—' }}</span>
+              <span class="block whitespace-nowrap">Total: {{ res.total_amount != null ? `$${formatCurrency(res.total_amount)}` : 'â€”' }}</span>
               <span class="block whitespace-nowrap text-xs text-gray-500">Pagado: ${{ formatCurrency(res.paid_amount || 0) }}</span>
               <span v-if="Number(res.commission_percentage || 0) > 0" class="mt-1 block text-xs text-gray-500">
-                Comisión {{ getCommissionSummary(res).name }} ({{ getCommissionSummary(res).percentage }}%): ${{ formatCurrency(getCommissionSummary(res).amount) }} → Neto: ${{ formatCurrency(getCommissionSummary(res).netAmount) }}
+                ComisiÃ³n {{ getCommissionSummary(res).name }} ({{ getCommissionSummary(res).percentage }}%): ${{ formatCurrency(getCommissionSummary(res).amount) }} â†’ Neto: ${{ formatCurrency(getCommissionSummary(res).netAmount) }}
               </span>
             </td>
             
@@ -115,14 +115,14 @@
             <td v-if="showFinancialColumns" class="px-6 py-4 whitespace-nowrap font-medium">
                <span v-if="res.balance === 0 || res.balance === '0'" class="text-emerald-600">Pagado</span>
                <span v-else-if="res.balance != null" class="text-red-600">${{ formatCurrency(res.balance) }}</span>
-               <span v-else class="text-gray-400">—</span>
+               <span v-else class="text-gray-400">â€”</span>
             </td>
             
             <!-- Acciones -->
             <td class="px-6 py-4 text-right">
               <div class="relative inline-block text-left">
                 <button
-                  class="rounded px-2 py-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                  class="touch-target inline-flex h-11 w-11 items-center justify-center rounded text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
                   type="button"
                   @click="toggleMenu(res.id)"
                 >
@@ -133,19 +133,19 @@
                   v-if="openMenuId === res.id"
                   class="absolute right-0 z-10 mt-1 w-40 rounded-md border border-gray-200 bg-white py-1 shadow-lg"
                 >
-                  <button class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" @click="handleView(res)">
+                  <button class="touch-target block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" @click="handleView(res)">
                     Ver detalle
                   </button>
                   <button
                     v-if="can('reservations', 'edit')"
-                    class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    class="touch-target block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
                     @click="handleChangeStatus(res)"
                   >
                     Cambiar estado
                   </button>
                   <button
                     v-if="can('payments', 'create')"
-                    class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    class="touch-target block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
                     @click="handleRegisterPayment(res)"
                   >
                     Registrar pago
@@ -160,7 +160,7 @@
 
     <div class="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-3 text-sm text-gray-600">
       <p>
-        Mostrando {{ reservations.length }} de {{ totalCount }} reservas · Pagina {{ page }} de {{ totalPages }}
+        Mostrando {{ reservations.length }} de {{ totalCount }} reservas Â· Pagina {{ page }} de {{ totalPages }}
       </p>
       <div class="flex items-center gap-2">
         <button v-if="page > 1" class="btn-secondary text-sm" :disabled="loading" @click="$emit('page-change', page - 1)">Anterior</button>
@@ -263,21 +263,21 @@ const formatDate = (ds) => {
 const formatCurrency = (val) => Number(val).toLocaleString('es-CO')
 
 const formatSource = (src) => {
-  const map = { whatsapp: 'WhatsApp', instagram: 'Instagram', telefono: 'Teléfono', directo: 'Directo', agencia: 'Agencia' }
+  const map = { whatsapp: 'WhatsApp', instagram: 'Instagram', telefono: 'TelÃ©fono', directo: 'Directo', agencia: 'Agencia' }
   return map[src] || src
 }
 
 const getReservationNights = (reservation) => {
   const checkIn = reservation?.check_in
   const checkOut = reservation?.check_out
-  if (!checkIn || !checkOut) return '—'
+  if (!checkIn || !checkOut) return 'â€”'
 
   const start = new Date(checkIn)
   const end = new Date(checkOut)
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '—'
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 'â€”'
 
   const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24))
-  return Number.isFinite(nights) && nights >= 0 ? nights : '—'
+  return Number.isFinite(nights) && nights >= 0 ? nights : 'â€”'
 }
 
 const mobileBadge = (res) => {
@@ -301,8 +301,8 @@ const mobileMeta = (res) => {
   ]
 
   if (showFinancialColumns.value) {
-    meta.push({ label: 'Total', value: res.total_amount != null ? `$${formatCurrency(res.total_amount)}` : '—' })
-    meta.push({ label: 'Saldo', value: res.balance === 0 || res.balance === '0' ? 'Pagado' : res.balance != null ? `$${formatCurrency(res.balance)}` : '—' })
+    meta.push({ label: 'Total', value: res.total_amount != null ? `$${formatCurrency(res.total_amount)}` : 'â€”' })
+    meta.push({ label: 'Saldo', value: res.balance === 0 || res.balance === '0' ? 'Pagado' : res.balance != null ? `$${formatCurrency(res.balance)}` : 'â€”' })
   }
 
   return meta
@@ -322,3 +322,6 @@ const mobileActions = (res) => {
   return actions
 }
 </script>
+
+
+
