@@ -7,8 +7,8 @@
         </svg>
       </button>
 
-      <div class="flex items-center gap-1">
-        <span class="font-semibold text-[#111827]">TekMi</span>
+      <div class="flex items-center justify-center">
+        <img :src="LogoImage" alt="TekMi Inn" class="h-8 w-8 object-contain">
       </div>
 
       <button type="button" class="touch-target rounded-md text-[#9CA3AF]">
@@ -25,13 +25,8 @@
       :style="{ width: `${sidebarWidth}px` }"
     >
       <div class="flex h-16 items-center border-b border-gray-800 px-4">
-        <div class="h-9 w-9 shrink-0 rounded-[8px] bg-primary">
-          <div class="flex h-full flex-col items-center justify-center">
-            <span class="leading-none text-[11px] font-semibold text-white">Tek</span>
-            <span class="leading-none text-[11px] font-semibold text-white">Mi</span>
-          </div>
-        </div>
-        <div v-if="!isSidebarCollapsed" class="ml-2 flex items-baseline overflow-hidden whitespace-nowrap">
+        <img :src="LogoImage" alt="TekMi Inn" class="h-9 w-9 shrink-0 rounded-[8px] object-contain">
+        <div v-if="!isSidebarCollapsed" class="ml-3 flex items-baseline overflow-hidden whitespace-nowrap">
           <span class="text-[18px] font-semibold text-white">TekMi</span>
           <span class="ml-1 text-[18px] font-normal text-neutral-muted">. Inn</span>
         </div>
@@ -113,6 +108,7 @@ import { usePermissions } from '../../composables/usePermissions'
 import { useBreakpoint } from '../../composables/useBreakpoint'
 import MobileNav from './MobileNav.vue'
 import MobileDrawer from './MobileDrawer.vue'
+import LogoImage from '../../assets/logo.png'
 
 const isSidebarCollapsed = ref(false)
 const isDrawerOpen = ref(false)

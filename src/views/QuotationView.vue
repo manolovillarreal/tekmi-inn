@@ -1,17 +1,14 @@
 <template>
-  <div class="quotation-page min-h-screen bg-gray-100 px-4 py-6 text-gray-900">
+  <div class="quotation-page min-h-screen bg-gray-100 px-4 py-6 text-gray-900" :class="isMobile ? 'pb-28' : ''">
     <div class="mx-auto w-full max-w-5xl">
-      <div class="quotation-actions mb-4 print:hidden" :class="isMobile ? 'sticky bottom-2 z-20 rounded-lg border border-gray-200 bg-white p-3 shadow-sm' : 'flex flex-wrap items-center justify-between gap-2'">
-        <button class="btn-secondary text-sm" :class="isMobile ? 'w-full' : ''" @click="goBack">← Volver a la consulta</button>
-        <div class="flex items-center gap-2" :class="isMobile ? 'mt-2 w-full flex-col' : ''">
-          <button class="btn-secondary text-sm" :class="isMobile ? 'w-full min-h-[44px]' : ''" :disabled="loading || !inquiry" @click="handleCopyWhatsApp">
-            Copiar para WhatsApp
-          </button>
-          <button class="btn-primary text-sm" :class="isMobile ? 'w-full min-h-[44px]' : ''" :disabled="loading || !inquiry" @click="printQuotation">
-            Imprimir / Guardar PDF
-          </button>
-        </div>
-      </div>
+      <DocumentActionBar
+        :mobile="isMobile"
+        :disabled="loading || !inquiry"
+        back-label="← Volver a la consulta"
+        @back="goBack"
+        @copy="handleCopyWhatsApp"
+        @print="printQuotation"
+      />
 
       <div v-if="loading" class="rounded-lg border border-gray-200 bg-white px-4 py-8 text-center text-sm text-gray-500">
         Cargando cotizacion...
@@ -90,6 +87,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import DocumentTemplate from '../components/documents/DocumentTemplate.vue'
+import DocumentActionBar from '../components/documents/DocumentActionBar.vue'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
 import { useToast } from '../composables/useToast'

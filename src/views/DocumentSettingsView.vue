@@ -8,9 +8,58 @@
       <RouterLink to="/configuracion" class="btn-secondary text-sm">Volver a configuracion</RouterLink>
     </div>
 
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
-      <div class="space-y-6 xl:col-span-5">
+    <div v-if="!isDesktop" class="rounded-xl border border-gray-200 bg-white p-1">
+      <div class="grid grid-cols-2 gap-1">
+        <button
+          type="button"
+          class="rounded-lg px-3 py-2 text-sm font-semibold transition"
+          :class="activeTab === 'edit' ? 'bg-primary/10 text-primary-dark' : 'text-gray-600 hover:bg-gray-50'"
+          @click="activeTab = 'edit'"
+        >
+          Editar
+        </button>
+        <button
+          type="button"
+          class="rounded-lg px-3 py-2 text-sm font-semibold transition"
+          :class="activeTab === 'preview' ? 'bg-primary/10 text-primary-dark' : 'text-gray-600 hover:bg-gray-50'"
+          @click="activeTab = 'preview'"
+        >
+          Vista previa
+        </button>
+      </div>
+    </div>
+
+    <div :class="isDesktop ? 'doc-editor-shell' : 'space-y-4'">
+      <div v-show="isDesktop || activeTab === 'edit'" class="doc-config-panel">
         <div class="card space-y-6">
+          <AppFormSection title="Estilos predefinidos" :divider="false" :collapsible="isMobile" :defaultOpen="true">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                v-for="preset in presetCards"
+                :key="preset.key"
+                type="button"
+                class="rounded-xl border p-3 text-left transition"
+                :class="form.preset === preset.key ? 'border-primary bg-primary/10' : 'border-gray-200 hover:border-primary/30'"
+                @click="applyPreset(preset.key)"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <p class="text-sm font-semibold text-gray-900">{{ preset.name }}</p>
+                    <p class="text-xs text-gray-500">Header {{ preset.header_layout }} · Footer {{ preset.footer_layout }}</p>
+                  </div>
+                  <span v-if="form.preset === preset.key" class="text-xs font-semibold text-primary-dark">Activo</span>
+                </div>
+
+                <svg class="mt-2 h-14 w-10 rounded border border-gray-200" viewBox="0 0 40 56" aria-hidden="true">
+                  <rect x="0" y="0" width="40" height="56" fill="#FFFFFF" />
+                  <rect x="3" y="3" width="34" height="13" :fill="preset.swatch.headerBg" />
+                  <rect x="3" y="18" width="34" height="25" :fill="preset.swatch.bodyBg" />
+                  <rect x="3" y="45" width="34" height="8" :fill="preset.swatch.footerBg" />
+                </svg>
+              </button>
+            </div>
+          </AppFormSection>
+
           <AppFormSection title="Tema de color" :divider="false" :collapsible="isMobile" :defaultOpen="true">
             <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
               <button
@@ -153,9 +202,7 @@
           <AppFormSection title="Secciones opcionales" description="Controla campos adicionales en el documento." :collapsible="isMobile" :defaultOpen="!isMobile">
             <AppToggle v-model="form.show_conditions" label="Incluir condiciones del alojamiento" size="sm" />
             <RouterLink to="/configuracion" class="text-sm font-medium text-primary hover:text-primary-dark">Editar condiciones</RouterLink>
-
             <AppInput v-model="form.custom_field_label" label="Etiqueta campo personalizado" placeholder="Informacion adicional" />
-
             <AppTextarea v-model="form.custom_field_content" label="Contenido campo personalizado" :rows="4" :autoResize="true" />
           </AppFormSection>
 
@@ -170,101 +217,56 @@
         </div>
       </div>
 
-      <div v-if="isMobile" class="card xl:col-span-7">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Preview</h2>
-            <p class="text-xs text-gray-500">Vista rápida del documento</p>
-          </div>
-          <button type="button" class="btn-secondary text-sm" @click="previewSheetOpen = true">Ver preview</button>
-        </div>
-      </div>
-
-      <div v-if="!isMobile" class="xl:col-span-7">
+      <div v-show="isDesktop || activeTab === 'preview'" class="doc-preview-panel">
         <div class="card h-full space-y-3">
           <div class="flex items-center justify-between">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Preview en tiempo real</h2>
             <span class="text-xs text-gray-500">Vista tipo voucher</span>
           </div>
 
-          <DocumentTemplate
-            :settings="previewSettings"
-            :profile="profile"
-            type="voucher"
-            :previewMode="true"
-          >
-            <section class="doc-content-section border-b pb-4">
-              <h1 class="doc-content-title text-2xl font-semibold">Comprobante de Reserva</h1>
-              <p class="mt-2 text-base font-semibold text-gray-900">Codigo de reserva: REF-AB12CD</p>
-              <div class="mt-3 grid grid-cols-1 gap-1 text-sm text-gray-700 md:grid-cols-3 md:gap-3">
-                <p><span class="font-semibold">Reserva:</span> RSV-202603-0012</p>
-                <p><span class="font-semibold">Codigo:</span> AB12CD</p>
-                <p><span class="font-semibold">Emitido:</span> {{ issuedAtPreview }}</p>
-              </div>
-            </section>
+          <div class="doc-preview-canvas">
+            <div :class="isDesktop ? 'doc-preview-scale' : ''">
+              <DocumentTemplate
+                :settings="previewSettings"
+                :profile="profile"
+                type="voucher"
+                :previewMode="true"
+              >
+                <section class="doc-content-section border-b pb-4">
+                  <h1 class="doc-content-title text-2xl font-semibold">Comprobante de Reserva</h1>
+                  <p class="mt-2 text-base font-semibold text-gray-900">Codigo de reserva: REF-AB12CD</p>
+                  <div class="mt-3 grid grid-cols-1 gap-1 text-sm text-gray-700 md:grid-cols-3 md:gap-3">
+                    <p><span class="font-semibold">Reserva:</span> RSV-202603-0012</p>
+                    <p><span class="font-semibold">Codigo:</span> AB12CD</p>
+                    <p><span class="font-semibold">Emitido:</span> {{ issuedAtPreview }}</p>
+                  </div>
+                </section>
 
-            <section class="doc-content-section border-b py-4">
-              <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Datos de la reserva</h2>
-              <div class="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-700 md:grid-cols-2">
-                <p><span class="font-semibold">Unidad:</span> Suite 301</p>
-                <p><span class="font-semibold">Origen:</span> Directo</p>
-                <p><span class="font-semibold">Check-in:</span> 22/03/2026</p>
-                <p><span class="font-semibold">Check-out:</span> 25/03/2026</p>
-                <p><span class="font-semibold">Noches:</span> 3</p>
-                <p><span class="font-semibold">Adultos:</span> 2 · <span class="font-semibold">Ninos:</span> 1</p>
-              </div>
-            </section>
+                <section class="doc-content-section border-b py-4">
+                  <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Datos de la reserva</h2>
+                  <div class="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-700 md:grid-cols-2">
+                    <p><span class="font-semibold">Unidad:</span> Suite 301</p>
+                    <p><span class="font-semibold">Origen:</span> Directo</p>
+                    <p><span class="font-semibold">Check-in:</span> 22/03/2026</p>
+                    <p><span class="font-semibold">Check-out:</span> 25/03/2026</p>
+                    <p><span class="font-semibold">Noches:</span> 3</p>
+                    <p><span class="font-semibold">Adultos:</span> 2 · <span class="font-semibold">Ninos:</span> 1</p>
+                  </div>
+                </section>
 
-            <section class="doc-content-section py-4">
-              <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Resumen financiero</h2>
-              <div class="mt-3 space-y-1 text-sm text-gray-700">
-                <p class="flex justify-between gap-3"><span>Precio por noche:</span> <span class="font-medium">$320.000</span></p>
-                <p class="flex justify-between gap-3"><span>Total reserva:</span> <span class="font-medium">$960.000</span></p>
-              </div>
-            </section>
-          </DocumentTemplate>
+                <section class="doc-content-section py-4">
+                  <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Resumen financiero</h2>
+                  <div class="mt-3 space-y-1 text-sm text-gray-700">
+                    <p class="flex justify-between gap-3"><span>Precio por noche:</span> <span class="font-medium">$320.000</span></p>
+                    <p class="flex justify-between gap-3"><span>Total reserva:</span> <span class="font-medium">$960.000</span></p>
+                  </div>
+                </section>
+              </DocumentTemplate>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-
-    <BottomSheet v-model="previewSheetOpen" title="Preview de documento" height="full">
-      <DocumentTemplate
-        :settings="previewSettings"
-        :profile="profile"
-        type="voucher"
-        :previewMode="true"
-      >
-        <section class="doc-content-section border-b pb-4">
-          <h1 class="doc-content-title text-2xl font-semibold">Comprobante de Reserva</h1>
-          <p class="mt-2 text-base font-semibold text-gray-900">Codigo de reserva: REF-AB12CD</p>
-          <div class="mt-3 grid grid-cols-1 gap-1 text-sm text-gray-700 md:grid-cols-3 md:gap-3">
-            <p><span class="font-semibold">Reserva:</span> RSV-202603-0012</p>
-            <p><span class="font-semibold">Codigo:</span> AB12CD</p>
-            <p><span class="font-semibold">Emitido:</span> {{ issuedAtPreview }}</p>
-          </div>
-        </section>
-
-        <section class="doc-content-section border-b py-4">
-          <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Datos de la reserva</h2>
-          <div class="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-700 md:grid-cols-2">
-            <p><span class="font-semibold">Unidad:</span> Suite 301</p>
-            <p><span class="font-semibold">Origen:</span> Directo</p>
-            <p><span class="font-semibold">Check-in:</span> 22/03/2026</p>
-            <p><span class="font-semibold">Check-out:</span> 25/03/2026</p>
-            <p><span class="font-semibold">Noches:</span> 3</p>
-            <p><span class="font-semibold">Adultos:</span> 2 · <span class="font-semibold">Ninos:</span> 1</p>
-          </div>
-        </section>
-
-        <section class="doc-content-section py-4">
-          <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Resumen financiero</h2>
-          <div class="mt-3 space-y-1 text-sm text-gray-700">
-            <p class="flex justify-between gap-3"><span>Precio por noche:</span> <span class="font-medium">$320.000</span></p>
-            <p class="flex justify-between gap-3"><span>Total reserva:</span> <span class="font-medium">$960.000</span></p>
-          </div>
-        </section>
-      </DocumentTemplate>
-    </BottomSheet>
   </div>
 
   <div v-else class="card border-amber-200 bg-amber-50/40">
@@ -282,13 +284,16 @@ import { useAccountStore } from '../stores/account'
 import { usePermissions } from '../composables/usePermissions'
 import { useToast } from '../composables/useToast'
 import { getDocumentSettings, saveDocumentSettings } from '../services/documentSettingsService'
-import BottomSheet from '../components/ui/BottomSheet.vue'
 import { useBreakpoint } from '../composables/useBreakpoint'
 import {
+  DOCUMENT_PRESETS,
   DOCUMENT_THEMES,
   DOCUMENT_VARIABLES,
   DEFAULT_DOCUMENT_SETTINGS,
+  deriveThemeTokens,
+  getDocumentThemeColors,
   normalizeDocumentSettings,
+  resolvePresetColors,
 } from '../utils/documentThemes'
 import {
   AppInput,
@@ -302,12 +307,12 @@ import {
 
 const accountStore = useAccountStore()
 const { can } = usePermissions()
-const { isMobile } = useBreakpoint()
+const { isMobile, isDesktop } = useBreakpoint()
 const toast = useToast()
 
 const loading = ref(true)
 const saving = ref(false)
-const previewSheetOpen = ref(false)
+const activeTab = ref('edit')
 const profile = ref({})
 const voucherConditions = ref('')
 
@@ -319,6 +324,16 @@ const themeOptions = computed(() => Object.entries(DOCUMENT_THEMES).map(([key, v
   primary: value.primary,
   accent: value.accent,
   background: value.background,
+})))
+
+const previewTokens = computed(() => {
+  const colors = getDocumentThemeColors(form.value)
+  return deriveThemeTokens(colors.primary, colors.accent, colors.background)
+})
+
+const presetCards = computed(() => Object.values(DOCUMENT_PRESETS).map((preset) => ({
+  ...preset,
+  swatch: resolvePresetColors(preset.key, previewTokens.value),
 })))
 
 const isCustomTheme = computed(() => form.value.color_theme === 'custom')
@@ -367,6 +382,15 @@ const issuedAtPreview = computed(() => new Intl.DateTimeFormat('es-CO', {
   minute: '2-digit',
   hour12: false,
 }).format(new Date()))
+
+const applyPreset = (presetKey) => {
+  const preset = DOCUMENT_PRESETS[presetKey]
+  if (!preset) return
+
+  form.value.preset = presetKey
+  form.value.header_layout = preset.header_layout
+  form.value.footer_layout = preset.footer_layout
+}
 
 const applyThemePalette = (themeKey) => {
   const selectedTheme = DOCUMENT_THEMES[themeKey]
@@ -428,6 +452,9 @@ const loadData = async () => {
     profile.value = profileData || {}
     voucherConditions.value = String(settingsData?.voucher_conditions || '').trim()
     form.value = normalizeDocumentSettings(settings)
+    if (!form.value.preset) {
+      applyPreset('moderno')
+    }
     applyThemePalette(form.value.color_theme)
   } catch (error) {
     toast.error(error.message || 'No se pudo cargar la configuracion de documentos.')
@@ -456,6 +483,38 @@ onMounted(loadData)
 </script>
 
 <style scoped>
+.doc-editor-shell {
+  display: flex;
+  gap: 16px;
+  min-height: calc(100vh - 220px);
+}
+
+.doc-config-panel {
+  width: 380px;
+  flex: 0 0 380px;
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.doc-preview-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+.doc-preview-canvas {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: auto;
+  padding: 10px 8px 30px;
+}
+
+.doc-preview-scale {
+  transform: scale(0.65);
+  transform-origin: top center;
+}
+
 .doc-content-title,
 .doc-content-subtitle {
   color: var(--doc-accent);
@@ -464,5 +523,17 @@ onMounted(loadData)
 .doc-content-section {
   break-inside: avoid;
   page-break-inside: avoid;
+}
+
+@media (max-width: 1023px) {
+  .doc-config-panel,
+  .doc-preview-panel {
+    width: 100%;
+    max-height: none;
+  }
+
+  .doc-preview-scale {
+    transform: none;
+  }
 }
 </style>

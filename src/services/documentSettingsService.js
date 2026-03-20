@@ -28,6 +28,7 @@ export const saveDocumentSettings = async (accountId, payload) => {
     .upsert(
       {
         account_id: accountId,
+        preset: normalized.preset,
         color_theme: normalized.color_theme,
         color_primary: normalized.color_primary,
         color_accent: normalized.color_accent,

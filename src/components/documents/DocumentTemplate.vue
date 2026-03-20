@@ -101,6 +101,7 @@ import {
   getDocumentThemeColors,
   getLogoHeightPx,
   normalizeDocumentSettings,
+  resolvePresetColors,
   resolveVariables,
 } from '../../utils/documentThemes'
 
@@ -135,6 +136,8 @@ const themeTokens = computed(() => deriveThemeTokens(
   themeColors.value.background,
 ))
 
+const presetColors = computed(() => resolvePresetColors(normalizedSettings.value.preset, themeTokens.value))
+
 const cssVariables = computed(() => ({
   '--doc-primary': themeTokens.value.primary,
   '--doc-accent': themeTokens.value.accent,
@@ -144,6 +147,12 @@ const cssVariables = computed(() => ({
   '--doc-border': themeTokens.value.borderColor,
   '--doc-section-bg': themeTokens.value.sectionBg,
   '--doc-hover-primary': themeTokens.value.hoverPrimary,
+  '--doc-header-bg': presetColors.value.headerBg,
+  '--doc-header-text': presetColors.value.headerText,
+  '--doc-body-bg': presetColors.value.bodyBg,
+  '--doc-body-text': presetColors.value.bodyText,
+  '--doc-footer-bg': presetColors.value.footerBg,
+  '--doc-footer-text': presetColors.value.footerText,
 }))
 
 const profileData = computed(() => ({
@@ -238,20 +247,22 @@ const resolvedCustomFieldContent = computed(() => resolveVariables(normalizedSet
 }
 
 .doc-sheet-wrapper.is-preview {
-  justify-content: flex-start;
-  transform: scale(0.72);
-  transform-origin: top left;
-  width: 138%;
+  justify-content: center;
+  width: 100%;
 }
 
 .doc-sheet {
-  width: 794px;
-  min-height: 1123px;
-  background: var(--doc-background);
-  color: #111827;
+  width: 8.5in;
+  min-height: 11in;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--doc-body-bg);
+  color: var(--doc-body-text);
   border: 1px solid var(--doc-border);
   box-shadow: 0 12px 35px rgba(15, 23, 42, 0.09);
   padding: 28px;
+  font-family: 'Inter', sans-serif;
 }
 
 .doc-block {
@@ -262,6 +273,10 @@ const resolvedCustomFieldContent = computed(() => resolveVariables(normalizedSet
 .doc-header {
   border-bottom: 1px solid var(--doc-border);
   padding-bottom: 16px;
+  background: var(--doc-header-bg);
+  color: var(--doc-header-text);
+  border-radius: 10px;
+  padding: 18px;
 }
 
 .doc-header-row {
@@ -309,9 +324,9 @@ const resolvedCustomFieldContent = computed(() => resolveVariables(normalizedSet
 }
 
 .doc-brand {
-  font-size: 24px;
+  font-size: 23px;
   font-weight: 700;
-  color: var(--doc-primary);
+  color: inherit;
 }
 
 .doc-slogan {
@@ -327,6 +342,7 @@ const resolvedCustomFieldContent = computed(() => resolveVariables(normalizedSet
 
 .doc-main {
   margin-top: 18px;
+  flex: 1;
 }
 
 .doc-section {
@@ -353,10 +369,13 @@ const resolvedCustomFieldContent = computed(() => resolveVariables(normalizedSet
 }
 
 .doc-footer {
-  margin-top: 16px;
+  margin-top: auto;
   border-top: 1px solid var(--doc-border);
   padding-top: 14px;
-  color: #1f2937;
+  color: var(--doc-footer-text);
+  background: var(--doc-footer-bg);
+  border-radius: 10px;
+  padding: 16px;
 }
 
 .doc-footer-centered {
@@ -377,8 +396,8 @@ const resolvedCustomFieldContent = computed(() => resolveVariables(normalizedSet
 }
 
 @page {
-  size: A4;
-  margin: 15mm;
+  size: Letter;
+  margin: 0;
 }
 
 @media print {
@@ -397,12 +416,12 @@ const resolvedCustomFieldContent = computed(() => resolveVariables(normalizedSet
   }
 
   .doc-sheet {
-    width: 100% !important;
-    min-height: auto;
+    width: 8.5in !important;
+    min-height: 11in !important;
     border: none !important;
     box-shadow: none !important;
-    background: #ffffff !important;
-    color: #000000 !important;
+    background: var(--doc-body-bg) !important;
+    color: var(--doc-body-text) !important;
     padding: 0 !important;
   }
 
@@ -413,15 +432,18 @@ const resolvedCustomFieldContent = computed(() => resolveVariables(normalizedSet
     print-color-adjust: exact;
   }
 
+  .doc-header,
+  .doc-footer,
+  .doc-section {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   .doc-brand,
   .doc-section-title,
   .doc-footer-title,
   .doc-footer-column-title {
-    color: var(--doc-accent) !important;
-  }
-
-  .doc-section {
-    background: #ffffff !important;
+    color: inherit !important;
   }
 }
 </style>

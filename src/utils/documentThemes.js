@@ -39,6 +39,79 @@ export const DOCUMENT_THEMES = {
   }
 }
 
+export const DOCUMENT_PRESETS = {
+  moderno: {
+    key: 'moderno',
+    name: 'Moderno',
+    header_layout: 1,
+    footer_layout: 1,
+    colors: {
+      headerBg: 'primary',
+      headerText: 'textOnPrimary',
+      bodyBg: 'white',
+      bodyText: '#111827',
+      footerBg: 'background',
+      footerText: 'primaryDark'
+    }
+  },
+  clasico: {
+    key: 'clasico',
+    name: 'Clasico',
+    header_layout: 3,
+    footer_layout: 2,
+    colors: {
+      headerBg: 'white',
+      headerText: 'primaryDark',
+      bodyBg: 'white',
+      bodyText: '#1F2937',
+      footerBg: 'white',
+      footerText: '#374151'
+    }
+  },
+  minimal: {
+    key: 'minimal',
+    name: 'Minimal',
+    header_layout: 2,
+    footer_layout: 1,
+    colors: {
+      headerBg: 'background',
+      headerText: 'primary',
+      bodyBg: 'white',
+      bodyText: '#111827',
+      footerBg: 'background',
+      footerText: '#4B5563'
+    }
+  },
+  bold: {
+    key: 'bold',
+    name: 'Bold',
+    header_layout: 1,
+    footer_layout: 3,
+    colors: {
+      headerBg: 'accent',
+      headerText: '#FFFFFF',
+      bodyBg: 'white',
+      bodyText: '#111827',
+      footerBg: 'primaryDark',
+      footerText: '#FFFFFF'
+    }
+  },
+  soft: {
+    key: 'soft',
+    name: 'Soft',
+    header_layout: 2,
+    footer_layout: 1,
+    colors: {
+      headerBg: 'primaryLight',
+      headerText: 'primaryDark',
+      bodyBg: '#FFFFFF',
+      bodyText: '#1F2937',
+      footerBg: 'sectionBg',
+      footerText: '#374151'
+    }
+  }
+}
+
 export const DOCUMENT_VARIABLES = {
   '{{nombre_comercial}}': 'Nombre comercial',
   '{{razon_social}}': 'Razon social',
@@ -95,7 +168,8 @@ export const DEFAULT_DOCUMENT_SETTINGS = {
   footer_free_text: '',
   show_conditions: true,
   custom_field_label: '',
-  custom_field_content: ''
+  custom_field_content: '',
+  preset: 'moderno',
 }
 
 const normalizeFields = (value, defaults) => ({
@@ -107,8 +181,31 @@ export const normalizeDocumentSettings = (value = {}) => ({
   ...DEFAULT_DOCUMENT_SETTINGS,
   ...value,
   header_fields: normalizeFields(value.header_fields, DEFAULT_HEADER_FIELDS),
-  footer_fields: normalizeFields(value.footer_fields, DEFAULT_FOOTER_FIELDS)
+  footer_fields: normalizeFields(value.footer_fields, DEFAULT_FOOTER_FIELDS),
+  preset: DOCUMENT_PRESETS[value.preset] ? value.preset : DEFAULT_DOCUMENT_SETTINGS.preset,
 })
+
+const resolveTone = (value, themeTokens) => {
+  if (!value) return undefined
+  if (value === 'white') return '#FFFFFF'
+  if (value === 'black') return '#111827'
+  if (themeTokens[value]) return themeTokens[value]
+  return value
+}
+
+export const resolvePresetColors = (presetKey, themeTokens) => {
+  const preset = DOCUMENT_PRESETS[presetKey] || DOCUMENT_PRESETS[DEFAULT_DOCUMENT_SETTINGS.preset]
+  const colors = preset.colors || {}
+
+  return {
+    headerBg: resolveTone(colors.headerBg, themeTokens) || themeTokens.primary,
+    headerText: resolveTone(colors.headerText, themeTokens) || themeTokens.textOnPrimary,
+    bodyBg: resolveTone(colors.bodyBg, themeTokens) || '#FFFFFF',
+    bodyText: resolveTone(colors.bodyText, themeTokens) || '#111827',
+    footerBg: resolveTone(colors.footerBg, themeTokens) || themeTokens.sectionBg,
+    footerText: resolveTone(colors.footerText, themeTokens) || '#1F2937'
+  }
+}
 
 export function deriveThemeTokens(primary, accent, background) {
   return {
