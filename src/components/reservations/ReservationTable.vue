@@ -26,19 +26,19 @@
         <thead class="bg-gray-50 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
           <tr>
             <th class="px-6 py-4">Nro</th>
-            <th class="px-6 py-4">CÃ³digo</th>
-            <th class="px-6 py-4">HuÃ©sped</th>
+            <th class="px-6 py-4">Código</th>
+            <th class="px-6 py-4">Huésped</th>
             <th class="px-6 py-4">Unidades</th>
             <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" @click="sortBy('check_in')">
               <span class="inline-flex items-center gap-1">
                 <span>Fechas</span>
                 <span class="text-[10px] leading-none text-gray-400" :class="sortKey === 'check_in' ? 'text-gray-700' : ''">
-                  {{ sortKey === 'check_in' ? (sortDir === 'asc' ? 'â†‘' : sortDir === 'desc' ? 'â†“' : 'â†•') : 'â†•' }}
+                  {{ sortKey === 'check_in' ? (sortDir === 'asc' ? '↑' : sortDir === 'desc' ? '↓' : '↕') : '↕' }}
                 </span>
               </span>
             </th>
             <th class="px-6 py-4 text-center">Noches</th>
-            <th class="px-6 py-4">EstadÃ­a</th>
+            <th class="px-6 py-4">Estadía</th>
             <th class="px-6 py-4">Estado</th>
             <th v-if="showFinancialColumns" class="px-6 py-4">Montos</th>
             <th v-if="showFinancialColumns" class="px-6 py-4">Saldo</th>
@@ -68,7 +68,7 @@
               {{ res.reference_code || '-' }}
             </td>
 
-            <!-- HuÃ©sped -->
+            <!-- Huésped -->
             <td class="px-6 py-4 font-medium text-gray-900 border-l-[3px] border-transparent" :class="getLeftBorderClass(res)">
               {{ res.guest_display_name || 'Desconocido' }}
             </td>
@@ -87,7 +87,7 @@
               {{ getReservationNights(res) }}
             </td>
             
-            <!-- EstadÃ­a -->
+            <!-- Estadía -->
             <td class="px-6 py-4 text-gray-600">
               <span class="block">{{ Number(res.adults || 0) + Number(res.children || 0) }} pax</span>
               <span class="block text-xs text-gray-400">{{ Number(res.adults || 0) }} ad / {{ Number(res.children || 0) }} ni</span>
@@ -107,7 +107,7 @@
               <span class="block whitespace-nowrap">Total: {{ res.total_amount != null ? `$${formatCurrency(res.total_amount)}` : 'â€”' }}</span>
               <span class="block whitespace-nowrap text-xs text-gray-500">Pagado: ${{ formatCurrency(res.paid_amount || 0) }}</span>
               <span v-if="Number(res.commission_percentage || 0) > 0" class="mt-1 block text-xs text-gray-500">
-                ComisiÃ³n {{ getCommissionSummary(res).name }} ({{ getCommissionSummary(res).percentage }}%): ${{ formatCurrency(getCommissionSummary(res).amount) }} â†’ Neto: ${{ formatCurrency(getCommissionSummary(res).netAmount) }}
+                Comisión {{ getCommissionSummary(res).name }} ({{ getCommissionSummary(res).percentage }}%): ${{ formatCurrency(getCommissionSummary(res).amount) }} â†’ Neto: ${{ formatCurrency(getCommissionSummary(res).netAmount) }}
               </span>
             </td>
             
@@ -160,7 +160,7 @@
 
     <div class="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-3 text-sm text-gray-600">
       <p>
-        Mostrando {{ reservations.length }} de {{ totalCount }} reservas Â· Pagina {{ page }} de {{ totalPages }}
+        Mostrando {{ reservations.length }} de {{ totalCount }} reservas · Página {{ page }} de {{ totalPages }}
       </p>
       <div class="flex items-center gap-2">
         <button v-if="page > 1" class="btn-secondary text-sm" :disabled="loading" @click="$emit('page-change', page - 1)">Anterior</button>

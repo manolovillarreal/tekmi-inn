@@ -1,6 +1,6 @@
 ﻿<template>
   <nav
-    class="fixed inset-x-0 bottom-0 z-40 border-t border-[#E5E7EB] bg-white"
+    class="fixed inset-x-0 bottom-0 z-40 border-t border-[#374151] bg-[#111827]"
     :style="{ paddingBottom: 'env(safe-area-inset-bottom)' }"
     aria-label="Navegacion principal mobile"
   >
@@ -9,8 +9,8 @@
         v-for="item in navItems"
         :key="item.key"
         type="button"
-        class="touch-target flex flex-1 flex-col items-center justify-center rounded-md"
-        :class="item.key === 'more' ? 'text-[#9CA3AF]' : isActive(item) ? 'text-[#4C2FFF]' : 'text-[#9CA3AF]'"
+        class="touch-target flex flex-1 flex-col items-center justify-center rounded-md transition-colors"
+        :class="isActive(item) ? 'bg-[#374151] text-white' : 'text-[#9CA3AF]'"
         @click="handlePress(item)"
       >
         <component :is="item.icon" class="transition-all" :class="isActive(item) ? 'h-5 w-5' : 'h-[18px] w-[18px]'" />

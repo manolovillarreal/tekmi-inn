@@ -6,19 +6,19 @@
       <Transition name="drawer-slide">
         <aside
           v-if="modelValue"
-          class="absolute inset-y-0 left-0 flex w-[85vw] max-w-[280px] flex-col border-r border-[#E5E7EB] bg-white shadow-xl"
+          class="absolute inset-y-0 left-0 flex w-[85vw] max-w-[280px] flex-col border-r border-[#374151] bg-[#111827] shadow-xl"
         >
-          <header class="border-b border-[#E5E7EB] px-4 py-4">
+          <header class="border-b border-[#374151] px-4 py-4">
             <div class="flex items-center gap-2">
               <div class="h-8 w-8 rounded-[8px] bg-primary text-center leading-8 text-xs font-semibold text-white">TI</div>
               <div>
-                <p class="text-sm font-semibold text-[#111827]">TekMi Inn</p>
-                <p class="text-xs text-[#6B7280]">{{ accountStore.currentAccountName || 'Sin alojamiento' }}</p>
+                <p class="text-sm font-semibold text-[#F9FAFB]">TekMi Inn</p>
+                <p class="text-xs text-[#9CA3AF]">{{ accountStore.currentAccountName || 'Sin alojamiento' }}</p>
               </div>
             </div>
             <div class="mt-3">
-              <p class="text-sm font-medium text-[#111827]">{{ userLabel }}</p>
-              <p class="text-xs capitalize text-[#6B7280]">{{ accountStore.currentUserRole || 'sin rol' }}</p>
+              <p class="text-sm font-medium text-[#F9FAFB]">{{ userLabel }}</p>
+              <p class="text-xs capitalize text-[#9CA3AF]">{{ accountStore.currentUserRole || 'sin rol' }}</p>
             </div>
           </header>
 
@@ -28,29 +28,29 @@
               :key="item.name"
               type="button"
               class="touch-target mb-1 flex w-full items-center rounded-md px-3 py-2 text-left text-sm font-medium transition-colors"
-              :class="isActive(item.to) ? 'bg-[#EEF2FF] text-[#4C2FFF]' : 'text-[#111827] hover:bg-[#F8F9FC]'"
+              :class="isActive(item.to) ? 'bg-[#374151] text-white' : 'text-[#9CA3AF] hover:bg-[#1F2937] hover:text-white'"
               @click="goTo(item.to)"
             >
               {{ item.name }}
             </button>
 
-            <div class="my-3 border-t border-[#E5E7EB]"></div>
+            <div class="my-3 border-t border-[#374151]"></div>
 
             <button
               v-for="item in secondaryItems"
               :key="item.name"
               type="button"
               class="touch-target mb-1 flex w-full items-center rounded-md px-3 py-2 text-left text-sm font-medium transition-colors"
-              :class="isActive(item.to) ? 'bg-[#EEF2FF] text-[#4C2FFF]' : 'text-[#111827] hover:bg-[#F8F9FC]'"
+              :class="isActive(item.to) ? 'bg-[#374151] text-white' : 'text-[#9CA3AF] hover:bg-[#1F2937] hover:text-white'"
               @click="goTo(item.to)"
             >
               {{ item.name }}
             </button>
           </nav>
 
-          <footer class="border-t border-[#E5E7EB] px-4 py-3" :style="{ paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' }">
-            <p class="truncate text-xs text-[#6B7280]">{{ userEmail || 'sin-email@tekmi.app' }}</p>
-            <button type="button" class="touch-target mt-2 text-sm font-medium text-[#111827] underline" @click="logout">
+          <footer class="border-t border-[#374151] px-4 py-3" :style="{ paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' }">
+            <p class="truncate text-xs text-[#9CA3AF]">{{ userEmail || 'sin-email@tekmi.app' }}</p>
+            <button type="button" class="touch-target mt-2 text-sm font-medium text-[#F9FAFB] underline" @click="logout">
               Cerrar sesion
             </button>
           </footer>
@@ -90,12 +90,14 @@ const primaryItems = computed(() => {
     { name: 'Reservas', to: '/reservas' },
     { name: 'Calendario', to: '/calendario' },
     { name: 'Consultas', to: '/consultas' },
+    { name: 'Huéspedes', to: '/huespedes' },
     { name: 'Pagos', to: '/pagos' },
   ]
 
   return items.filter((item) => {
     if (item.to === '/reservas') return can('reservations', 'view')
     if (item.to === '/consultas') return can('inquiries', 'view')
+    if (item.to === '/huespedes') return can('guests', 'view')
     if (item.to === '/pagos') return can('payments', 'view')
     if (item.to === '/calendario') return can('calendar', 'view')
     return true

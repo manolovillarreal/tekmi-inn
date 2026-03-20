@@ -75,15 +75,6 @@
           <AppInlineAlert v-if="logoError" type="error" :message="logoError" />
         </AppFormSection>
 
-        <AppFormSection title="Código de referencia" :collapsible="isMobile" :defaultOpen="!isMobile">
-          <AppInlineAlert
-            type="info"
-            :message="`Tu prefijo de referencia: ${profilePrefix}`"
-          >
-            <p><span class="font-semibold">Ejemplo de codigo:</span> {{ sampleReferenceCode }}</p>
-          </AppInlineAlert>
-        </AppFormSection>
-
         <div :class="isMobile ? 'sticky bottom-0 z-20 -mx-4 border-t border-[#E5E7EB] bg-white px-4 py-3 shadow-[0_-6px_18px_rgba(15,23,42,0.06)]' : ''">
           <AppFormActions
             submit-label="Guardar perfil"
@@ -112,7 +103,6 @@ import { usePermissions } from '../composables/usePermissions'
 import { useToast } from '../composables/useToast'
 import { useBreakpoint } from '../composables/useBreakpoint'
 import { calculateNitDigit, formatNit } from '../utils/nitUtils'
-import { generateReferenceCode } from '../utils/referenceUtils'
 import {
   AppInput,
   AppFieldHint,
@@ -155,17 +145,6 @@ const profileForm = ref({
 const MAX_LOGO_BYTES = 2 * 1024 * 1024
 const ALLOWED_LOGO_TYPES = new Set(['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'])
 
-const sampleReferenceCode = ref('')
-
-const profilePrefix = computed(() => {
-  const raw = String(profileForm.value.reference_prefix || '')
-    .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, '')
-
-  return raw || 'TEKM'
-})
-
 const nitDigitPreview = computed(() => {
   if (!profileForm.value.nit) return null
   return calculateNitDigit(profileForm.value.nit)
@@ -177,14 +156,6 @@ const nitFormattedPreview = computed(() => {
 })
 
 const logoPreviewUrl = computed(() => selectedLogoPreviewUrl.value || profileForm.value.logo_url || '')
-
-watch(
-  () => profileForm.value.reference_prefix,
-  () => {
-    sampleReferenceCode.value = generateReferenceCode()
-  },
-  { immediate: true }
-)
 
 const setProfileForm = (data = {}) => {
   profileForm.value = {

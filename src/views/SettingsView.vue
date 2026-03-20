@@ -21,10 +21,10 @@
         <span>Personalización documentos</span>
         <span class="text-gray-400">›</span>
       </RouterLink>
-      <RouterLink to="/configuracion" class="flex items-center justify-between px-4 py-3 text-sm text-gray-800">
+        <a href="#condiciones-alojamiento" class="flex items-center justify-between px-4 py-3 text-sm text-gray-800">
         <span>Condiciones</span>
         <span class="text-gray-400">›</span>
-      </RouterLink>
+        </a>
     </div>
 
     <div v-if="can('settings', 'edit') && !isMobile" class="card">
@@ -60,6 +60,24 @@
         <RouterLink to="/configuracion/perfil" class="btn-primary text-sm">
           Abrir perfil
         </RouterLink>
+      </div>
+    </div>
+
+    <div id="condiciones-alojamiento" v-if="can('settings', 'edit')" class="card">
+      <div class="mb-4">
+        <h2 class="text-lg font-semibold text-gray-900">Condiciones del alojamiento</h2>
+        <p class="text-sm text-gray-500">Este texto se mostrará en vouchers y cotizaciones.</p>
+      </div>
+      <textarea
+        v-model="voucherConditions"
+        rows="5"
+        class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+        placeholder="Escribe aquí las condiciones del alojamiento..."
+      ></textarea>
+      <div class="mt-3 flex justify-end">
+        <button type="button" class="btn-primary text-sm" :disabled="savingConditions" @click="saveVoucherConditions">
+          {{ savingConditions ? 'Guardando...' : 'Guardar condiciones' }}
+        </button>
       </div>
     </div>
 
@@ -215,6 +233,8 @@ const showRoleSheet = ref(false)
 const showRemoveSheet = ref(false)
 const selectedUser = ref(null)
 const selectedRole = ref('')
+const voucherConditions = ref('')
+const savingConditions = ref(false)
 
 let successMessageTimeout = null
 
@@ -265,6 +285,48 @@ const fetchUsers = async () => {
     toast.error(err.message)
   } finally {
     loading.value = false
+  }
+}
+
+const fetchVoucherConditions = async () => {
+  if (!can('settings', 'edit')) return
+
+  try {
+    const accountId = accountStore.getRequiredAccountId()
+    const { data, error } = await supabase
+      .from('settings')
+      .select('voucher_conditions')
+      .eq('account_id', accountId)
+      .maybeSingle()
+
+    if (error) throw error
+    voucherConditions.value = String(data?.voucher_conditions || '')
+  } catch (err) {
+    toast.error(err.message)
+  }
+}
+
+const saveVoucherConditions = async () => {
+  if (!can('settings', 'edit')) return
+
+  savingConditions.value = true
+  try {
+    const accountId = accountStore.getRequiredAccountId()
+    const payload = {
+      account_id: accountId,
+      voucher_conditions: String(voucherConditions.value || '').trim(),
+    }
+
+    const { error } = await supabase
+      .from('settings')
+      .upsert(payload, { onConflict: 'account_id' })
+
+    if (error) throw error
+    toast.success('Condiciones guardadas correctamente.')
+  } catch (err) {
+    toast.error(err.message)
+  } finally {
+    savingConditions.value = false
   }
 }
 
@@ -342,5 +404,7 @@ const removeUser = async (item) => {
   }
 }
 
-onMounted(fetchUsers)
+onMounted(async () => {
+  await Promise.all([fetchUsers(), fetchVoucherConditions()])
+})
 </script>

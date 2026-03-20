@@ -16,6 +16,12 @@
           @click="openConversionModal"
           :disabled="!inquiry"
         >Convertir en reserva</button>
+          <button
+            v-if="inquiry && inquiry.guest_name"
+            class="btn-secondary text-sm"
+            @click="copyInquiryAsWhatsApp"
+            :disabled="!inquiry"
+          >Copiar para WhatsApp</button>
         <button v-if="can('inquiries', 'edit')" class="btn-secondary text-sm" @click="openEditModal" :disabled="!inquiry">Editar</button>
       </div>
     </div>
@@ -73,20 +79,17 @@
       <div class="space-y-6">
         <div class="card">
           <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-900">Gestión de estado</h2>
-          <div class="space-y-2" v-if="can('inquiries', 'edit')">
-            <button
-              v-for="status in availableTransitions"
-              :key="status"
-              class="w-full rounded-md border px-3 py-2 text-left text-sm border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-              @click="changeStatus(status)"
-            >
-              {{ getInquiryStatusLabel(status) }}
-            </button>
-            <p v-if="availableTransitions.length === 0" class="text-sm text-gray-500 italic">
-              {{ inquiry.status === 'convertida' || inquiry.status === 'perdida' ? 'Estado final — no se puede cambiar.' : 'Sin transiciones disponibles.' }}
-            </p>
-          </div>
-          <p v-else class="text-sm text-gray-500">No tienes permisos para editar estado.</p>
+            <div v-if="can('inquiries', 'edit')">
+              <button
+                v-if="inquiry.status !== 'perdida' && inquiry.status !== 'convertida'"
+                class="w-full rounded-md border border-red-200 bg-white px-3 py-2 text-left text-sm font-medium text-red-700 hover:bg-red-50"
+                @click="showLostSheet = true"
+              >
+                Marcar como perdida
+              </button>
+              <p v-else class="text-sm italic text-gray-500">Estado final — no se puede cambiar.</p>
+            </div>
+            <p v-else class="text-sm text-gray-500">No tienes permisos para editar estado.</p>
         </div>
 
         <div class="card" v-if="can('occupancies', 'create')">
@@ -277,6 +280,27 @@
       @close="showConversionModal = false"
       @converted="onReservationCreated"
     />
+
+      <BottomSheet v-model="showLostSheet" title="Marcar consulta como perdida" height="half">
+        <div class="space-y-3">
+          <p class="text-sm text-gray-600">Esta acción cambiará el estado de la consulta a perdida.</p>
+          <AppTextarea
+            v-model="lostMotivo"
+            label="Motivo (opcional)"
+            :rows="3"
+            :autoResize="true"
+            placeholder="Ej: Cliente no respondió / encontró otra opción"
+          />
+        </div>
+        <template #footer>
+          <div class="flex items-center justify-end gap-2">
+            <button type="button" class="btn-secondary" @click="showLostSheet = false">Cancelar</button>
+            <button type="button" class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700" @click="confirmMarkAsLost">
+              Confirmar
+            </button>
+          </div>
+        </template>
+      </BottomSheet>
   </div>
 </template>
 
@@ -286,6 +310,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../services/supabase'
 import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
+import BottomSheet from '../components/ui/BottomSheet.vue'
 import SourceSelector from '../components/sources/SourceSelector.vue'
 import InquiryConversionModal from '../components/inquiries/InquiryConversionModal.vue'
 import { useInquiriesStore } from '../stores/inquiries'
@@ -293,6 +318,7 @@ import { usePermissions } from '../composables/usePermissions'
 import { useAccountStore } from '../stores/account'
 import { useToast } from '../composables/useToast'
 import { formatReferenceDisplay } from '../utils/referenceUtils'
+import { copyQuotationAsWhatsApp } from '../utils/voucherUtils'
 import {
   getInquiryStatusLabel,
   getInquiryStatusStyle,
@@ -320,6 +346,7 @@ const toast = useToast()
 
 const loading = ref(true)
 const inquiry = ref(null)
+const profile = ref({})
 
 const availableTransitions = computed(() => getAvailableInquiryTransitions(inquiry.value?.status))
 const inquiryReferenceDisplay = computed(() => formatReferenceDisplay(inquiry.value?.reference_code, inquiry.value?.guest_name))
@@ -338,6 +365,8 @@ const isQuoteExpired = computed(() => {
 })
 
 const showConversionModal = ref(false)
+const showLostSheet = ref(false)
+const lostMotivo = ref('')
 
 const showEditModal = ref(false)
 const editForm = ref({})
@@ -391,6 +420,15 @@ const loadInquiry = async () => {
   loading.value = true
   try {
     inquiry.value = await store.getInquiryById(route.params.id)
+
+    const accountId = accountStore.getRequiredAccountId()
+    const { data: profileData } = await supabase
+      .from('account_profile')
+      .select('*')
+      .eq('account_id', accountId)
+      .maybeSingle()
+
+    profile.value = profileData || {}
   } catch (err) {
     inquiry.value = null
     toast.error(err.message || 'No se pudo cargar la consulta')
@@ -454,6 +492,22 @@ const changeStatus = async (status) => {
     toast.success('Estado actualizado.')
   } catch (err) {
     toast.error(err.message || 'No se pudo actualizar el estado')
+  }
+}
+
+const confirmMarkAsLost = async () => {
+  await changeStatus('perdida')
+  showLostSheet.value = false
+  lostMotivo.value = ''
+}
+
+const copyInquiryAsWhatsApp = async () => {
+  if (!inquiry.value) return
+  try {
+    await copyQuotationAsWhatsApp(inquiry.value, profile.value)
+    toast.success('Mensaje de WhatsApp copiado al portapapeles.')
+  } catch (error) {
+    toast.error(error.message || 'No se pudo copiar el mensaje de WhatsApp.')
   }
 }
 

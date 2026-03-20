@@ -21,7 +21,7 @@
       
       <!-- Search Guest -->
       <div class="w-full md:w-64">
-        <label class="sr-only">Buscar huÃ©sped</label>
+        <label class="sr-only">Buscar huésped</label>
         <div class="relative">
           <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -29,7 +29,7 @@
           <input 
             v-model="filters.searchData" 
             type="text" 
-            placeholder="Buscar huÃ©sped, cÃ³digo o nro..." 
+            placeholder="Buscar huésped, código o nro..." 
             class="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-shadow"
           >
         </div>
@@ -40,7 +40,7 @@
         <select v-model="filters.status" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
           <option value="">Todos los estados</option>
           <option value="confirmed">Confirmada</option>
-          <option value="in_stay">En estadÃ­a</option>
+          <option value="in_stay">En estadía</option>
           <option value="completed">Finalizada</option>
           <option value="cancelled">Cancelada</option>
         </select>
@@ -55,12 +55,12 @@
       </div>
 
       <div class="w-full md:w-40">
-        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Ingreso desde</label>
+        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Check-in</label>
         <input v-model="filters.checkInFrom" type="date" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
       </div>
 
       <div class="w-full md:w-40">
-        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Ingreso hasta</label>
+        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Check-out</label>
         <input v-model="filters.checkInTo" type="date" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
       </div>
 
@@ -132,7 +132,7 @@
           <select v-model="filters.status" class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm">
             <option value="">Todos los estados</option>
             <option value="confirmed">Confirmada</option>
-            <option value="in_stay">En estadÃ­a</option>
+            <option value="in_stay">En estadía</option>
             <option value="completed">Finalizada</option>
             <option value="cancelled">Cancelada</option>
           </select>

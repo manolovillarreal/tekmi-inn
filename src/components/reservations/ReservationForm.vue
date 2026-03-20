@@ -2,20 +2,10 @@
   <div class="max-w-3xl mx-auto">
     <h2 class="mb-6 text-2xl font-bold text-gray-800">Nueva Reserva</h2>
 
-    <form @submit.prevent="submitForm" class="space-y-6">
+  <form @submit.prevent="submitForm" class="space-y-3 sm:space-y-6">
 
       <!-- ── 1. Huésped ────────────────────────────────────────── -->
       <AppFormSection title="Huésped" :divider="true" :collapsible="isMobile" :defaultOpen="true">
-        <template #actions>
-          <button
-            type="button"
-            class="text-sm font-medium text-[#4C2FFF] hover:opacity-80"
-            @click="openCreateGuestModal"
-          >
-            + Crear huésped
-          </button>
-        </template>
-
         <AppSelect
           :modelValue="form.venue_id"
           label="Sede"
@@ -52,7 +42,20 @@
             :error="fieldError('guest_name')"
             @focus="showSuggestions = true"
             @blur="onGuestNameBlur"
-          />
+            >
+              <template #suffix>
+                <button
+                  type="button"
+                  class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#4C2FFF] text-white hover:bg-[#3d26cc] transition-colors"
+                  title="Crear nuevo huésped"
+                  @click.stop="openCreateGuestModal"
+                >
+                  <svg viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4" aria-hidden="true">
+                    <path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" />
+                  </svg>
+                </button>
+              </template>
+            </AppInput>
           <div
             v-if="showSuggestions && (autocompleteLoading || guestSuggestions.length > 0)"
             class="absolute left-0 right-0 top-full z-20 mt-1 rounded-md border border-[#E5E7EB] bg-white shadow-lg"
@@ -94,7 +97,21 @@
           placeholder="Booking, agencia..."
           hint="Opcional"
         />
-      </AppFormSection>
+          <div class="space-y-1">
+            <AppInput
+              v-model="form.commission_percentage"
+              type="number"
+              label="Comisión"
+              suffix="%"
+              hint="Opcional"
+            />
+            <AppFieldHint
+              v-if="sourceSuggestions.commissionPercentage !== null"
+              :message="`Sugerido por ${sourceSuggestions.sourceDetailLabel}: ${sourceSuggestions.commissionPercentage}%`"
+              type="hint"
+            />
+          </div>
+        </AppFormSection>
       <!-- ── 3. Fechas y unidad ─────────────────────────────────── -->
       <AppFormSection title="Fechas y unidad" :divider="true" :collapsible="isMobile" :defaultOpen="true">
         <AppFormGrid :columns="2">
@@ -192,7 +209,6 @@
 
       <!-- ── 5. Precio y comisión ──────────────────────────────── -->
       <AppFormSection title="Precio y comisión" :divider="true" :collapsible="isMobile" :defaultOpen="!isMobile">
-        <AppFormGrid :columns="2">
           <AppInput
             v-model="form.price_per_night"
             type="number"
@@ -203,15 +219,7 @@
             :hint="suggestedNightlyPrice > 0 ? `Sugerido: $${formatCurrency(suggestedNightlyPrice)}` : ''"
             @blur="onTouched('price_per_night')"
           />
-          <AppSelect
-            v-model="form.status"
-            label="Estado inicial"
-            :options="statusOptions"
-            placeholder="Seleccionar estado"
-          />
-        </AppFormGrid>
 
-        <AppFormGrid :columns="2">
           <div class="space-y-1">
             <AppInput
               v-model="form.discount_percentage"
@@ -226,21 +234,6 @@
               type="hint"
             />
           </div>
-          <div class="space-y-1">
-            <AppInput
-              v-model="form.commission_percentage"
-              type="number"
-              label="Comisión"
-              suffix="%"
-              hint="Opcional"
-            />
-            <AppFieldHint
-              v-if="sourceSuggestions.commissionPercentage !== null"
-              :message="`Sugerido por ${sourceSuggestions.sourceDetailLabel}: ${sourceSuggestions.commissionPercentage}%`"
-              type="hint"
-            />
-          </div>
-        </AppFormGrid>
 
         <PricingCalculatorPanel
           :checkIn="form.check_in"
@@ -254,11 +247,6 @@
           @update="onCalculatorUpdate"
         />
 
-        <AppDatePicker
-          v-model="form.payment_deadline"
-          label="Fecha límite de pago"
-          hint="Opcional — hasta cuándo se reservan las fechas"
-        />
       </AppFormSection>  
       <!-- ── 6. Notas ───────────────────────────────────────────── -->
       <AppFormSection title="Notas" :divider="false" :collapsible="isMobile" :defaultOpen="!isMobile">
@@ -1010,14 +998,7 @@ const submitManualOccupancy = async () => {
       reservation_id: syncIssue.value.reservationId,
       notes: 'Creada manualmente desde formulario'
     }))
-
-    const { error } = await supabase.from('occupancies').insert(payload)
-    if (error) throw error
-
-    showManualOccupancyModal.value = false
-    router.push('/reservas')
-  } catch (err) {
-    manualOccupancyError.value = err.message
+    await supabase.from('occupancies').insert(payload)
   } finally {
     manualOccupancyLoading.value = false
   }

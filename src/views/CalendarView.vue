@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6 p-6">
+  <div class="space-y-6 p-2 sm:p-6">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <h1 class="text-2xl font-bold text-gray-800">Calendario</h1>
       <div class="flex flex-wrap items-end gap-3">
@@ -80,7 +80,7 @@
       </div>
     </div>
 
-    <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+    <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white p-2 sm:p-6 shadow-sm">
       <div class="mb-6 flex flex-wrap gap-4 text-sm font-medium text-gray-600">
         <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-blue-500"></span> Reserva</span>
         <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-orange-500"></span> Mantenimiento</span>
@@ -161,7 +161,7 @@
           v-for="day in calendarDays"
           :key="`classic-day-${day.date}`"
           class="min-h-[120px] bg-white p-2 transition-colors hover:bg-gray-50"
-          :class="isMobile ? 'cursor-pointer min-h-[88px]' : ''"
+          :class="isMobile ? 'cursor-pointer min-h-[60px] p-1' : ''"
           @click="isMobile ? openDaySheet(day.date) : null"
         >
           <div class="text-right text-sm font-semibold text-gray-400">{{ day.dayNumber }}</div>
@@ -182,7 +182,7 @@
             data-occ-trigger="true"
             type="button"
             class="mt-1 block w-full truncate rounded p-1.5 text-left text-xs text-white shadow-sm"
-            :class="occupancyColor(occ)"
+            :class="[occupancyColor(occ), isMobile ? 'px-1 py-0.5 text-[10px]' : '']"
             v-show="!isMobile"
             @mouseenter="openDesktopTooltip($event, occ, day.date)"
             @mousemove="openDesktopTooltip($event, occ, day.date)"
