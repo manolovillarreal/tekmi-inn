@@ -1,6 +1,27 @@
 <template>
   <div class="card overflow-hidden !p-0">
-    <div class="overflow-x-auto">
+    <div v-if="isMobile" class="space-y-3 p-3">
+      <div v-if="loading" class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
+        Cargando reservas...
+      </div>
+      <div v-else-if="reservations.length === 0" class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
+        No hay reservas para mostrar.
+      </div>
+
+      <DataCard
+        v-for="res in reservations"
+        v-else
+        :key="res.id"
+        :title="res.guest_display_name || 'Desconocido'"
+        :subtitle="`${res.reservation_number || '-'} · ${res.reference_code || '-'}`"
+        :badge="mobileBadge(res)"
+        :meta="mobileMeta(res)"
+        :actions="mobileActions(res)"
+        :onClick="() => handleView(res)"
+      />
+    </div>
+
+    <div v-else class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
         <thead class="bg-gray-50 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
           <tr>
@@ -152,10 +173,13 @@
 <script setup>
 import { computed, ref } from 'vue'
 import ReservationBadge from '../ui/ReservationBadge.vue'
+import DataCard from '../ui/DataCard.vue'
 import { getCommissionSummary } from '../../utils/reservations'
 import { usePermissions } from '../../composables/usePermissions'
+import { useBreakpoint } from '../../composables/useBreakpoint'
 
 const { can } = usePermissions()
+const { isMobile } = useBreakpoint()
 
 const props = defineProps({
   reservations: { type: Array, required: true },
@@ -254,5 +278,47 @@ const getReservationNights = (reservation) => {
 
   const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24))
   return Number.isFinite(nights) && nights >= 0 ? nights : '—'
+}
+
+const mobileBadge = (res) => {
+  const map = {
+    confirmed: { label: 'Confirmada', type: 'info' },
+    in_stay: { label: 'En estadia', type: 'success' },
+    completed: { label: 'Finalizada', type: 'ghost' },
+    cancelled: { label: 'Cancelada', type: 'danger' }
+  }
+
+  return map[res.status] || { label: res.status || 'Sin estado', type: 'ghost' }
+}
+
+const mobileMeta = (res) => {
+  const meta = [
+    { label: 'Fechas', value: `${formatDate(res.check_in)} -> ${formatDate(res.check_out)}` },
+    { label: 'Noches', value: String(getReservationNights(res)) },
+    { label: 'Unidades', value: res.unit_names_display || 'Sin unidades' },
+    { label: 'Personas', value: `${Number(res.adults || 0) + Number(res.children || 0)} pax` },
+    { label: 'Origen', value: res.source_display_label || formatSource(res.source) || '-' }
+  ]
+
+  if (showFinancialColumns.value) {
+    meta.push({ label: 'Total', value: res.total_amount != null ? `$${formatCurrency(res.total_amount)}` : '—' })
+    meta.push({ label: 'Saldo', value: res.balance === 0 || res.balance === '0' ? 'Pagado' : res.balance != null ? `$${formatCurrency(res.balance)}` : '—' })
+  }
+
+  return meta
+}
+
+const mobileActions = (res) => {
+  const actions = [{ label: 'Ver detalle', type: 'primary', handler: () => handleView(res) }]
+
+  if (can('reservations', 'edit')) {
+    actions.push({ label: 'Estado', type: 'ghost', handler: () => handleChangeStatus(res) })
+  }
+
+  if (can('payments', 'create')) {
+    actions.push({ label: 'Pago', type: 'ghost', handler: () => handleRegisterPayment(res) })
+  }
+
+  return actions
 }
 </script>

@@ -3,14 +3,21 @@
     <!-- Header -->
     <div class="flex items-center justify-between">
       <h1 class="text-3xl font-semibold text-gray-900 tracking-tight">Reservas</h1>
-      <router-link v-if="can('reservations', 'create')" to="/reservar" class="btn-primary flex items-center gap-2">
+      <router-link v-if="can('reservations', 'create') && !isMobile" to="/reservar" class="btn-primary flex items-center gap-2">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
         Nueva reserva
       </router-link>
     </div>
 
+    <div v-if="isMobile" class="card !py-3 flex items-center justify-between gap-3">
+      <p class="text-sm text-gray-600">{{ store.totalCount }} resultados</p>
+      <button type="button" class="btn-secondary text-sm" @click="showFiltersSheet = true">
+        Filtros
+      </button>
+    </div>
+
     <!-- Filters Bar -->
-    <div class="card !py-4 flex flex-wrap gap-4 items-center bg-white">
+    <div v-if="!isMobile" class="card !py-4 flex flex-wrap gap-4 items-center bg-white">
       
       <!-- Search Guest -->
       <div class="w-full md:w-64">
@@ -105,6 +112,69 @@
       @updated="handleStatusUpdated"
     />
 
+    <BottomSheet
+      :isOpen="showFiltersSheet"
+      title="Filtros"
+      @close="showFiltersSheet = false"
+    >
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Buscar</label>
+          <input
+            v-model="filters.searchData"
+            type="text"
+            placeholder="Huésped, código o nro"
+            class="mt-1 block w-full rounded-md border-gray-300 text-sm"
+          >
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Estado</label>
+          <select v-model="filters.status" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+            <option value="">Todos los estados</option>
+            <option value="confirmed">Confirmada</option>
+            <option value="in_stay">En estadía</option>
+            <option value="completed">Finalizada</option>
+            <option value="cancelled">Cancelada</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Origen</label>
+          <select v-model="filters.sourceDetailId" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+            <option value="">Cualquier origen</option>
+            <option v-for="detail in sourceDetails" :key="detail.id" :value="detail.id">{{ detail.label_es }}</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Ingreso desde</label>
+            <input v-model="filters.checkInFrom" type="date" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Ingreso hasta</label>
+            <input v-model="filters.checkInTo" type="date" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <button v-if="hasActiveFilters" type="button" class="text-sm font-medium text-gray-500 underline" @click="clearFilters">
+            Limpiar filtros
+          </button>
+          <button type="button" class="btn-primary ml-auto" @click="showFiltersSheet = false">Aplicar</button>
+        </div>
+      </div>
+    </BottomSheet>
+
+    <router-link
+      v-if="can('reservations', 'create') && isMobile"
+      to="/reservar"
+      class="fixed bottom-24 right-4 z-30 inline-flex h-12 items-center justify-center rounded-full bg-primary px-5 text-sm font-semibold text-white shadow-lg hover:bg-primary-dark"
+    >
+      + Reserva
+    </router-link>
+
   </div>
 </template>
 
@@ -116,12 +186,15 @@ import { useSourcesStore } from '../stores/sources'
 import ReservationTable from '../components/reservations/ReservationTable.vue'
 import PaymentModal from '../components/payments/PaymentModal.vue'
 import StatusChangeModal from '../components/reservations/StatusChangeModal.vue'
+import BottomSheet from '../components/ui/BottomSheet.vue'
 import { usePermissions } from '../composables/usePermissions'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
 const store = useReservationsStore()
 const sourcesStore = useSourcesStore()
 const router = useRouter()
 const { can } = usePermissions()
+const { isMobile } = useBreakpoint()
 
 const getLast30DaysRange = () => {
   const today = new Date()
@@ -162,6 +235,7 @@ const showPaymentModal = ref(false)
 const selectedReservation = ref(null)
 const showStatusModal = ref(false)
 const selectedStatusReservation = ref(null)
+const showFiltersSheet = ref(false)
 
 const fetchList = async () => {
   await store.fetchReservations({

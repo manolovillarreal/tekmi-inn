@@ -5,7 +5,12 @@
       <button v-if="can('inquiries', 'create')" class="btn-primary" @click="openCreateModal">+ Nueva consulta</button>
     </div>
 
-    <div class="card !py-4 flex flex-wrap items-center gap-4 bg-white">
+    <div v-if="isMobile" class="card !py-3 flex items-center justify-between gap-3">
+      <p class="text-sm text-gray-600">{{ filteredInquiries.length }} consultas</p>
+      <button type="button" class="btn-secondary text-sm" @click="showFiltersSheet = true">Filtros</button>
+    </div>
+
+    <div v-if="!isMobile" class="card !py-4 flex flex-wrap items-center gap-4 bg-white">
       <input
         v-model="filters.search"
         type="text"
@@ -27,7 +32,7 @@
       <button v-if="hasFilters" class="text-sm font-medium text-gray-500 underline" @click="clearFilters">Limpiar filtros</button>
     </div>
 
-    <div class="card overflow-hidden !p-0">
+    <div v-if="!isMobile" class="card overflow-hidden !p-0">
       <div class="overflow-x-auto">
         <table class="w-full border-collapse text-left text-sm">
           <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
@@ -87,6 +92,27 @@
           </tbody>
         </table>
       </div>
+    </div>
+
+    <div v-else class="space-y-3">
+      <div v-if="store.loading" class="card text-sm text-gray-500">Cargando consultas...</div>
+      <div v-else-if="filteredInquiries.length === 0" class="card text-sm text-gray-500">No hay consultas para mostrar.</div>
+
+      <DataCard
+        v-for="inquiry in filteredInquiries"
+        v-else
+        :key="inquiry.id"
+        :title="inquiry.guest_name || 'Sin nombre'"
+        :subtitle="`${inquiry.inquiry_number || '-'} · ${inquiry.reference_code || '-'}`"
+        :badge="{ label: getInquiryStatusLabel(inquiry.status), type: inquiry.status === 'perdida' ? 'danger' : inquiry.status === 'convertida' ? 'success' : 'info' }"
+        :meta="[
+          { label: 'Fechas', value: `${formatDate(inquiry.check_in)} -> ${formatDate(inquiry.check_out)}` },
+          { label: 'Noches', value: String(getNights(inquiry.check_in, inquiry.check_out)) },
+          { label: 'Personas', value: String(getPersonas(inquiry)) },
+          { label: 'Origen', value: inquiry.source_display_label || inquiry.source || '-' }
+        ]"
+        :actions="inquiryActions(inquiry)"
+      />
     </div>
 
     <BaseModal :isOpen="showCreateModal" title="Nueva consulta" size="lg" @close="closeCreateModal">
@@ -188,15 +214,59 @@
         />
       </form>
     </BaseModal>
+
+    <InquiryConversionModal
+      v-if="selectedInquiryForConversion"
+      :isOpen="showConversionModal"
+      :inquiry="selectedInquiryForConversion"
+      @close="closeConversionModal"
+      @converted="handleConverted"
+    />
+
+    <BottomSheet
+      :isOpen="showFiltersSheet"
+      title="Filtros de consultas"
+      @close="showFiltersSheet = false"
+    >
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Buscar</label>
+          <input v-model="filters.search" type="text" placeholder="Nombre, teléfono o número" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Estado</label>
+          <select v-model="filters.status" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+            <option value="">Todos los estados</option>
+            <option v-for="(label, key) in INQUIRY_STATUS_LABELS" :key="key" :value="key">{{ label }}</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3">
+          <input v-model="filters.dateFrom" type="date" class="rounded-md border border-gray-300 px-3 py-2 text-sm">
+          <input v-model="filters.dateTo" type="date" class="rounded-md border border-gray-300 px-3 py-2 text-sm">
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <button v-if="hasFilters" class="text-sm font-medium text-gray-500 underline" @click="clearFilters">Limpiar filtros</button>
+          <button type="button" class="btn-primary ml-auto" @click="showFiltersSheet = false">Aplicar</button>
+        </div>
+      </div>
+    </BottomSheet>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import BaseModal from '../components/ui/BaseModal.vue'
 import SourceSelector from '../components/sources/SourceSelector.vue'
+import DataCard from '../components/ui/DataCard.vue'
+import BottomSheet from '../components/ui/BottomSheet.vue'
+import InquiryConversionModal from '../components/inquiries/InquiryConversionModal.vue'
 import { useInquiriesStore } from '../stores/inquiries'
 import { usePermissions } from '../composables/usePermissions'
+import { useBreakpoint } from '../composables/useBreakpoint'
 import { useAccountStore } from '../stores/account'
 import { supabase } from '../services/supabase'
 import { useToast } from '../composables/useToast'
@@ -214,12 +284,15 @@ import {
 } from '@/components/ui/forms'
 import {
   INQUIRY_STATUS_LABELS,
+  getAvailableInquiryTransitions,
   getInquiryStatusLabel,
   getInquiryStatusStyle
 } from '../utils/inquiryUtils'
 
 const store = useInquiriesStore()
+const router = useRouter()
 const { can } = usePermissions()
+const { isMobile } = useBreakpoint()
 const accountStore = useAccountStore()
 const toast = useToast()
 
@@ -235,6 +308,9 @@ const venues = ref([])
 const units = ref([])
 
 const createForm = ref(buildEmptyForm())
+const showFiltersSheet = ref(false)
+const showConversionModal = ref(false)
+const selectedInquiryForConversion = ref(null)
 
 function buildEmptyForm() {
   return {
@@ -302,6 +378,41 @@ const filteredInquiries = computed(() => {
 
 const clearFilters = () => {
   filters.value = { search: '', status: '', dateFrom: '', dateTo: '' }
+}
+
+const openConversionModal = (inquiry) => {
+  selectedInquiryForConversion.value = inquiry
+  showConversionModal.value = true
+}
+
+const closeConversionModal = () => {
+  showConversionModal.value = false
+  selectedInquiryForConversion.value = null
+}
+
+const handleConverted = async () => {
+  await store.fetchInquiries()
+  closeConversionModal()
+}
+
+const inquiryActions = (inquiry) => {
+  const actions = [
+    {
+      label: 'Ver detalle',
+      type: 'ghost',
+      handler: () => router.push(`/consultas/${inquiry.id}`)
+    }
+  ]
+
+  if (getAvailableInquiryTransitions(inquiry.status).includes('convertida')) {
+    actions.push({
+      label: 'Convertir',
+      type: 'primary',
+      handler: () => openConversionModal(inquiry)
+    })
+  }
+
+  return actions
 }
 
 const isQuoteExpired = (inquiry) => {

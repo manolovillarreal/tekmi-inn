@@ -5,7 +5,7 @@
     <form @submit.prevent="submitForm" class="space-y-6">
 
       <!-- ── 1. Huésped ────────────────────────────────────────── -->
-      <AppFormSection title="Huésped" :divider="true">
+      <AppFormSection title="Huésped" :divider="true" :collapsible="isMobile" :defaultOpen="true">
         <template #actions>
           <button
             type="button"
@@ -79,7 +79,7 @@
         />
       </AppFormSection>
       <!-- ── 2. Origen ──────────────────────────────────────────── -->
-      <AppFormSection title="Origen" :divider="true">
+      <AppFormSection title="Origen" :divider="true" :collapsible="isMobile" :defaultOpen="!isMobile">
         <AppFieldGroup title="Canal de origen" :border="false" :compact="true">
           <SourceSelector
             :modelValue="{ sourceTypeId: form.source_type_id, sourceDetailId: form.source_detail_id }"
@@ -96,7 +96,7 @@
         />
       </AppFormSection>
       <!-- ── 3. Fechas y unidad ─────────────────────────────────── -->
-      <AppFormSection title="Fechas y unidad" :divider="true">
+      <AppFormSection title="Fechas y unidad" :divider="true" :collapsible="isMobile" :defaultOpen="true">
         <AppFormGrid :columns="2">
           <AppDatePicker
             v-model="form.check_in"
@@ -170,7 +170,7 @@
       </AppFormSection>
 
       <!-- ── 4. Personas ───────────────────────────────────────── -->
-      <AppFormSection title="Personas" :divider="true">
+      <AppFormSection title="Personas" :divider="true" :collapsible="isMobile" :defaultOpen="!isMobile">
         <AppFormGrid :columns="2">
           <AppCounter
             v-model="form.adults"
@@ -191,7 +191,7 @@
       </AppFormSection>
 
       <!-- ── 5. Precio y comisión ──────────────────────────────── -->
-      <AppFormSection title="Precio y comisión" :divider="true">
+      <AppFormSection title="Precio y comisión" :divider="true" :collapsible="isMobile" :defaultOpen="!isMobile">
         <AppFormGrid :columns="2">
           <AppInput
             v-model="form.price_per_night"
@@ -261,7 +261,7 @@
         />
       </AppFormSection>  
       <!-- ── 6. Notas ───────────────────────────────────────────── -->
-      <AppFormSection title="Notas" :divider="false">
+      <AppFormSection title="Notas" :divider="false" :collapsible="isMobile" :defaultOpen="!isMobile">
         <AppTextarea
           v-model="form.notes"
           label="Notas internas"
@@ -305,17 +305,19 @@
       />
 
       <!-- Form footer -->
-      <AppFormActions
-        submit-label="Guardar reserva"
-        cancel-label="Cancelar"
-        :loading="loading"
-        :submit-disabled="!canSubmit"
-        @submit="submitForm"
-        @cancel="router.push('/reservas')"
-      />
+      <div :class="isMobile ? 'sticky bottom-0 z-20 -mx-4 border-t border-[#E5E7EB] bg-white px-4 py-3 shadow-[0_-6px_18px_rgba(15,23,42,0.06)]' : ''">
+        <AppFormActions
+          submit-label="Guardar reserva"
+          cancel-label="Cancelar"
+          :loading="loading"
+          :submit-disabled="!canSubmit"
+          @submit="submitForm"
+          @cancel="router.push('/reservas')"
+        />
+      </div>
     </form>
 
-    <BaseModal :isOpen="showCreateGuestModal" title="Crear huésped" @close="closeCreateGuestModal">
+    <BaseModal :isOpen="showCreateGuestModal" title="Crear huésped" :fullScreenOnMobile="true" @close="closeCreateGuestModal">
       <form class="space-y-4" @submit.prevent="submitCreateGuest">
         <div>
           <label class="block text-sm font-medium text-gray-700">Nombre</label>
@@ -339,7 +341,7 @@
       </form>
     </BaseModal>
 
-    <BaseModal :isOpen="showManualOccupancyModal" title="Crear ocupación manual" @close="closeManualOccupancyModal">
+    <BaseModal :isOpen="showManualOccupancyModal" title="Crear ocupación manual" :fullScreenOnMobile="true" @close="closeManualOccupancyModal">
       <form class="space-y-4" @submit.prevent="submitManualOccupancy">
         <p class="text-sm text-gray-600">Se crearán ocupaciones tipo <strong>reservation</strong> para las unidades seleccionadas.</p>
         <div>
@@ -369,6 +371,7 @@ import BaseModal from '../ui/BaseModal.vue'
 import SourceSelector from '../sources/SourceSelector.vue'
 import { useAccountStore } from '../../stores/account'
 import { useToast } from '../../composables/useToast'
+import { useBreakpoint } from '../../composables/useBreakpoint'
 import {
   AppInput, AppSelect, AppTextarea, AppDatePicker,
   AppCounter, AppToggle, AppFieldGroup, AppFormSection,
@@ -381,6 +384,7 @@ const accountStore = useAccountStore()
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
+const { isMobile } = useBreakpoint()
 
 const loading = ref(false)
 const errorMessage = ref('')

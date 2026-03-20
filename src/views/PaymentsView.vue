@@ -10,7 +10,12 @@
     </div>
 
     <template v-else>
-      <div class="card !py-4">
+      <div v-if="isMobile" class="card !py-3 flex items-center justify-between gap-3">
+        <p class="text-sm text-gray-600">{{ payments.length }} pagos</p>
+        <button type="button" class="btn-secondary text-sm" @click="showFiltersSheet = true">Filtros</button>
+      </div>
+
+      <div v-if="!isMobile" class="card !py-4">
         <div class="flex flex-wrap items-end gap-3">
           <div class="w-full md:w-64">
             <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Buscar huésped</label>
@@ -55,7 +60,7 @@
         </div>
       </div>
 
-      <div class="card overflow-hidden !p-0">
+      <div v-if="!isMobile" class="card overflow-hidden !p-0">
         <div class="overflow-x-auto">
           <table class="w-full border-collapse text-left text-sm">
             <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
@@ -126,9 +131,43 @@
           </div>
         </div>
       </div>
+
+      <div v-else class="space-y-3">
+        <div v-if="loading" class="card text-sm text-gray-500">Cargando pagos...</div>
+        <div v-else-if="paginatedPayments.length === 0" class="card text-sm text-gray-500">
+          No se encontraron pagos con los filtros aplicados.
+        </div>
+
+        <DataCard
+          v-for="payment in paginatedPayments"
+          v-else
+          :key="payment.id"
+          :title="payment.guest_display_name"
+          :subtitle="`Reserva ${payment.reservation_number || '-'}`"
+          :meta="[
+            { label: 'Fecha', value: formatDateShort(payment.payment_date) },
+            { label: 'Método', value: payment.method || '-' },
+            { label: 'Referencia', value: payment.reference || '-' },
+            { label: 'Monto', value: formatCop(payment.amount) }
+          ]"
+          :actions="[
+            { label: 'Ver reserva', type: 'ghost', handler: () => goToReservation(payment) },
+            { label: 'Eliminar', type: 'danger', handler: () => openDeleteModal(payment) }
+          ]"
+        />
+
+        <div class="card flex items-center justify-between text-sm text-gray-600">
+          <p>Página {{ page }} de {{ totalPages }}</p>
+          <div class="flex items-center gap-2">
+            <button v-if="page > 1" class="btn-secondary text-sm" @click="page -= 1">Anterior</button>
+            <button v-if="page < totalPages" class="btn-secondary text-sm" @click="page += 1">Siguiente</button>
+          </div>
+        </div>
+      </div>
     </template>
 
     <ConfirmActionModal
+      v-if="!isMobile"
       :isOpen="showDeleteModal"
       title="Eliminar pago"
       :message="deleteModalMessage"
@@ -137,20 +176,80 @@
       @close="closeDeleteModal"
       @confirm="confirmDeletePayment"
     />
+
+    <BottomSheet
+      :isOpen="isMobile && showDeleteModal"
+      title="Eliminar pago"
+      @close="closeDeleteModal"
+    >
+      <div class="space-y-4">
+        <p class="text-sm text-gray-700">{{ deleteModalMessage }}</p>
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" class="btn-secondary" :disabled="deleting" @click="closeDeleteModal">Cancelar</button>
+          <button type="button" class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60" :disabled="deleting" @click="confirmDeletePayment">
+            {{ deleting ? 'Eliminando...' : 'Eliminar' }}
+          </button>
+        </div>
+      </div>
+    </BottomSheet>
+
+    <BottomSheet
+      :isOpen="showFiltersSheet"
+      title="Filtros de pagos"
+      @close="showFiltersSheet = false"
+    >
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Buscar huésped</label>
+          <input v-model="filters.search" type="text" placeholder="Nombre del huésped" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+        </div>
+        <div class="grid grid-cols-1 gap-3">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Desde</label>
+            <input v-model="filters.from" type="date" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Hasta</label>
+            <input v-model="filters.to" type="date" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Método</label>
+          <select v-model="filters.method" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
+            <option value="">Todos</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="transferencia">Transferencia</option>
+            <option value="nequi">Nequi</option>
+            <option value="tarjeta">Tarjeta</option>
+            <option value="plataforma">Plataforma</option>
+          </select>
+        </div>
+        <div class="flex items-center justify-between pt-2">
+          <button v-if="hasActiveFilters" type="button" class="text-sm font-medium text-gray-500 underline" @click="clearFilters">Limpiar filtros</button>
+          <button type="button" class="btn-primary ml-auto" @click="showFiltersSheet = false">Aplicar</button>
+        </div>
+      </div>
+    </BottomSheet>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
 import { usePermissions } from '../composables/usePermissions'
 import { useToast } from '../composables/useToast'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
+import DataCard from '../components/ui/DataCard.vue'
+import BottomSheet from '../components/ui/BottomSheet.vue'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
 const accountStore = useAccountStore()
 const { can } = usePermissions()
 const toast = useToast()
+const router = useRouter()
+const { isMobile } = useBreakpoint()
 
 const filters = ref({
   search: '',
@@ -167,6 +266,7 @@ const pageSize = 25
 const sortDir = ref('desc')
 const showDeleteModal = ref(false)
 const selectedPayment = ref(null)
+const showFiltersSheet = ref(false)
 
 const hasActiveFilters = computed(() => {
   return Boolean(filters.value.search || filters.value.from || filters.value.to || filters.value.method)
@@ -215,6 +315,11 @@ const toggleDateSort = () => {
 
 const clearFilters = () => {
   filters.value = { search: '', from: '', to: '', method: '' }
+}
+
+const goToReservation = (payment) => {
+  if (!payment?.reservation_id) return
+  router.push(`/reservas/${payment.reservation_id}`)
 }
 
 const mapPaymentRow = (row) => {

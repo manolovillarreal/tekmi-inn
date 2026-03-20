@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center">
+  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center" :class="wrapperClass">
     <!-- Overlay -->
     <div 
       class="absolute inset-0 bg-black opacity-50 transition-opacity"
@@ -7,13 +7,13 @@
     ></div>
     
     <!-- Modal Panel -->
-    <div 
-      class="bg-white rounded-xl shadow-xl z-50 flex flex-col max-h-[90vh] overflow-hidden transform transition-all"
-      :class="widthClass"
+    <div
+      class="bg-white shadow-xl z-50 flex flex-col overflow-hidden transform transition-all"
+      :class="panelClass"
       role="dialog"
       aria-modal="true"
     >
-      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+      <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between sm:px-6 sm:py-4">
         <h3 class="text-xl font-semibold text-gray-900" id="modal-title">
           {{ title }}
         </h3>
@@ -28,11 +28,11 @@
         </button>
       </div>
       
-      <div class="px-6 py-6 overflow-y-auto flex-1">
+      <div class="px-4 py-5 overflow-y-auto flex-1 sm:px-6 sm:py-6">
         <slot></slot>
       </div>
       
-      <div v-if="$slots.footer" class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 rounded-b-xl">
+      <div v-if="$slots.footer" class="px-4 py-3 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 sm:px-6 sm:py-4">
         <slot name="footer"></slot>
       </div>
     </div>
@@ -41,6 +41,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useBreakpoint } from '../../composables/useBreakpoint'
 
 const props = defineProps({
   isOpen: {
@@ -54,10 +55,23 @@ const props = defineProps({
   size: {
     type: String,
     default: 'md' // sm (400px), md (600px), lg (800px)
+  },
+  fullScreenOnMobile: {
+    type: Boolean,
+    default: false
   }
 })
 
 const emit = defineEmits(['close'])
+
+const { isMobile } = useBreakpoint()
+
+const wrapperClass = computed(() => {
+  if (props.fullScreenOnMobile && isMobile.value) {
+    return 'p-0'
+  }
+  return 'p-4'
+})
 
 const widthClass = computed(() => {
   switch (props.size) {
@@ -65,6 +79,14 @@ const widthClass = computed(() => {
     case 'lg': return 'w-full max-w-4xl'
     default: return 'w-full max-w-2xl'
   }
+})
+
+const panelClass = computed(() => {
+  if (props.fullScreenOnMobile && isMobile.value) {
+    return 'h-[100dvh] w-full rounded-none max-h-none'
+  }
+
+  return `rounded-xl max-h-[90vh] ${widthClass.value}`
 })
 
 const close = () => {

@@ -1,5 +1,5 @@
 <template>
-  <BaseModal :isOpen="isOpen" title="Convertir en reserva" size="lg" @close="handleClose">
+  <BaseModal :isOpen="isOpen" title="Convertir en reserva" size="lg" :fullScreenOnMobile="true" @close="handleClose">
     <form class="space-y-5" @submit.prevent="submitConversion">
       <p class="font-mono text-xs text-gray-500">Consulta: {{ props.inquiry?.inquiry_number || '-' }}</p>
 

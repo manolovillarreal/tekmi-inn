@@ -102,7 +102,7 @@
             No hay pagos registrados aún.
           </div>
           
-          <table v-else class="min-w-full divide-y divide-gray-200">
+          <table v-else-if="!isMobile" class="min-w-full divide-y divide-gray-200">
             <thead>
               <tr class="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <th class="py-2 px-3">Fecha</th>
@@ -130,6 +130,25 @@
               </tr>
             </tbody>
           </table>
+
+          <div v-else class="space-y-2">
+            <div v-for="p in payments" :key="p.id" class="rounded-md border border-gray-200 bg-white p-3">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-gray-900">{{ formatCop(p.amount) }}</p>
+                  <p class="text-xs text-gray-500">{{ formatDate(p.payment_date) }} · {{ p.method || '-' }}</p>
+                  <p class="text-xs text-gray-500">Ref: {{ p.reference || '-' }}</p>
+                </div>
+                <button
+                  v-if="can('payments', 'delete')"
+                  class="text-xs font-medium text-red-600"
+                  @click="openDeletePaymentModal(p)"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
           
           <div class="mt-4 pt-4 border-t border-gray-100 flex justify-end">
             <div class="w-full max-w-xs space-y-2 text-sm">
@@ -257,7 +276,7 @@
       </div>
     </div>
 
-    <BaseModal :isOpen="showPreregistroModal" title="Completar pre-registro" size="lg" @close="closePreregistroModal">
+    <BaseModal :isOpen="showPreregistroModal" title="Completar pre-registro" size="lg" :fullScreenOnMobile="true" @close="closePreregistroModal">
       <PreRegistroForm
         v-if="res"
         :reservation="preregistroReservation"
@@ -272,7 +291,7 @@
       </p>
     </BaseModal>
 
-    <BaseModal :isOpen="showEditUnitsModal" title="Editar unidades" @close="closeEditUnitsModal">
+    <BaseModal :isOpen="showEditUnitsModal" title="Editar unidades" :fullScreenOnMobile="true" @close="closeEditUnitsModal">
       <div class="space-y-4">
         <p class="text-sm text-gray-600">
           Selecciona las unidades para esta reserva. Se validará disponibilidad en el mismo rango de fechas.
@@ -386,12 +405,14 @@ import { formatReferenceDisplay } from '../utils/referenceUtils'
 import { usePermissions } from '../composables/usePermissions'
 import { useAccountStore } from '../stores/account'
 import { useToast } from '../composables/useToast'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
 const route = useRoute()
 const router = useRouter()
 const reservationsStore = useReservationsStore()
 const accountStore = useAccountStore()
 const { can } = usePermissions()
+const { isMobile } = useBreakpoint()
 const toast = useToast()
 const loading = ref(true)
 const res = ref(null)
@@ -590,6 +611,12 @@ const formatDate = (ds) => {
 }
 
 const formatCurrency = (val) => Number(val).toLocaleString('es-CO')
+
+const formatCop = (value) => new Intl.NumberFormat('es-CO', {
+  style: 'currency',
+  currency: 'COP',
+  maximumFractionDigits: 0
+}).format(Number(value || 0))
 
 const formatDateTime = (ds) => {
   if (!ds) return '-'

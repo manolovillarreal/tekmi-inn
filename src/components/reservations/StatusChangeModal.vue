@@ -1,5 +1,5 @@
 <template>
-  <BaseModal :isOpen="isOpen" title="Cambiar estado de la reserva" @close="handleClose">
+  <BaseModal :isOpen="isOpen" title="Cambiar estado de la reserva" :fullScreenOnMobile="true" @close="handleClose">
     <form class="space-y-5" @submit.prevent="submitChange">
       <div class="space-y-1">
         <p class="text-sm text-[#6B7280]">

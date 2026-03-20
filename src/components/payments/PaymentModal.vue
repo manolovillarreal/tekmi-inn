@@ -1,5 +1,5 @@
 <template>
-  <BaseModal :isOpen="isOpen" title="Registrar pago" size="md" @close="closeModal">
+  <BaseModal :isOpen="isOpen" title="Registrar pago" size="md" :fullScreenOnMobile="true" @close="closeModal">
     <form class="space-y-5" @submit.prevent="submitPayment">
       <AppFormSection title="Datos del pago" :divider="true">
         <AppFormGrid :columns="2">

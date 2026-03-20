@@ -3,7 +3,23 @@
     <div class="flex flex-wrap items-center justify-between gap-4">
       <h1 class="text-2xl font-bold text-gray-800">Calendario</h1>
       <div class="flex flex-wrap items-end gap-3">
-        <div>
+        <div v-if="isMobile" class="w-full">
+          <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Vista</label>
+          <div class="mt-1 grid grid-cols-3 gap-2">
+            <button
+              v-for="option in mobileViewOptions"
+              :key="option.value"
+              type="button"
+              class="rounded-md px-3 py-2 text-sm font-medium transition"
+              :class="mobileViewPreset === option.value ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+              @click="mobileViewPreset = option.value"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="!isMobile">
           <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Vista</label>
           <select v-model="viewMode" class="mt-1 rounded-md border-gray-300 text-sm">
             <option value="clasica">Clásica</option>
@@ -12,7 +28,7 @@
           </select>
         </div>
 
-        <div>
+        <div v-if="!isMobile">
           <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Periodo</label>
           <select v-model="periodPreset" class="mt-1 rounded-md border-gray-300 text-sm">
             <option value="today">Hoy</option>
@@ -145,8 +161,20 @@
           v-for="day in calendarDays"
           :key="`classic-day-${day.date}`"
           class="min-h-[120px] bg-white p-2 transition-colors hover:bg-gray-50"
+          :class="isMobile ? 'cursor-pointer min-h-[88px]' : ''"
+          @click="isMobile ? openDaySheet(day.date) : null"
         >
           <div class="text-right text-sm font-semibold text-gray-400">{{ day.dayNumber }}</div>
+
+          <div v-if="isMobile" class="mt-2 flex flex-wrap gap-1">
+            <span
+              v-for="occ in getOccupanciesForDay(day.date).slice(0, 4)"
+              :key="`dot-${day.date}-${occ.id}`"
+              class="h-2 w-2 rounded-full"
+              :class="occupancyDotColor(occ)"
+            ></span>
+            <span v-if="getOccupanciesForDay(day.date).length > 4" class="text-[10px] text-gray-500">+{{ getOccupanciesForDay(day.date).length - 4 }}</span>
+          </div>
 
           <button
             v-for="occ in getOccupanciesForDay(day.date)"
@@ -155,6 +183,7 @@
             type="button"
             class="mt-1 block w-full truncate rounded p-1.5 text-left text-xs text-white shadow-sm"
             :class="occupancyColor(occ)"
+            v-show="!isMobile"
             @mouseenter="openDesktopTooltip($event, occ, day.date)"
             @mousemove="openDesktopTooltip($event, occ, day.date)"
             @mouseleave="closeDesktopTooltip"
@@ -311,6 +340,29 @@
         </button>
       </div>
     </div>
+
+    <BottomSheet
+      :isOpen="daySheetOpen"
+      title="Detalle del día"
+      @close="daySheetOpen = false"
+    >
+      <div class="space-y-3">
+        <p class="text-sm text-gray-500">{{ formatDate(selectedDayForSheet) }}</p>
+        <div v-if="daySheetOccupancies.length === 0" class="rounded-md border border-gray-200 bg-gray-50 px-3 py-4 text-sm text-gray-500">
+          Sin ocupaciones para este día.
+        </div>
+        <button
+          v-for="occ in daySheetOccupancies"
+          :key="`sheet-occ-${occ.id}`"
+          type="button"
+          class="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-left text-sm"
+          @click="goToOccupancyDetail(occ)"
+        >
+          <p class="font-medium text-gray-900">{{ getOccupancyDisplayLabel(occ, 'clasica') }}</p>
+          <p class="text-xs text-gray-500">{{ getOccupancyTypeLabel(occ, selectedDayForSheet) }} · {{ occ.start_date }} -> {{ occ.end_date }}</p>
+        </button>
+      </div>
+    </BottomSheet>
   </div>
 </template>
 
@@ -319,9 +371,12 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
+import BottomSheet from '../components/ui/BottomSheet.vue'
+import { useBreakpoint } from '../composables/useBreakpoint'
 
 const router = useRouter()
 const accountStore = useAccountStore()
+const { isMobile } = useBreakpoint()
 
 const occupancies = ref([])
 const units = ref([])
@@ -346,6 +401,43 @@ const tooltip = ref({
 })
 const tooltipRef = ref(null)
 const isTouchDevice = ref(false)
+const selectedDayForSheet = ref('')
+const daySheetOpen = ref(false)
+
+const mobileViewOptions = [
+  { value: 'clasica', label: 'Clasica' },
+  { value: 'today', label: 'Hoy' },
+  { value: 'this_week', label: 'Esta semana' }
+]
+
+const mobileViewPreset = computed({
+  get: () => {
+    if (periodPreset.value === 'today') return 'today'
+    if (periodPreset.value === 'this_week') return 'this_week'
+    return 'clasica'
+  },
+  set: (value) => {
+    if (value === 'today') {
+      viewMode.value = 'clasica'
+      periodPreset.value = 'today'
+      return
+    }
+
+    if (value === 'this_week') {
+      viewMode.value = 'clasica'
+      periodPreset.value = 'this_week'
+      return
+    }
+
+    viewMode.value = 'clasica'
+    periodPreset.value = 'next_30'
+  }
+})
+
+const daySheetOccupancies = computed(() => {
+  if (!selectedDayForSheet.value) return []
+  return getOccupanciesForDay(selectedDayForSheet.value)
+})
 
 function toIsoDate(value) {
   const date = new Date(value)
@@ -608,6 +700,10 @@ function occupancyColor(occ) {
   }[occ.occupancy_type] || 'bg-gray-400'
 }
 
+function occupancyDotColor(occ) {
+  return occupancyColor(occ).replace('bg-', 'bg-')
+}
+
 function getOccupancyDisplayLabel(occ, mode) {
   if (mode === 'por_unidad' && occ.occupancy_type === 'reservation') {
     return occ.reservations?.guest_name || 'Reserva'
@@ -644,6 +740,11 @@ function goToOccupancyDetail(occ) {
   }
 
   router.push(`/bloqueos/${occ.id}`)
+}
+
+function openDaySheet(dateStr) {
+  selectedDayForSheet.value = dateStr
+  daySheetOpen.value = true
 }
 
 function getPointerPosition(event) {
@@ -817,6 +918,13 @@ watch(periodPreset, async () => {
   applyPreset()
   tooltip.value.visible = false
   await fetchOccupancies()
+})
+
+watch(isMobile, (mobile) => {
+  if (!mobile) return
+  if (viewMode.value !== 'clasica') {
+    viewMode.value = 'clasica'
+  }
 })
 
 watch(weekStart, async () => {
