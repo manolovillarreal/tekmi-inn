@@ -29,7 +29,7 @@
       />
     </div>
 
-    <div v-else class="card overflow-hidden">
+    <div v-if="!isMobile && isTable" class="card overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead class="bg-gray-50 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
@@ -69,6 +69,33 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div v-if="!isMobile && isCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <DataCard
+        v-for="venue in store.venues"
+        :key="venue.id"
+        :title="venue.name"
+        :subtitle="venue.description || ''"
+        :badge="{ label: venue.is_active ? 'Activa' : 'Inactiva', type: venue.is_active ? 'success' : 'neutral' }"
+        :meta="[{ label: 'Unidades', value: `${getUnitCount(venue.id)} unidades` }]"
+        :actions="[
+          ...(can('settings', 'edit') ? [{ label: 'Editar', type: 'ghost', handler: () => openEditModal(venue) }] : []),
+          ...(can('settings', 'edit') && canDeleteVenue(venue) ? [{ label: 'Eliminar', type: 'danger', handler: () => removeVenue(venue) }] : [])
+        ]"
+      />
+      <div
+        v-if="!store.loading && store.venues.length === 0"
+        class="col-span-full text-center py-12 text-neutral-secondary"
+      >
+        No hay sedes registradas.
+      </div>
+      <div
+        v-if="store.loading"
+        class="col-span-full text-center py-12 text-neutral-secondary"
+      >
+        Cargando sedes...
       </div>
     </div>
 
@@ -173,6 +200,11 @@ const deleteMessage = ref('')
 
 const getUnitCount = (venueId) => {
   return unitsStore.units.filter(u => u.venue_id === venueId).length
+}
+
+const canDeleteVenue = (venue) => {
+  const hasUnits = venue?.has_units != null ? Boolean(venue.has_units) : getUnitCount(venue.id) > 0
+  return !hasUnits
 }
 
 const openCreateModal = () => {

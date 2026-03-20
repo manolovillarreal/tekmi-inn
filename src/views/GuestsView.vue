@@ -49,7 +49,7 @@
       />
     </div>
 
-    <div v-else class="card overflow-hidden">
+    <div v-if="!isMobile && isTable" class="card overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead class="bg-gray-50 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
@@ -85,6 +85,34 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div v-if="!isMobile && isCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <DataCard
+        v-for="guest in filteredGuests"
+        :key="guest.id"
+        :title="guest.name"
+        :subtitle="guestCardSubtitle(guest)"
+        :badge="{ label: `${getReservationCount(guest.id)} reserva(s)`, type: 'neutral' }"
+        :meta="buildGuestCardMeta(guest)"
+        :actions="[
+          { label: 'Ver perfil', type: 'ghost', handler: () => goToGuestProfile(guest) },
+          ...(can('guests', 'edit') ? [{ label: 'Editar', type: 'primary', handler: () => openEditModal(guest) }] : [])
+        ]"
+        :onClick="() => goToGuestProfile(guest)"
+      />
+      <div
+        v-if="!store.loading && filteredGuests.length === 0"
+        class="col-span-full text-center py-12 text-neutral-secondary"
+      >
+        No hay huéspedes registrados.
+      </div>
+      <div
+        v-if="store.loading"
+        class="col-span-full text-center py-12 text-neutral-secondary"
+      >
+        Cargando huéspedes...
       </div>
     </div>
 
@@ -258,6 +286,20 @@ const guestMeta = (guest) => {
   }
 
   return meta
+}
+
+const guestCardSubtitle = (guest) => {
+  const type = guest.document_type || ''
+  const number = guest.document_number || ''
+  return `${type} ${number}`.trim() || '-'
+}
+
+const buildGuestCardMeta = (guest) => {
+  return [
+    guest.phone ? { label: 'Teléfono', value: guest.phone } : null,
+    guest.email ? { label: 'Email', value: guest.email } : null,
+    guest.nationality ? { label: 'Nacionalidad', value: guest.nationality } : null
+  ].filter(Boolean)
 }
 
 const goToGuestProfile = (guest) => {

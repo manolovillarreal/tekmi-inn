@@ -42,7 +42,7 @@
       />
     </div>
 
-    <div v-else class="card overflow-hidden">
+    <div v-if="!isMobile && isTable" class="card overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead class="bg-gray-50 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
@@ -82,6 +82,33 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div v-if="!isMobile && isCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <DataCard
+        v-for="unit in store.units"
+        :key="unit.id"
+        :title="unit.name"
+        :subtitle="unit.venues?.name || '-'"
+        :badge="{ label: unit.is_active ? 'Activa' : 'Inactiva', type: unit.is_active ? 'success' : 'neutral' }"
+        :meta="buildUnitCardMeta(unit)"
+        :actions="[
+          ...(can('units', 'edit') ? [{ label: 'Editar', type: 'ghost', handler: () => openEditModal(unit) }] : []),
+          ...(can('units', 'delete') ? [{ label: 'Eliminar', type: 'danger', handler: () => removeUnit(unit) }] : [])
+        ]"
+      />
+      <div
+        v-if="!store.loading && store.units.length === 0"
+        class="col-span-full text-center py-12 text-neutral-secondary"
+      >
+        No hay unidades registradas.
+      </div>
+      <div
+        v-if="store.loading"
+        class="col-span-full text-center py-12 text-neutral-secondary"
+      >
+        Cargando unidades...
       </div>
     </div>
 
@@ -205,6 +232,12 @@ const unitMeta = (unit) => {
     meta.push({ label: 'Descripción', value: unit.description })
   }
   return meta
+}
+
+const buildUnitCardMeta = (unit) => {
+  return [
+    unit.description ? { label: 'Descripción', value: unit.description } : null
+  ].filter(Boolean)
 }
 
 const openCreateModal = () => {

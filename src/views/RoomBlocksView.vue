@@ -43,7 +43,7 @@
       />
     </div>
 
-    <div v-else class="card overflow-hidden !p-0">
+    <div v-if="!isMobile && isTable" class="card overflow-hidden !p-0">
       <div class="overflow-x-auto">
         <table class="w-full border-collapse text-left text-sm">
           <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
@@ -81,6 +81,33 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div v-if="!isMobile && isCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <DataCard
+        v-for="block in filteredBlocks"
+        :key="block.id"
+        :title="block.units?.name || '-'"
+        :subtitle="formatOccupancyType(block.occupancy_type)"
+        :badge="{ label: `${formatDateShort(block.start_date)} - ${formatDateShort(block.end_date)}`, type: 'neutral' }"
+        :meta="buildBlockCardMeta(block)"
+        :actions="[
+          ...(can('occupancies', 'edit') ? [{ label: 'Editar', type: 'ghost', handler: () => openEditModal(block) }] : []),
+          ...(can('occupancies', 'delete') ? [{ label: 'Eliminar', type: 'danger', handler: () => openDeleteModal(block) }] : [])
+        ]"
+      />
+      <div
+        v-if="!store.loading && filteredBlocks.length === 0"
+        class="col-span-full text-center py-12 text-neutral-secondary"
+      >
+        No hay bloqueos registrados.
+      </div>
+      <div
+        v-if="store.loading"
+        class="col-span-full text-center py-12 text-neutral-secondary"
+      >
+        Cargando bloqueos...
       </div>
     </div>
 
@@ -286,11 +313,21 @@ const formatDateShort = (value) => {
 
 const formatOccupancyType = (type) => {
   return {
+    reservation: 'Reserva',
     maintenance: 'Mantenimiento',
-    owner_use: 'Uso propietario',
+    owner_use: 'Uso del propietario',
     inquiry_hold: 'Hold consulta',
     external: 'Externo'
   }[type] || type
+}
+
+const buildBlockCardMeta = (block) => {
+  return [
+    block.start_date ? { label: 'Desde', value: formatDate(block.start_date) } : null,
+    block.end_date ? { label: 'Hasta', value: formatDate(block.end_date) } : null,
+    block.start_date && block.end_date ? { label: 'Días', value: `${getDays(block.start_date, block.end_date)} días` } : null,
+    block.notes ? { label: 'Notas', value: block.notes } : null
+  ].filter(Boolean)
 }
 
 const blockMeta = (block) => {

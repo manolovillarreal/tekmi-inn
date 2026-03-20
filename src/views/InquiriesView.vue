@@ -35,7 +35,7 @@
       <button v-if="hasFilters" class="text-sm font-medium text-gray-500 underline" @click="clearFilters">Limpiar filtros</button>
     </div>
 
-    <div v-if="!isMobile" class="card overflow-hidden !p-0">
+    <div v-if="!isMobile && isTable" class="card overflow-hidden !p-0">
       <div class="overflow-x-auto">
         <table class="w-full border-collapse text-left text-sm">
           <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
@@ -97,9 +97,37 @@
       </div>
     </div>
 
-    <div v-else class="space-y-3">
+    <div v-if="!isMobile && isCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <DataCard
+        v-for="inquiry in filteredInquiries"
+        :key="inquiry.id"
+        :title="inquiry.guest_name || 'Sin nombre'"
+        :subtitle="`${inquiry.inquiry_number || '-'} · ${inquiry.reference_code || '-'}`"
+        :badge="{
+          label: `${INQUIRY_STATUS_LABELS[inquiry.status] || getInquiryStatusLabel(inquiry.status)}${isQuoteExpired(inquiry) ? ' ⚠' : ''}`,
+          type: inquiryCardBadgeType(inquiry.status)
+        }"
+        :meta="buildInquiryCardMeta(inquiry)"
+        :actions="buildInquiryCardActions(inquiry)"
+        :onClick="() => router.push(`/consultas/${inquiry.id}`)"
+      />
+      <div
+        v-if="!store.loading && filteredInquiries.length === 0"
+        class="col-span-full text-center py-12 text-neutral-secondary"
+      >
+        No hay consultas registradas.
+      </div>
+      <div
+        v-if="store.loading"
+        class="col-span-full text-center py-12 text-neutral-secondary"
+      >
+        Cargando consultas...
+      </div>
+    </div>
+
+    <div v-if="isMobile" class="space-y-3">
       <div v-if="store.loading" class="card text-sm text-gray-500">Cargando consultas...</div>
-      <div v-else-if="filteredInquiries.length === 0" class="card text-sm text-gray-500">No hay consultas para mostrar.</div>
+      <div v-else-if="filteredInquiries.length === 0" class="card text-sm text-gray-500">No hay consultas registradas.</div>
 
       <DataCard
         v-for="inquiry in filteredInquiries"
@@ -107,14 +135,10 @@
         :key="inquiry.id"
         :title="inquiry.guest_name || 'Sin nombre'"
         :subtitle="`${inquiry.inquiry_number || '-'} · ${inquiry.reference_code || '-'}`"
-        :badge="{ label: getInquiryStatusLabel(inquiry.status), type: inquiry.status === 'perdida' ? 'danger' : inquiry.status === 'convertida' ? 'success' : 'info' }"
-        :meta="[
-          { label: 'Fechas', value: `${formatDate(inquiry.check_in)} -> ${formatDate(inquiry.check_out)}` },
-          { label: 'Noches', value: String(getNights(inquiry.check_in, inquiry.check_out)) },
-          { label: 'Personas', value: String(getPersonas(inquiry)) },
-          { label: 'Origen', value: inquiry.source_display_label || inquiry.source || '-' }
-        ]"
-        :actions="inquiryActions(inquiry)"
+        :badge="{ label: getInquiryStatusLabel(inquiry.status), type: inquiryCardBadgeType(inquiry.status) }"
+        :meta="buildInquiryCardMeta(inquiry)"
+        :actions="buildInquiryCardActions(inquiry)"
+        :onClick="() => router.push(`/consultas/${inquiry.id}`)"
       />
     </div>
 
@@ -400,7 +424,33 @@ const handleConverted = async () => {
   closeConversionModal()
 }
 
-const inquiryActions = (inquiry) => {
+const canConvertInquiry = (status) => getAvailableInquiryTransitions(status).includes('convertida')
+
+const inquiryCardBadgeType = (status) => {
+  if (status === 'perdida') return 'danger'
+  if (status === 'convertida') return 'success'
+  if (status === 'cotizada') return 'warning'
+  return 'info'
+}
+
+const buildInquiryCardMeta = (inquiry) => {
+  const pricePerNight = inquiry.price_per_night ?? inquiry.pricePerNight
+  const originLabel = inquiry.source_detail?.label_es || inquiry.source_display_label || inquiry.source || null
+  const adults = Number(inquiry.adults || 0)
+  const children = Number(inquiry.children || 0)
+  const people = adults + children
+
+  return [
+    inquiry.check_in ? { label: 'Check-in', value: formatDate(inquiry.check_in) } : null,
+    inquiry.check_out ? { label: 'Check-out', value: formatDate(inquiry.check_out) } : null,
+    inquiry.check_in && inquiry.check_out ? { label: 'Noches', value: String(getNights(inquiry.check_in, inquiry.check_out)) } : null,
+    people > 0 ? { label: 'Personas', value: String(people) } : null,
+    originLabel ? { label: 'Origen', value: originLabel } : null,
+    pricePerNight != null && pricePerNight !== '' ? { label: 'Precio/noche', value: `$${formatCurrency(pricePerNight)}` } : null
+  ].filter(Boolean)
+}
+
+const buildInquiryCardActions = (inquiry) => {
   const actions = [
     {
       label: 'Ver detalle',
@@ -409,7 +459,7 @@ const inquiryActions = (inquiry) => {
     }
   ]
 
-  if (getAvailableInquiryTransitions(inquiry.status).includes('convertida')) {
+  if (canConvertInquiry(inquiry.status)) {
     actions.push({
       label: 'Convertir',
       type: 'primary',

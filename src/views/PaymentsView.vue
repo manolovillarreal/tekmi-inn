@@ -61,7 +61,7 @@
         </div>
       </div>
 
-      <div v-if="!isMobile" class="card overflow-hidden !p-0">
+      <div v-if="!isMobile && isTable" class="card overflow-hidden !p-0">
         <div class="overflow-x-auto">
           <table class="w-full border-collapse text-left text-sm">
             <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
@@ -133,7 +133,34 @@
         </div>
       </div>
 
-      <div v-else class="space-y-3">
+      <div v-if="!isMobile && isCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <DataCard
+          v-for="payment in paginatedPayments"
+          :key="payment.id"
+          :title="payment.guest_display_name || 'Sin huésped'"
+          :subtitle="payment.reservation_number || '-'"
+          :badge="{ label: formatPaymentMethod(payment.method), type: 'neutral' }"
+          :meta="buildPaymentCardMeta(payment)"
+          :actions="[
+            { label: 'Ver reserva', type: 'ghost', handler: () => goToReservation(payment) },
+            { label: 'Eliminar', type: 'danger', handler: () => openDeleteModal(payment) }
+          ]"
+        />
+        <div
+          v-if="!loading && paginatedPayments.length === 0"
+          class="col-span-full text-center py-12 text-neutral-secondary"
+        >
+          No hay pagos registrados.
+        </div>
+        <div
+          v-if="loading"
+          class="col-span-full text-center py-12 text-neutral-secondary"
+        >
+          Cargando pagos...
+        </div>
+      </div>
+
+      <div v-if="isMobile" class="space-y-3">
         <div v-if="loading" class="card text-sm text-gray-500">Cargando pagos...</div>
         <div v-else-if="paginatedPayments.length === 0" class="card text-sm text-gray-500">
           No se encontraron pagos con los filtros aplicados.
@@ -310,6 +337,21 @@ const formatDateShort = (value) => {
     year: 'numeric',
     timeZone: 'UTC',
   }).format(date)
+}
+
+const formatPaymentMethod = (method) => {
+  const value = String(method || '').trim()
+  if (!value) return '-'
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+const buildPaymentCardMeta = (payment) => {
+  return [
+    payment.payment_date ? { label: 'Fecha', value: formatDateShort(payment.payment_date) } : null,
+    payment.amount != null ? { label: 'Monto', value: formatCop(payment.amount) } : null,
+    payment.reference ? { label: 'Referencia', value: payment.reference } : null,
+    payment.notes ? { label: 'Notas', value: payment.notes } : null
+  ].filter(Boolean)
 }
 
 const toggleDateSort = () => {
