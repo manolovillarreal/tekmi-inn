@@ -9,7 +9,26 @@
     </div>
 
     <!-- Venues List -->
-    <div class="card overflow-hidden">
+    <div v-if="isMobile" class="space-y-3">
+      <div v-if="store.loading" class="card text-sm text-gray-500">Cargando sedes...</div>
+      <div v-else-if="store.venues.length === 0" class="card text-sm text-gray-500">No hay sedes registradas.</div>
+
+      <DataCard
+        v-for="venue in store.venues"
+        v-else
+        :key="venue.id"
+        :title="venue.name"
+        :subtitle="venue.description || '-'"
+        :badge="{ label: venue.is_active ? 'Activa' : 'Inactiva', type: venue.is_active ? 'success' : 'neutral' }"
+        :meta="[{ label: 'Unidades', value: `${getUnitCount(venue.id)} unidades` }]"
+        :actions="[
+          ...(can('settings', 'edit') ? [{ label: 'Editar', type: 'ghost', handler: () => openEditModal(venue) }] : []),
+          ...(can('settings', 'edit') ? [{ label: 'Eliminar', type: 'danger', handler: () => removeVenue(venue) }] : [])
+        ]"
+      />
+    </div>
+
+    <div v-else class="card overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead class="bg-gray-50 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
@@ -53,7 +72,7 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    <BaseModal :isOpen="showModal" @close="closeModal" :title="editingVenue ? 'Editar sede' : 'Nueva sede'">
+    <BaseModal :isOpen="showModal" @close="closeModal" :title="editingVenue ? 'Editar sede' : 'Nueva sede'" :fullScreenOnMobile="true">
       <form @submit.prevent="submitForm" class="space-y-5">
         <AppFormSection title="Datos de la sede" :divider="false">
           <AppInput v-model="form.name" label="Nombre" required />
@@ -74,6 +93,7 @@
     </BaseModal>
 
     <ConfirmActionModal
+      v-if="!isMobile"
       :isOpen="showDeleteModal"
       title="Eliminar sede"
       :message="deleteMessage"
@@ -86,6 +106,21 @@
       @close="closeDeleteModal"
       @confirm="confirmDeleteVenue"
     />
+
+    <BottomSheet v-if="isMobile" v-model="showDeleteModal" title="Eliminar sede" height="half">
+      <div class="space-y-3">
+        <p class="text-sm text-gray-700">{{ deleteMessage }}</p>
+        <p class="text-xs text-gray-500">Escribe: {{ deleteConfirmationText }}</p>
+        <input v-model="deleteConfirmationInput" type="text" class="w-full rounded-md border-gray-300 text-sm" placeholder="Confirmación">
+        <p v-if="deleteErrorMessage" class="text-sm text-red-600">{{ deleteErrorMessage }}</p>
+      </div>
+      <template #footer>
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" class="btn-secondary" :disabled="deleteLoading" @click="closeDeleteModal">Cancelar</button>
+          <button type="button" class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60" :disabled="deleteLoading || deleteConfirmationInput.trim() !== deleteConfirmationText" @click="confirmDeleteVenue">Eliminar sede</button>
+        </div>
+      </template>
+    </BottomSheet>
   </div>
 </template>
 
@@ -95,13 +130,17 @@ import { useVenuesStore } from '../stores/venues'
 import { useUnitsStore } from '../stores/units'
 import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
+import BottomSheet from '../components/ui/BottomSheet.vue'
+import DataCard from '../components/ui/DataCard.vue'
 import { usePermissions } from '../composables/usePermissions'
 import { useToast } from '../composables/useToast'
+import { useBreakpoint } from '../composables/useBreakpoint'
 import { AppInput, AppTextarea, AppToggle, AppFormSection, AppFormActions } from '@/components/ui/forms'
 
 const store = useVenuesStore()
 const unitsStore = useUnitsStore()
 const { can } = usePermissions()
+const { isMobile } = useBreakpoint()
 const toast = useToast()
 
 const showModal = ref(false)

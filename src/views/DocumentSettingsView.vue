@@ -11,7 +11,7 @@
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <div class="space-y-6 xl:col-span-5">
         <div class="card space-y-6">
-          <AppFormSection title="Tema de color" :divider="false">
+          <AppFormSection title="Tema de color" :divider="false" :collapsible="isMobile" :defaultOpen="true">
             <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
               <button
                 v-for="option in themeOptions"
@@ -33,21 +33,21 @@
             <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
               <label class="text-xs font-medium text-gray-600">
                 Color primario
-                <input v-model="form.color_primary" type="color" class="mt-1 h-10 w-full rounded-md border border-gray-300" :disabled="!isCustomTheme">
+                <input v-model="form.color_primary" type="color" class="mt-1 h-12 w-full rounded-md border border-gray-300" :disabled="!isCustomTheme">
               </label>
               <label class="text-xs font-medium text-gray-600">
                 Color acento
-                <input v-model="form.color_accent" type="color" class="mt-1 h-10 w-full rounded-md border border-gray-300" :disabled="!isCustomTheme">
+                <input v-model="form.color_accent" type="color" class="mt-1 h-12 w-full rounded-md border border-gray-300" :disabled="!isCustomTheme">
               </label>
               <label class="text-xs font-medium text-gray-600">
                 Color fondo
-                <input v-model="form.color_background" type="color" class="mt-1 h-10 w-full rounded-md border border-gray-300" :disabled="!isCustomTheme">
+                <input v-model="form.color_background" type="color" class="mt-1 h-12 w-full rounded-md border border-gray-300" :disabled="!isCustomTheme">
               </label>
             </div>
             <p class="text-xs text-gray-500">Los colores solo son editables cuando el tema es Personalizada.</p>
           </AppFormSection>
 
-          <AppFormSection title="Header" description="Configura estructura, logo y campos visibles.">
+          <AppFormSection title="Header" description="Configura estructura, logo y campos visibles." :collapsible="isMobile" :defaultOpen="!isMobile">
             <div class="grid grid-cols-1 gap-2 md:grid-cols-3">
               <button
                 v-for="layout in headerLayouts"
@@ -100,7 +100,7 @@
             <AppTextarea v-model="form.header_extra_text" label="Texto adicional" :rows="3" :autoResize="true" />
           </AppFormSection>
 
-          <AppFormSection title="Footer" description="Selecciona layout y contenido del pie de pagina.">
+          <AppFormSection title="Footer" description="Selecciona layout y contenido del pie de pagina." :collapsible="isMobile" :defaultOpen="!isMobile">
             <div class="grid grid-cols-1 gap-2 md:grid-cols-3">
               <button
                 v-for="layout in footerLayouts"
@@ -150,7 +150,7 @@
             />
           </AppFormSection>
 
-          <AppFormSection title="Secciones opcionales" description="Controla campos adicionales en el documento.">
+          <AppFormSection title="Secciones opcionales" description="Controla campos adicionales en el documento." :collapsible="isMobile" :defaultOpen="!isMobile">
             <AppToggle v-model="form.show_conditions" label="Incluir condiciones del alojamiento" size="sm" />
             <RouterLink to="/configuracion" class="text-sm font-medium text-primary hover:text-primary-dark">Editar condiciones</RouterLink>
 
@@ -170,7 +170,17 @@
         </div>
       </div>
 
-      <div class="xl:col-span-7">
+      <div v-if="isMobile" class="card xl:col-span-7">
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Preview</h2>
+            <p class="text-xs text-gray-500">Vista rápida del documento</p>
+          </div>
+          <button type="button" class="btn-secondary text-sm" @click="previewSheetOpen = true">Ver preview</button>
+        </div>
+      </div>
+
+      <div v-if="!isMobile" class="xl:col-span-7">
         <div class="card h-full space-y-3">
           <div class="flex items-center justify-between">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Preview en tiempo real</h2>
@@ -216,6 +226,45 @@
         </div>
       </div>
     </div>
+
+    <BottomSheet v-model="previewSheetOpen" title="Preview de documento" height="full">
+      <DocumentTemplate
+        :settings="previewSettings"
+        :profile="profile"
+        type="voucher"
+        :previewMode="true"
+      >
+        <section class="doc-content-section border-b pb-4">
+          <h1 class="doc-content-title text-2xl font-semibold">Comprobante de Reserva</h1>
+          <p class="mt-2 text-base font-semibold text-gray-900">Codigo de reserva: REF-AB12CD</p>
+          <div class="mt-3 grid grid-cols-1 gap-1 text-sm text-gray-700 md:grid-cols-3 md:gap-3">
+            <p><span class="font-semibold">Reserva:</span> RSV-202603-0012</p>
+            <p><span class="font-semibold">Codigo:</span> AB12CD</p>
+            <p><span class="font-semibold">Emitido:</span> {{ issuedAtPreview }}</p>
+          </div>
+        </section>
+
+        <section class="doc-content-section border-b py-4">
+          <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Datos de la reserva</h2>
+          <div class="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-700 md:grid-cols-2">
+            <p><span class="font-semibold">Unidad:</span> Suite 301</p>
+            <p><span class="font-semibold">Origen:</span> Directo</p>
+            <p><span class="font-semibold">Check-in:</span> 22/03/2026</p>
+            <p><span class="font-semibold">Check-out:</span> 25/03/2026</p>
+            <p><span class="font-semibold">Noches:</span> 3</p>
+            <p><span class="font-semibold">Adultos:</span> 2 · <span class="font-semibold">Ninos:</span> 1</p>
+          </div>
+        </section>
+
+        <section class="doc-content-section py-4">
+          <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Resumen financiero</h2>
+          <div class="mt-3 space-y-1 text-sm text-gray-700">
+            <p class="flex justify-between gap-3"><span>Precio por noche:</span> <span class="font-medium">$320.000</span></p>
+            <p class="flex justify-between gap-3"><span>Total reserva:</span> <span class="font-medium">$960.000</span></p>
+          </div>
+        </section>
+      </DocumentTemplate>
+    </BottomSheet>
   </div>
 
   <div v-else class="card border-amber-200 bg-amber-50/40">
@@ -233,6 +282,8 @@ import { useAccountStore } from '../stores/account'
 import { usePermissions } from '../composables/usePermissions'
 import { useToast } from '../composables/useToast'
 import { getDocumentSettings, saveDocumentSettings } from '../services/documentSettingsService'
+import BottomSheet from '../components/ui/BottomSheet.vue'
+import { useBreakpoint } from '../composables/useBreakpoint'
 import {
   DOCUMENT_THEMES,
   DOCUMENT_VARIABLES,
@@ -251,10 +302,12 @@ import {
 
 const accountStore = useAccountStore()
 const { can } = usePermissions()
+const { isMobile } = useBreakpoint()
 const toast = useToast()
 
 const loading = ref(true)
 const saving = ref(false)
+const previewSheetOpen = ref(false)
 const profile = ref({})
 const voucherConditions = ref('')
 

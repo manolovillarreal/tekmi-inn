@@ -1,13 +1,13 @@
 <template>
   <div class="voucher-page min-h-screen bg-gray-100 px-4 py-6 text-gray-900">
     <div class="mx-auto w-full max-w-5xl">
-      <div class="voucher-actions mb-4 flex flex-wrap items-center justify-between gap-2 print:hidden">
-        <button class="btn-secondary text-sm" @click="goBack">← Volver a la reserva</button>
-        <div class="flex items-center gap-2">
-          <button class="btn-secondary text-sm" :disabled="loading || !reservation" @click="handleCopyWhatsApp">
+      <div class="voucher-actions mb-4 print:hidden" :class="isMobile ? 'sticky bottom-2 z-20 rounded-lg border border-gray-200 bg-white p-3 shadow-sm' : 'flex flex-wrap items-center justify-between gap-2'">
+        <button class="btn-secondary text-sm" :class="isMobile ? 'w-full' : ''" @click="goBack">← Volver a la reserva</button>
+        <div class="flex items-center gap-2" :class="isMobile ? 'mt-2 w-full flex-col' : ''">
+          <button class="btn-secondary text-sm" :class="isMobile ? 'w-full min-h-[44px]' : ''" :disabled="loading || !reservation" @click="handleCopyWhatsApp">
             Copiar para WhatsApp
           </button>
-          <button class="btn-primary text-sm" :disabled="loading || !reservation" @click="printVoucher">
+          <button class="btn-primary text-sm" :class="isMobile ? 'w-full min-h-[44px]' : ''" :disabled="loading || !reservation" @click="printVoucher">
             Imprimir / Guardar PDF
           </button>
         </div>
@@ -121,6 +121,7 @@ import DocumentTemplate from '../components/documents/DocumentTemplate.vue'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
 import { useToast } from '../composables/useToast'
+import { useBreakpoint } from '../composables/useBreakpoint'
 import { copyAsWhatsApp, formatCop } from '../utils/voucherUtils'
 import { formatReferenceDisplay } from '../utils/referenceUtils'
 import { getDocumentSettings } from '../services/documentSettingsService'
@@ -128,6 +129,7 @@ import { getDocumentSettings } from '../services/documentSettingsService'
 const route = useRoute()
 const router = useRouter()
 const accountStore = useAccountStore()
+const { isMobile } = useBreakpoint()
 const toast = useToast()
 
 const loading = ref(true)

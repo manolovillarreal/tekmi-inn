@@ -27,7 +27,26 @@
     </div>
 
     <!-- Guests List -->
-    <div class="card overflow-hidden">
+    <div v-if="isMobile" class="space-y-3">
+      <div v-if="store.loading" class="card text-sm text-gray-500">Cargando huéspedes...</div>
+      <div v-else-if="filteredGuests.length === 0" class="card text-sm text-gray-500">No hay huéspedes registrados.</div>
+
+      <DataCard
+        v-for="guest in filteredGuests"
+        v-else
+        :key="guest.id"
+        :title="guest.name"
+        :subtitle="formatDocument(guest)"
+        :badge="{ label: reservationsBadge(guest.id), type: 'neutral' }"
+        :meta="guestMeta(guest)"
+        :actions="[
+          { label: 'Ver perfil', type: 'ghost', handler: () => goToGuestProfile(guest) },
+          ...(can('guests', 'edit') ? [{ label: 'Editar', type: 'primary', handler: () => openEditModal(guest) }] : [])
+        ]"
+      />
+    </div>
+
+    <div v-else class="card overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead class="bg-gray-50 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
@@ -56,6 +75,7 @@
               <td class="px-6 py-4 text-gray-600">{{ formatDocument(guest) }}</td>
               <td class="px-6 py-4 text-gray-600">{{ getReservationCount(guest.id) }}</td>
               <td class="px-6 py-4 text-right">
+                <button @click="goToGuestProfile(guest)" class="text-gray-400 hover:text-primary px-2 py-1 transition-colors">Ver perfil</button>
                 <button v-if="can('guests', 'edit')" @click="openEditModal(guest)" class="text-gray-400 hover:text-primary px-2 py-1 transition-colors">Editar</button>
                 <button v-if="can('guests', 'delete')" @click="removeGuest(guest)" class="text-gray-400 hover:text-red-600 px-2 py-1 transition-colors ml-2">Eliminar</button>
               </td>
@@ -66,7 +86,7 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    <BaseModal :isOpen="showModal" @close="closeModal" :title="editingGuest ? 'Editar huésped' : 'Nuevo huésped'" size="lg">
+    <BaseModal :isOpen="showModal" @close="closeModal" :title="editingGuest ? 'Editar huésped' : 'Nuevo huésped'" size="lg" :fullScreenOnMobile="true">
       <form @submit.prevent="submitForm" class="space-y-5">
         <AppFormSection title="Identidad" :divider="true">
           <AppInput
@@ -133,11 +153,14 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useGuestsStore } from '../stores/guests'
 import { useReservationsStore } from '../stores/reservations'
 import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
+import DataCard from '../components/ui/DataCard.vue'
 import { usePermissions } from '../composables/usePermissions'
+import { useBreakpoint } from '../composables/useBreakpoint'
 import { useToast } from '../composables/useToast'
 import {
   AppInput,
@@ -150,7 +173,9 @@ import {
 
 const store = useGuestsStore()
 const reservationsStore = useReservationsStore()
+const router = useRouter()
 const { can } = usePermissions()
+const { isMobile } = useBreakpoint()
 const toast = useToast()
 
 const searchQuery = ref('')
@@ -209,6 +234,29 @@ const filteredGuests = computed(() => {
 
 const getReservationCount = (guestId) => {
   return reservationsStore.reservations.filter(r => r.guest_id === guestId).length
+}
+
+const reservationsBadge = (guestId) => {
+  const total = getReservationCount(guestId)
+  return `${total} reserva${total === 1 ? '' : 's'}`
+}
+
+const guestMeta = (guest) => {
+  const meta = [
+    { label: 'Teléfono', value: guest.phone || '-' },
+    { label: 'Email', value: guest.email || '-' }
+  ]
+
+  if (guest.nationality) {
+    meta.push({ label: 'País', value: guest.nationality })
+  }
+
+  return meta
+}
+
+const goToGuestProfile = (guest) => {
+  if (!guest?.id) return
+  router.push(`/huespedes/${guest.id}`)
 }
 
 const openCreateModal = () => {

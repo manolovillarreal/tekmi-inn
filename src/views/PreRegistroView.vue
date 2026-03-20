@@ -1,9 +1,16 @@
 <template>
-  <div class="min-h-screen bg-gray-100 px-4 py-10">
+  <div class="min-h-screen bg-gray-100 px-4 py-10 pb-24">
     <div class="mx-auto max-w-4xl space-y-6">
       <header class="text-center">
+        <img
+          v-if="accommodationLogo"
+          :src="accommodationLogo"
+          alt="Logo alojamiento"
+          class="mx-auto mb-3 h-14 w-14 rounded-lg border border-gray-200 bg-white object-contain"
+        >
         <h1 class="text-3xl font-bold text-gray-900">Pre-registro de huéspedes</h1>
-        <p class="mt-2 text-sm text-gray-600">Completa tus datos antes de tu llegada al alojamiento.</p>
+        <p class="mt-2 text-base font-semibold text-gray-800">{{ accommodationName }}</p>
+        <p class="mt-1 text-sm text-gray-600">Completa tus datos antes de tu llegada al alojamiento.</p>
       </header>
 
       <section v-if="viewState === 'loading'" class="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500 shadow-sm">
@@ -57,6 +64,7 @@ const checkOutDate = ref('')
 const guestsCount = ref(1)
 const accommodationName = ref('Alojamiento')
 const contactPhone = ref('')
+const accommodationLogo = ref('')
 
 const token = computed(() => String(route.params.token || ''))
 
@@ -112,6 +120,7 @@ const loadContextFromQuery = () => {
   checkOutDate.value = String(query.check_out || '')
   guestsCount.value = Math.max(1, Number(query.guests_count || 1))
   accommodationName.value = String(query.accommodation || 'Alojamiento')
+  accommodationLogo.value = String(query.logo_url || '')
   contactPhone.value = String(query.contact_phone || '')
   viewState.value = 'form'
 }

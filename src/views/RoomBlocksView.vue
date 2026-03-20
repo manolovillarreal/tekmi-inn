@@ -21,7 +21,26 @@
       <button v-if="searchText || selectedVenueId" class="text-sm font-medium text-gray-500 underline" @click="clearFilters">Limpiar filtros</button>
     </div>
 
-    <div class="card overflow-hidden !p-0">
+    <div v-if="isMobile" class="space-y-3">
+      <div v-if="store.loading" class="card text-sm text-gray-500">Cargando bloqueos...</div>
+      <div v-else-if="filteredBlocks.length === 0" class="card text-sm text-gray-500">No hay bloqueos para mostrar.</div>
+
+      <DataCard
+        v-for="block in filteredBlocks"
+        v-else
+        :key="block.id"
+        :title="block.units?.name || '-'"
+        :subtitle="formatOccupancyType(block.occupancy_type)"
+        :badge="{ label: `${formatDateShort(block.start_date)} - ${formatDateShort(block.end_date)}`, type: 'neutral' }"
+        :meta="blockMeta(block)"
+        :actions="[
+          ...(can('occupancies', 'edit') ? [{ label: 'Editar', type: 'ghost', handler: () => openEditModal(block) }] : []),
+          ...(can('occupancies', 'delete') ? [{ label: 'Eliminar', type: 'danger', handler: () => openDeleteModal(block) }] : [])
+        ]"
+      />
+    </div>
+
+    <div v-else class="card overflow-hidden !p-0">
       <div class="overflow-x-auto">
         <table class="w-full border-collapse text-left text-sm">
           <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
@@ -62,7 +81,7 @@
       </div>
     </div>
 
-    <BaseModal :isOpen="showModal" :title="editingBlock ? 'Editar bloqueo' : 'Nuevo bloqueo'" @close="closeModal">
+    <BaseModal :isOpen="showModal" :title="editingBlock ? 'Editar bloqueo' : 'Nuevo bloqueo'" :fullScreenOnMobile="true" @close="closeModal">
       <form class="space-y-5" @submit.prevent="submitForm">
         <AppFormSection title="Detalles del bloqueo" :divider="false">
           <AppSelect
@@ -104,6 +123,7 @@
     </BaseModal>
 
     <ConfirmActionModal
+      v-if="!isMobile"
       :isOpen="showDeleteModal"
       title="Eliminar bloqueo"
       :message="`¿Deseas eliminar el bloqueo de ${blockToDelete?.units?.name || 'esta unidad'}?`"
@@ -113,6 +133,21 @@
       @close="closeDeleteModal"
       @confirm="confirmDelete"
     />
+
+    <BottomSheet v-if="isMobile" v-model="showDeleteModal" title="Eliminar bloqueo" height="half">
+      <div class="space-y-4">
+        <p class="text-sm text-gray-700">¿Deseas eliminar el bloqueo de {{ blockToDelete?.units?.name || 'esta unidad' }}?</p>
+        <p v-if="deleteError" class="text-sm text-red-600">{{ deleteError }}</p>
+      </div>
+      <template #footer>
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" class="btn-secondary" :disabled="deleting" @click="closeDeleteModal">Cancelar</button>
+          <button type="button" class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60" :disabled="deleting" @click="confirmDelete">
+            {{ deleting ? 'Eliminando...' : 'Eliminar' }}
+          </button>
+        </div>
+      </template>
+    </BottomSheet>
   </div>
 </template>
 
@@ -122,8 +157,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../services/supabase'
 import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
+import BottomSheet from '../components/ui/BottomSheet.vue'
+import DataCard from '../components/ui/DataCard.vue'
 import { useRoomBlocksStore } from '../stores/roomBlocks'
 import { usePermissions } from '../composables/usePermissions'
+import { useBreakpoint } from '../composables/useBreakpoint'
 import { useAccountStore } from '../stores/account'
 import { useToast } from '../composables/useToast'
 import {
@@ -140,6 +178,7 @@ const route = useRoute()
 const router = useRouter()
 const store = useRoomBlocksStore()
 const { can } = usePermissions()
+const { isMobile } = useBreakpoint()
 const accountStore = useAccountStore()
 const toast = useToast()
 
@@ -234,6 +273,11 @@ const formatDate = (value) => {
   return new Date(value).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
 }
 
+const formatDateShort = (value) => {
+  if (!value) return '-'
+  return new Date(value).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', timeZone: 'UTC' })
+}
+
 const formatOccupancyType = (type) => {
   return {
     maintenance: 'Mantenimiento',
@@ -241,6 +285,29 @@ const formatOccupancyType = (type) => {
     inquiry_hold: 'Hold consulta',
     external: 'Externo'
   }[type] || type
+}
+
+const blockMeta = (block) => {
+  const meta = [
+    { label: 'Desde', value: formatDate(block.start_date) },
+    { label: 'Hasta', value: formatDate(block.end_date) },
+    { label: 'Días', value: `${getDays(block.start_date, block.end_date)} días bloqueados` }
+  ]
+
+  const notes = block.notes || block.reason
+  if (notes) {
+    meta.push({ label: 'Notas', value: notes })
+  }
+
+  return meta
+}
+
+const getDays = (fromValue, toValue) => {
+  if (!fromValue || !toValue) return 0
+  const from = new Date(fromValue)
+  const to = new Date(toValue)
+  const diff = Math.ceil((to - from) / (1000 * 60 * 60 * 24))
+  return diff > 0 ? diff : 0
 }
 
 const openCreateModal = () => {

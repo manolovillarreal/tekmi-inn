@@ -64,7 +64,30 @@
                 <button type="button" class="btn-secondary text-sm" @click="openCreateSourceDetailModal(group.type)">+ Agregar canal</button>
               </div>
 
-              <div class="overflow-x-auto">
+              <div v-if="isMobile" class="space-y-3 p-3">
+                <div v-if="group.details.length === 0" class="rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-4 text-sm text-gray-500">
+                  No hay canales configurados para este tipo.
+                </div>
+
+                <DataCard
+                  v-for="detail in group.details"
+                  v-else
+                  :key="detail.id"
+                  :title="detail.label_es"
+                  :subtitle="detail.name"
+                  :badge="{ label: detail.is_active ? 'Activo' : 'Inactivo', type: detail.is_active ? 'success' : 'neutral' }"
+                  :meta="[
+                    { label: 'Comisión sugerida', value: `${Number(detail.suggested_commission_percentage || 0)}%` },
+                    { label: 'Descuento sugerido', value: `${Number(detail.suggested_discount_percentage || 0)}%` }
+                  ]"
+                  :actions="[
+                    { label: 'Editar', type: 'ghost', handler: () => openEditSourceDetailModal(detail) },
+                    { label: detail.is_active ? 'Desactivar' : 'Activar', type: 'primary', handler: () => toggleSourceDetail(detail, !detail.is_active) }
+                  ]"
+                />
+              </div>
+
+              <div v-else class="overflow-x-auto">
                 <table class="w-full border-collapse text-left text-sm">
                   <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
                     <tr>
@@ -118,7 +141,7 @@
       </div>
     </div>
 
-    <BaseModal :isOpen="showSourceDetailModal" :title="sourceDetailModalTitle" @close="closeSourceDetailModal">
+    <BaseModal :isOpen="showSourceDetailModal" :title="sourceDetailModalTitle" :fullScreenOnMobile="true" @close="closeSourceDetailModal">
       <form class="space-y-5" @submit.prevent="submitSourceDetail">
         <AppFormSection title="Configuracion del canal" :divider="false">
           <AppSelect
@@ -169,10 +192,12 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import BaseModal from '../components/ui/BaseModal.vue'
+import DataCard from '../components/ui/DataCard.vue'
 import { useAccountStore } from '../stores/account'
 import { useSourcesStore } from '../stores/sources'
 import { usePermissions } from '../composables/usePermissions'
 import { useToast } from '../composables/useToast'
+import { useBreakpoint } from '../composables/useBreakpoint'
 import {
   AppInput,
   AppSelect,
@@ -195,6 +220,7 @@ import {
 const accountStore = useAccountStore()
 const sourcesStore = useSourcesStore()
 const { can } = usePermissions()
+const { isMobile } = useBreakpoint()
 const toast = useToast()
 
 const loadingSourceCatalog = ref(false)

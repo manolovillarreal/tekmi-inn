@@ -20,7 +20,26 @@
     </div>
 
     <!-- Units List -->
-    <div class="card overflow-hidden">
+    <div v-if="isMobile" class="space-y-3">
+      <div v-if="store.loading" class="card text-sm text-gray-500">Cargando unidades...</div>
+      <div v-else-if="store.units.length === 0" class="card text-sm text-gray-500">No hay unidades registradas.</div>
+
+      <DataCard
+        v-for="unit in store.units"
+        v-else
+        :key="unit.id"
+        :title="unit.name"
+        :subtitle="unit.venues?.name || '-'"
+        :badge="{ label: unit.is_active ? 'Activa' : 'Inactiva', type: unit.is_active ? 'success' : 'neutral' }"
+        :meta="unitMeta(unit)"
+        :actions="[
+          ...(can('units', 'edit') ? [{ label: 'Editar', type: 'ghost', handler: () => openEditModal(unit) }] : []),
+          ...(can('units', 'delete') ? [{ label: 'Eliminar', type: 'danger', handler: () => removeUnit(unit) }] : [])
+        ]"
+      />
+    </div>
+
+    <div v-else class="card overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead class="bg-gray-50 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
@@ -64,7 +83,7 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    <BaseModal :isOpen="showModal" @close="closeModal" :title="editingUnit ? 'Editar unidad' : 'Nueva unidad'">
+    <BaseModal :isOpen="showModal" @close="closeModal" :title="editingUnit ? 'Editar unidad' : 'Nueva unidad'" :fullScreenOnMobile="true">
       <form @submit.prevent="submitForm" class="space-y-5">
         <AppFormSection title="Datos de la unidad" :divider="false">
           <AppSelect
@@ -90,6 +109,7 @@
     </BaseModal>
 
     <ConfirmActionModal
+      v-if="!isMobile"
       :isOpen="showDeleteModal"
       title="Eliminar unidad"
       :message="deleteMessage"
@@ -99,6 +119,19 @@
       @close="closeDeleteModal"
       @confirm="confirmDeleteUnit"
     />
+
+    <BottomSheet v-if="isMobile" v-model="showDeleteModal" title="Eliminar unidad" height="half">
+      <div class="space-y-4">
+        <p class="text-sm text-gray-700">{{ deleteMessage }}</p>
+        <p v-if="deleteErrorMessage" class="text-sm text-red-600">{{ deleteErrorMessage }}</p>
+      </div>
+      <template #footer>
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" class="btn-secondary" :disabled="deleteLoading" @click="closeDeleteModal">Cancelar</button>
+          <button type="button" class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60" :disabled="deleteLoading" @click="confirmDeleteUnit">Eliminar unidad</button>
+        </div>
+      </template>
+    </BottomSheet>
   </div>
 </template>
 
@@ -109,14 +142,18 @@ import { useVenuesStore } from '../stores/venues'
 import { useReservationsStore } from '../stores/reservations'
 import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
+import BottomSheet from '../components/ui/BottomSheet.vue'
+import DataCard from '../components/ui/DataCard.vue'
 import { usePermissions } from '../composables/usePermissions'
 import { useToast } from '../composables/useToast'
+import { useBreakpoint } from '../composables/useBreakpoint'
 import { AppInput, AppSelect, AppTextarea, AppToggle, AppFormSection, AppFormActions } from '@/components/ui/forms'
 
 const store = useUnitsStore()
 const venuesStore = useVenuesStore()
 const reservationsStore = useReservationsStore()
 const { can } = usePermissions()
+const { isMobile } = useBreakpoint()
 const toast = useToast()
 
 const selectedVenue = ref('')
@@ -154,6 +191,14 @@ const getActiveReservations = (unitId) => {
     r.reservation_units?.some(ru => ru.unit_id === unitId) &&
     ['confirmed', 'in_stay'].includes(r.status)
   ).length
+}
+
+const unitMeta = (unit) => {
+  const meta = []
+  if (unit.description) {
+    meta.push({ label: 'Descripción', value: unit.description })
+  }
+  return meta
 }
 
 const openCreateModal = () => {

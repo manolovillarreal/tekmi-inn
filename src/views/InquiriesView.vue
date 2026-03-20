@@ -224,9 +224,8 @@
     />
 
     <BottomSheet
-      :isOpen="showFiltersSheet"
+      v-model="showFiltersSheet"
       title="Filtros de consultas"
-      @close="showFiltersSheet = false"
     >
       <div class="space-y-4">
         <div>

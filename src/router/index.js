@@ -109,6 +109,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/huespedes/:id',
+      name: 'detalle-huesped',
+      component: () => import('../views/GuestDetailView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/pagos',
       name: 'pagos',
       component: () => import('../views/PaymentsView.vue'),

@@ -342,9 +342,8 @@
     </div>
 
     <BottomSheet
-      :isOpen="daySheetOpen"
+      v-model="daySheetOpen"
       title="Detalle del día"
-      @close="daySheetOpen = false"
     >
       <div class="space-y-3">
         <p class="text-sm text-gray-500">{{ formatDate(selectedDayForSheet) }}</p>

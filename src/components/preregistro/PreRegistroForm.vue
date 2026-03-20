@@ -23,7 +23,7 @@
             :options="documentTypeOptions"
             placeholder="Sin definir"
           />
-          <AppInput v-model="primaryGuest.document_number" label="Número de documento" />
+          <AppInput v-model="primaryGuest.document_number" label="Número de documento" inputmode="numeric" />
         </AppFormGrid>
 
         <AppFormGrid :columns="2">
@@ -36,7 +36,7 @@
 
       <AppFieldGroup :border="true" :compact="true" title="Acompañantes" subtitle="Opcional">
         <template #footer>
-          <button type="button" class="btn-secondary text-sm" @click="addCompanion">+ Agregar acompañante</button>
+          <button type="button" class="btn-secondary min-h-[44px] w-full text-sm sm:w-auto" @click="addCompanion">+ Agregar acompañante</button>
         </template>
 
         <div v-if="additionalGuests.length === 0" class="rounded-md border border-dashed border-gray-300 bg-gray-50 px-3 py-3 text-sm text-gray-500">
@@ -50,7 +50,7 @@
           :divider="index !== additionalGuests.length - 1"
         >
           <template #actions>
-            <button type="button" class="text-sm font-semibold text-red-600 hover:text-red-800" @click="removeCompanion(index)">×</button>
+            <button type="button" class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-sm font-semibold text-red-600 hover:bg-red-50 hover:text-red-800" @click="removeCompanion(index)">× Eliminar</button>
           </template>
 
           <AppInput v-model="guest.name" label="Nombre" required />
@@ -62,21 +62,23 @@
               :options="documentTypeOptions"
               placeholder="Sin definir"
             />
-            <AppInput v-model="guest.document_number" label="Número de documento" />
+            <AppInput v-model="guest.document_number" label="Número de documento" inputmode="numeric" />
           </AppFormGrid>
 
           <AppInput v-model="guest.nationality" label="Nacionalidad" />
         </AppFormSection>
       </AppFieldGroup>
 
-      <AppFormActions
-        submit-label="Completar pre-registro"
-        cancel-label="Cancelar"
-        :loading="submitting"
-        :submit-disabled="submitting || !primaryGuest.name.trim()"
-        @submit="submitForm"
-        @cancel="emit('cancel')"
-      />
+      <div class="pb-20 sm:pb-0">
+        <AppFormActions
+          submit-label="Completar pre-registro"
+          cancel-label="Cancelar"
+          :loading="submitting"
+          :submit-disabled="submitting || !primaryGuest.name.trim()"
+          @submit="submitForm"
+          @cancel="emit('cancel')"
+        />
+      </div>
     </form>
   </div>
 </template>

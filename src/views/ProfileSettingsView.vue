@@ -10,7 +10,7 @@
 
     <div class="card">
       <form class="space-y-6" @submit.prevent="saveProfile">
-        <AppFormSection title="Informacion comercial" :divider="false">
+        <AppFormSection title="Informacion comercial" :divider="false" :collapsible="isMobile" :defaultOpen="true">
           <AppFormGrid :columns="2">
             <AppInput v-model="profileForm.commercial_name" label="Nombre comercial" />
             <AppInput v-model="profileForm.legal_name" label="Razon social" />
@@ -30,7 +30,7 @@
           <AppInput v-model="profileForm.slogan" label="Slogan" />
         </AppFormSection>
 
-        <AppFormSection title="Contacto" description="Canales principales de comunicacion.">
+        <AppFormSection title="Contacto" description="Canales principales de comunicacion." :collapsible="isMobile" :defaultOpen="true">
           <AppFormGrid :columns="3">
             <AppInput v-model="profileForm.phone" label="Telefono" />
             <AppInput v-model="profileForm.email" label="Email" type="email" />
@@ -38,7 +38,7 @@
           </AppFormGrid>
         </AppFormSection>
 
-        <AppFormSection title="Ubicacion" description="Direccion comercial para documentos y comprobantes.">
+        <AppFormSection title="Ubicacion" description="Direccion comercial para documentos y comprobantes." :collapsible="isMobile" :defaultOpen="!isMobile">
           <AppFormGrid :columns="2">
             <AppInput v-model="profileForm.address" label="Direccion" class="md:col-span-2" />
             <AppInput v-model="profileForm.city" label="Ciudad" />
@@ -47,7 +47,7 @@
           </AppFormGrid>
         </AppFormSection>
 
-        <AppFormSection title="Logo" description="Se usa en documentos y vistas compartidas.">
+        <AppFormSection title="Logo" description="Se usa en documentos y vistas compartidas." :collapsible="isMobile" :defaultOpen="!isMobile">
           <AppFieldGroup tone="info" compact>
             <div class="flex flex-wrap items-start gap-4">
               <div class="h-24 w-24 overflow-hidden rounded-md border border-[#E5E7EB] bg-white">
@@ -67,7 +67,7 @@
                   class="hidden"
                   @change="onLogoSelected"
                 >
-                <button type="button" class="btn-secondary text-sm" @click="openLogoPicker">Cambiar logo</button>
+                <button type="button" class="btn-secondary min-h-[44px] px-4 text-sm" @click="openLogoPicker">Cambiar logo</button>
                 <AppFieldHint message="Maximo 2MB. Formatos permitidos: PNG, JPG, JPEG, SVG y WEBP." />
               </div>
             </div>
@@ -75,21 +75,25 @@
           <AppInlineAlert v-if="logoError" type="error" :message="logoError" />
         </AppFormSection>
 
-        <AppInlineAlert
-          type="info"
-          :message="`Tu prefijo de referencia: ${profilePrefix}`"
-        >
-          <p><span class="font-semibold">Ejemplo de codigo:</span> {{ sampleReferenceCode }}</p>
-        </AppInlineAlert>
+        <AppFormSection title="Código de referencia" :collapsible="isMobile" :defaultOpen="!isMobile">
+          <AppInlineAlert
+            type="info"
+            :message="`Tu prefijo de referencia: ${profilePrefix}`"
+          >
+            <p><span class="font-semibold">Ejemplo de codigo:</span> {{ sampleReferenceCode }}</p>
+          </AppInlineAlert>
+        </AppFormSection>
 
-        <AppFormActions
-          submit-label="Guardar perfil"
-          cancel-label="Restablecer"
-          :loading="savingProfile || loadingProfile"
-          :submit-disabled="savingProfile || loadingProfile"
-          @submit="saveProfile"
-          @cancel="loadProfile"
-        />
+        <div :class="isMobile ? 'sticky bottom-0 z-20 -mx-4 border-t border-[#E5E7EB] bg-white px-4 py-3 shadow-[0_-6px_18px_rgba(15,23,42,0.06)]' : ''">
+          <AppFormActions
+            submit-label="Guardar perfil"
+            cancel-label="Restablecer"
+            :loading="savingProfile || loadingProfile"
+            :submit-disabled="savingProfile || loadingProfile"
+            @submit="saveProfile"
+            @cancel="loadProfile"
+          />
+        </div>
       </form>
     </div>
   </div>
@@ -106,6 +110,7 @@ import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
 import { usePermissions } from '../composables/usePermissions'
 import { useToast } from '../composables/useToast'
+import { useBreakpoint } from '../composables/useBreakpoint'
 import { calculateNitDigit, formatNit } from '../utils/nitUtils'
 import { generateReferenceCode } from '../utils/referenceUtils'
 import {
@@ -120,6 +125,7 @@ import {
 
 const accountStore = useAccountStore()
 const { can } = usePermissions()
+const { isMobile } = useBreakpoint()
 const toast = useToast()
 
 const loadingProfile = ref(false)

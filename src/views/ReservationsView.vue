@@ -113,9 +113,8 @@
     />
 
     <BottomSheet
-      :isOpen="showFiltersSheet"
+      v-model="showFiltersSheet"
       title="Filtros"
-      @close="showFiltersSheet = false"
     >
       <div class="space-y-4">
         <div>

@@ -59,6 +59,7 @@ const badgeClass = computed(() => {
   if (type === 'success') return 'bg-emerald-100 text-emerald-700'
   if (type === 'warning') return 'bg-amber-100 text-amber-700'
   if (type === 'danger') return 'bg-red-100 text-red-700'
+  if (type === 'neutral') return 'bg-gray-100 text-gray-700'
   return 'bg-[#EEF2FF] text-[#4C2FFF]'
 })
 

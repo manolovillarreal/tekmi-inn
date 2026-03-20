@@ -4,7 +4,30 @@
       <h1 class="text-3xl font-semibold tracking-tight text-gray-900">Configuracion</h1>
     </div>
 
-    <div v-if="can('settings', 'edit')" class="card">
+    <div v-if="can('settings', 'edit') && isMobile" class="card !p-0 overflow-hidden">
+      <RouterLink to="/configuracion/perfil" class="flex items-center justify-between border-b border-gray-100 px-4 py-3 text-sm text-gray-800">
+        <span>Perfil del alojamiento</span>
+        <span class="text-gray-400">›</span>
+      </RouterLink>
+      <RouterLink to="/configuracion" class="flex items-center justify-between border-b border-gray-100 px-4 py-3 text-sm text-gray-800">
+        <span>Usuarios</span>
+        <span class="text-gray-400">›</span>
+      </RouterLink>
+      <RouterLink to="/configuracion/canales-origenes" class="flex items-center justify-between border-b border-gray-100 px-4 py-3 text-sm text-gray-800">
+        <span>Canales y origen</span>
+        <span class="text-gray-400">›</span>
+      </RouterLink>
+      <RouterLink to="/configuracion/documentos" class="flex items-center justify-between border-b border-gray-100 px-4 py-3 text-sm text-gray-800">
+        <span>Personalización documentos</span>
+        <span class="text-gray-400">›</span>
+      </RouterLink>
+      <RouterLink to="/configuracion" class="flex items-center justify-between px-4 py-3 text-sm text-gray-800">
+        <span>Condiciones</span>
+        <span class="text-gray-400">›</span>
+      </RouterLink>
+    </div>
+
+    <div v-if="can('settings', 'edit') && !isMobile" class="card">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="text-lg font-semibold text-gray-900">Documentos</h2>
@@ -16,7 +39,7 @@
       </div>
     </div>
 
-    <div v-if="can('settings', 'edit')" class="card">
+    <div v-if="can('settings', 'edit') && !isMobile" class="card">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="text-lg font-semibold text-gray-900">Canales y origenes</h2>
@@ -28,7 +51,7 @@
       </div>
     </div>
 
-    <div v-if="can('settings', 'edit')" class="card">
+    <div v-if="can('settings', 'edit') && !isMobile" class="card">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="text-lg font-semibold text-gray-900">Perfil</h2>
@@ -63,7 +86,21 @@
 
       <AppInlineAlert v-if="usersSuccessMessage" type="success" :message="usersSuccessMessage" />
 
-      <div class="overflow-x-auto">
+      <div v-if="isMobile" class="space-y-3">
+        <DataCard
+          v-for="item in users"
+          :key="item.id"
+          :title="item.user_email || item.user_id"
+          :subtitle="item.role"
+          :badge="roleBadge(item.role)"
+          :actions="[
+            ...(can('users', 'edit_role') ? [{ label: 'Cambiar rol', type: 'ghost', handler: () => openRoleSheet(item) }] : []),
+            ...(can('users', 'remove') ? [{ label: 'Eliminar', type: 'danger', handler: () => openRemoveSheet(item) }] : [])
+          ]"
+        />
+      </div>
+
+      <div v-else class="overflow-x-auto">
         <table class="w-full border-collapse text-left text-sm">
           <thead class="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
             <tr>
@@ -114,6 +151,37 @@
 
     </div>
 
+    <BottomSheet v-if="isMobile" v-model="showRoleSheet" title="Cambiar rol" height="half">
+      <div class="space-y-4">
+        <p class="text-sm text-gray-600">Selecciona el nuevo rol para {{ selectedUser?.user_email || selectedUser?.user_id || '-' }}.</p>
+        <AppSelect
+          :model-value="selectedRole"
+          :options="roleOptions"
+          placeholder="Seleccionar rol"
+          @change="selectedRole = $event"
+        />
+      </div>
+      <template #footer>
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" class="btn-secondary" @click="showRoleSheet = false">Cancelar</button>
+          <button type="button" class="btn-primary" :disabled="!selectedRole || !selectedUser" @click="applyRoleChange">Guardar</button>
+        </div>
+      </template>
+    </BottomSheet>
+
+    <BottomSheet v-if="isMobile" v-model="showRemoveSheet" title="Eliminar usuario" height="half">
+      <div class="space-y-4">
+        <p class="text-sm text-gray-700">¿Quitar usuario de esta cuenta?</p>
+        <p class="text-sm text-gray-500">{{ selectedUser?.user_email || selectedUser?.user_id || '-' }}</p>
+      </div>
+      <template #footer>
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" class="btn-secondary" @click="showRemoveSheet = false">Cancelar</button>
+          <button type="button" class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700" @click="applyRemoveUser">Eliminar</button>
+        </div>
+      </template>
+    </BottomSheet>
+
     <div v-else class="card border-amber-200 bg-amber-50/40">
       <h2 class="text-sm font-semibold uppercase tracking-wide text-amber-900">Sin acceso</h2>
       <p class="mt-2 text-sm text-amber-800">No tienes permisos para gestionar usuarios.</p>
@@ -128,10 +196,14 @@ import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
 import { usePermissions } from '../composables/usePermissions'
 import { useToast } from '../composables/useToast'
+import { useBreakpoint } from '../composables/useBreakpoint'
+import BottomSheet from '../components/ui/BottomSheet.vue'
+import DataCard from '../components/ui/DataCard.vue'
 import { AppInlineAlert, AppSelect } from '@/components/ui/forms'
 
 const accountStore = useAccountStore()
 const { can } = usePermissions()
+const { isMobile } = useBreakpoint()
 const toast = useToast()
 
 const users = ref([])
@@ -139,6 +211,10 @@ const loading = ref(false)
 const savingRoleId = ref('')
 const removingId = ref('')
 const usersSuccessMessage = ref('')
+const showRoleSheet = ref(false)
+const showRemoveSheet = ref(false)
+const selectedUser = ref(null)
+const selectedRole = ref('')
 
 let successMessageTimeout = null
 
@@ -211,6 +287,38 @@ const updateRole = async (item, role) => {
   } finally {
     savingRoleId.value = ''
   }
+}
+
+const roleBadge = (role) => {
+  const map = {
+    admin: { label: 'admin', type: 'danger' },
+    manager: { label: 'manager', type: 'warning' },
+    staff: { label: 'staff', type: 'neutral' }
+  }
+  return map[role] || { label: role || '-', type: 'neutral' }
+}
+
+const openRoleSheet = (item) => {
+  selectedUser.value = item
+  selectedRole.value = item.role
+  showRoleSheet.value = true
+}
+
+const applyRoleChange = async () => {
+  if (!selectedUser.value || !selectedRole.value) return
+  await updateRole(selectedUser.value, selectedRole.value)
+  showRoleSheet.value = false
+}
+
+const openRemoveSheet = (item) => {
+  selectedUser.value = item
+  showRemoveSheet.value = true
+}
+
+const applyRemoveUser = async () => {
+  if (!selectedUser.value) return
+  await removeUser(selectedUser.value)
+  showRemoveSheet.value = false
 }
 
 const removeUser = async (item) => {

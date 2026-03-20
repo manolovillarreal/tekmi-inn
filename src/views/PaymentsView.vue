@@ -178,9 +178,9 @@
     />
 
     <BottomSheet
-      :isOpen="isMobile && showDeleteModal"
+      v-if="isMobile"
+      v-model="showDeleteModal"
       title="Eliminar pago"
-      @close="closeDeleteModal"
     >
       <div class="space-y-4">
         <p class="text-sm text-gray-700">{{ deleteModalMessage }}</p>
@@ -194,9 +194,8 @@
     </BottomSheet>
 
     <BottomSheet
-      :isOpen="showFiltersSheet"
+      v-model="showFiltersSheet"
       title="Filtros de pagos"
-      @close="showFiltersSheet = false"
     >
       <div class="space-y-4">
         <div>
