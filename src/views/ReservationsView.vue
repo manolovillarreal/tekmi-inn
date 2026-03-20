@@ -122,7 +122,7 @@
           <input
             v-model="filters.searchData"
             type="text"
-            placeholder="HuÃ©sped, cÃ³digo o nro"
+            placeholder="Huésped, código o nro"
             class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm"
           >
         </div>
@@ -148,11 +148,11 @@
 
         <div class="grid grid-cols-1 gap-3">
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Ingreso desde</label>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Check-in</label>
             <input v-model="filters.checkInFrom" type="date" class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm">
           </div>
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Ingreso hasta</label>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Check-out</label>
             <input v-model="filters.checkInTo" type="date" class="mt-1 block min-h-[44px] w-full rounded-md border-gray-300 text-sm">
           </div>
         </div>

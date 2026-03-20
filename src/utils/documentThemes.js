@@ -41,73 +41,118 @@ export const DOCUMENT_THEMES = {
 
 export const DOCUMENT_PRESETS = {
   moderno: {
-    key: 'moderno',
-    name: 'Moderno',
-    header_layout: 1,
-    footer_layout: 1,
-    colors: {
-      headerBg: 'primary',
-      headerText: 'textOnPrimary',
-      bodyBg: 'white',
-      bodyText: '#111827',
-      footerBg: 'background',
-      footerText: 'primaryDark'
+    label: 'Moderno',
+    description: 'Limpio, sans-serif, sin bordes',
+    header: {
+      size: 'md',
+      layout: 'logo-left',
+      style: 'filled',
+      borderRadius: '0px',
+      padding: '20px 32px',
+    },
+    footer: {
+      style: 'filled',
+      padding: '12px 32px',
+    },
+    body: {
+      fontFamily: 'Inter, sans-serif',
+      sectionStyle: 'line',
+      dataStyle: 'list',
+      borderRadius: '0px',
+      tableStyle: 'clean',
     }
   },
+
   clasico: {
-    key: 'clasico',
-    name: 'Clasico',
-    header_layout: 3,
-    footer_layout: 2,
-    colors: {
-      headerBg: 'white',
-      headerText: 'primaryDark',
-      bodyBg: 'white',
-      bodyText: '#1F2937',
-      footerBg: 'white',
-      footerText: '#374151'
+    label: 'Clásico',
+    description: 'Serif, formal, con bordes y cajas',
+    header: {
+      size: 'lg',
+      layout: 'centered',
+      style: 'bordered',
+      borderRadius: '0px',
+      padding: '28px 32px',
+    },
+    footer: {
+      style: 'bordered',
+      padding: '16px 32px',
+    },
+    body: {
+      fontFamily: 'Georgia, serif',
+      sectionStyle: 'box',
+      dataStyle: 'table',
+      borderRadius: '4px',
+      tableStyle: 'bordered',
     }
   },
+
   minimal: {
-    key: 'minimal',
-    name: 'Minimal',
-    header_layout: 2,
-    footer_layout: 1,
-    colors: {
-      headerBg: 'background',
-      headerText: 'primary',
-      bodyBg: 'white',
-      bodyText: '#111827',
-      footerBg: 'background',
-      footerText: '#4B5563'
+    label: 'Minimal',
+    description: 'Máximo espacio, líneas sutiles',
+    header: {
+      size: 'sm',
+      layout: 'logo-left',
+      style: 'line-top',
+      borderRadius: '0px',
+      padding: '16px 32px',
+    },
+    footer: {
+      style: 'line-top',
+      padding: '12px 32px',
+    },
+    body: {
+      fontFamily: 'Inter, sans-serif',
+      sectionStyle: 'space',
+      dataStyle: 'list',
+      borderRadius: '0px',
+      tableStyle: 'minimal',
     }
   },
+
   bold: {
-    key: 'bold',
-    name: 'Bold',
-    header_layout: 1,
-    footer_layout: 3,
-    colors: {
-      headerBg: 'accent',
-      headerText: '#FFFFFF',
-      bodyBg: 'white',
-      bodyText: '#111827',
-      footerBg: 'primaryDark',
-      footerText: '#FFFFFF'
+    label: 'Bold',
+    description: 'Header y footer oscuros, alto contraste',
+    header: {
+      size: 'lg',
+      layout: 'logo-left',
+      style: 'filled-dark',
+      borderRadius: '0px',
+      padding: '24px 32px',
+    },
+    footer: {
+      style: 'filled-dark',
+      padding: '14px 32px',
+    },
+    body: {
+      fontFamily: 'Inter, sans-serif',
+      sectionStyle: 'accent-line',
+      dataStyle: 'list',
+      borderRadius: '0px',
+      tableStyle: 'striped',
     }
   },
+
   soft: {
-    key: 'soft',
-    name: 'Soft',
-    header_layout: 2,
-    footer_layout: 1,
-    colors: {
-      headerBg: 'primaryLight',
-      headerText: 'primaryDark',
-      bodyBg: '#FFFFFF',
-      bodyText: '#1F2937',
-      footerBg: 'sectionBg',
-      footerText: '#374151'
+    label: 'Soft',
+    description: 'Redondeado, suave, amigable',
+    header: {
+      size: 'md',
+      layout: 'centered',
+      style: 'filled-light',
+      borderRadius: '12px 12px 0px 0px',
+      padding: '20px 32px',
+    },
+    footer: {
+      style: 'filled-light',
+      borderRadius: '0px 0px 12px 12px',
+      padding: '14px 32px',
+    },
+    body: {
+      fontFamily: 'Inter, sans-serif',
+      sectionStyle: 'rounded-box',
+      dataStyle: 'list',
+      borderRadius: '8px',
+      tableStyle: 'rounded',
     }
   }
 }
@@ -158,12 +203,10 @@ export const DEFAULT_DOCUMENT_SETTINGS = {
   color_primary: DOCUMENT_THEMES.tekmi.primary,
   color_accent: DOCUMENT_THEMES.tekmi.accent,
   color_background: DOCUMENT_THEMES.tekmi.background,
-  header_layout: 1,
   header_show_logo: true,
   header_logo_size: 'medium',
   header_fields: { ...DEFAULT_HEADER_FIELDS },
   header_extra_text: '',
-  footer_layout: 1,
   footer_fields: { ...DEFAULT_FOOTER_FIELDS },
   footer_free_text: '',
   show_conditions: true,
@@ -193,17 +236,65 @@ const resolveTone = (value, themeTokens) => {
   return value
 }
 
+export const getPresetConfig = (presetKey) => {
+  return DOCUMENT_PRESETS[presetKey] || DOCUMENT_PRESETS[DEFAULT_DOCUMENT_SETTINGS.preset]
+}
+
 export const resolvePresetColors = (presetKey, themeTokens) => {
-  const preset = DOCUMENT_PRESETS[presetKey] || DOCUMENT_PRESETS[DEFAULT_DOCUMENT_SETTINGS.preset]
-  const colors = preset.colors || {}
+  // For the new preset structure, we derive colors from header/footer styles
+  // This maps preset styles to color configurations
+  const preset = getPresetConfig(presetKey)
+  
+  let headerBg = themeTokens.primary
+  let headerText = '#FFFFFF'
+  let footerBg = themeTokens.background
+  let footerText = '#1F2937'
+  
+  // Resolve header style
+  if (preset.header?.style === 'filled') {
+    headerBg = themeTokens.primary
+    headerText = '#FFFFFF'
+  } else if (preset.header?.style === 'filled-dark') {
+    headerBg = themeTokens.primaryDark || chroma(themeTokens.primary).darken(1).hex()
+    headerText = '#FFFFFF'
+  } else if (preset.header?.style === 'filled-light') {
+    headerBg = chroma(themeTokens.primary).alpha(0.12).css()
+    headerText = themeTokens.primary
+  } else if (preset.header?.style === 'bordered') {
+    headerBg = '#FFFFFF'
+    headerText = themeTokens.primary
+  } else if (preset.header?.style === 'line-top') {
+    headerBg = '#FFFFFF'
+    headerText = themeTokens.primary
+  }
+  
+  // Resolve footer style
+  if (preset.footer?.style === 'filled') {
+    footerBg = themeTokens.primary
+    footerText = '#FFFFFF'
+  } else if (preset.footer?.style === 'filled-dark') {
+    footerBg = themeTokens.primaryDark || chroma(themeTokens.primary).darken(1).hex()
+    footerText = '#FFFFFF'
+  } else if (preset.footer?.style === 'filled-light') {
+    footerBg = chroma(themeTokens.primary).alpha(0.12).css()
+    footerText = themeTokens.primary
+  } else if (preset.footer?.style === 'bordered') {
+    footerBg = '#FFFFFF'
+    footerText = '#1F2937'
+  } else if (preset.footer?.style === 'line-top') {
+    footerBg = '#FFFFFF'
+    footerText = '#1F2937'
+  }
 
   return {
-    headerBg: resolveTone(colors.headerBg, themeTokens) || themeTokens.primary,
-    headerText: resolveTone(colors.headerText, themeTokens) || themeTokens.textOnPrimary,
-    bodyBg: resolveTone(colors.bodyBg, themeTokens) || '#FFFFFF',
-    bodyText: resolveTone(colors.bodyText, themeTokens) || '#111827',
-    footerBg: resolveTone(colors.footerBg, themeTokens) || themeTokens.sectionBg,
-    footerText: resolveTone(colors.footerText, themeTokens) || '#1F2937'
+    headerBg,
+    headerText,
+    bodyBg: '#FFFFFF',
+    bodyText: '#111827',
+    footerBg,
+    footerText,
+    accentColor: themeTokens.accent,
+    darkColor: themeTokens.primaryDark || chroma(themeTokens.primary).darken(1).hex()
   }
 }
 

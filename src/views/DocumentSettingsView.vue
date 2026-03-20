@@ -33,29 +33,22 @@
       <div v-show="isDesktop || activeTab === 'edit'" class="doc-config-panel">
         <div class="card space-y-6">
           <AppFormSection title="Estilos predefinidos" :divider="false" :collapsible="isMobile" :defaultOpen="true">
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div class="grid grid-cols-1 gap-3">
               <button
-                v-for="preset in presetCards"
-                :key="preset.key"
+                v-for="(preset, key) in presetOptions"
+                :key="key"
                 type="button"
-                class="rounded-xl border p-3 text-left transition"
-                :class="form.preset === preset.key ? 'border-primary bg-primary/10' : 'border-gray-200 hover:border-primary/30'"
-                @click="applyPreset(preset.key)"
+                class="rounded-xl border p-4 text-left transition"
+                :class="form.preset === key ? 'border-primary bg-primary/10' : 'border-gray-200 hover:border-primary/30'"
+                @click="form.preset = key"
               >
-                <div class="flex items-start justify-between gap-2">
-                  <div>
-                    <p class="text-sm font-semibold text-gray-900">{{ preset.name }}</p>
-                    <p class="text-xs text-gray-500">Header {{ preset.header_layout }} · Footer {{ preset.footer_layout }}</p>
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex-1">
+                    <p class="text-sm font-semibold text-gray-900">{{ preset.label }}</p>
+                    <p class="text-xs text-gray-500">{{ preset.description }}</p>
                   </div>
-                  <span v-if="form.preset === preset.key" class="text-xs font-semibold text-primary-dark">Activo</span>
+                  <span v-if="form.preset === key" class="flex-shrink-0 text-xs font-semibold text-primary-dark">Activo</span>
                 </div>
-
-                <svg class="mt-2 h-14 w-10 rounded border border-gray-200" viewBox="0 0 40 56" aria-hidden="true">
-                  <rect x="0" y="0" width="40" height="56" fill="#FFFFFF" />
-                  <rect x="3" y="3" width="34" height="13" :fill="preset.swatch.headerBg" />
-                  <rect x="3" y="18" width="34" height="25" :fill="preset.swatch.bodyBg" />
-                  <rect x="3" y="45" width="34" height="8" :fill="preset.swatch.footerBg" />
-                </svg>
               </button>
             </div>
           </AppFormSection>
@@ -96,26 +89,13 @@
             <p class="text-xs text-gray-500">Los colores solo son editables cuando el tema es Personalizada.</p>
           </AppFormSection>
 
-          <AppFormSection title="Header" description="Configura estructura, logo y campos visibles." :collapsible="isMobile" :defaultOpen="!isMobile">
-            <div class="grid grid-cols-1 gap-2 md:grid-cols-3">
-              <button
-                v-for="layout in headerLayouts"
-                :key="layout.value"
-                type="button"
-                class="rounded-lg border p-2 text-xs"
-                :class="form.header_layout === layout.value ? 'border-primary bg-primary/10 text-primary-dark' : 'border-gray-200 text-gray-700'"
-                @click="form.header_layout = layout.value"
-              >
-                {{ layout.label }}
-              </button>
-            </div>
-
+          <AppFormSection title="Header" description="Configura logo y campos visibles." :collapsible="isMobile" :defaultOpen="!isMobile">
             <AppToggle v-model="form.header_show_logo" label="Mostrar logo" size="sm" />
 
             <AppSelect
               v-if="form.header_show_logo"
               v-model="form.header_logo_size"
-              label="Tamano de logo"
+              label="Tamaño de logo"
               :options="logoSizeOptions"
             />
 
@@ -131,38 +111,10 @@
               </div>
             </AppFieldGroup>
 
-            <div>
-              <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-600">Variables disponibles</p>
-              <div class="flex flex-wrap gap-2">
-                <button
-                  v-for="token in variableTokens"
-                  :key="`header-token-${token}`"
-                  type="button"
-                  class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 hover:border-primary/30"
-                  @click="insertToken('header', token)"
-                >
-                  Insertar {{ token }}
-                </button>
-              </div>
-            </div>
-
-            <AppTextarea v-model="form.header_extra_text" label="Texto adicional" :rows="3" :autoResize="true" />
+            <AppTextarea v-model="form.header_extra_text" label="Texto adicional (opcional)" :rows="2" :autoResize="true" placeholder="Cualquier texto adicional para el header..." />
           </AppFormSection>
 
-          <AppFormSection title="Footer" description="Selecciona layout y contenido del pie de pagina." :collapsible="isMobile" :defaultOpen="!isMobile">
-            <div class="grid grid-cols-1 gap-2 md:grid-cols-3">
-              <button
-                v-for="layout in footerLayouts"
-                :key="layout.value"
-                type="button"
-                class="rounded-lg border p-2 text-xs"
-                :class="form.footer_layout === layout.value ? 'border-primary bg-primary/10 text-primary-dark' : 'border-gray-200 text-gray-700'"
-                @click="form.footer_layout = layout.value"
-              >
-                {{ layout.label }}
-              </button>
-            </div>
-
+          <AppFormSection title="Footer" description="Configura campos visibles del pie de página." :collapsible="isMobile" :defaultOpen="!isMobile">
             <AppFieldGroup title="Campos visibles" compact>
               <div class="grid grid-cols-2 gap-3">
                 <AppToggle
@@ -175,28 +127,7 @@
               </div>
             </AppFieldGroup>
 
-            <div>
-              <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-600">Variables disponibles</p>
-              <div class="flex flex-wrap gap-2">
-                <button
-                  v-for="token in variableTokens"
-                  :key="`footer-token-${token}`"
-                  type="button"
-                  class="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 hover:border-primary/30"
-                  @click="insertToken('footer', token)"
-                >
-                  Insertar {{ token }}
-                </button>
-              </div>
-            </div>
-
-            <AppTextarea
-              v-if="form.footer_layout === 3"
-              v-model="form.footer_free_text"
-              label="Texto libre del footer"
-              :rows="4"
-              :autoResize="true"
-            />
+            <AppTextarea v-model="form.footer_free_text" label="Texto adicional (opcional)" :rows="2" :autoResize="true" placeholder="Cualquier texto adicional para el footer..." />
           </AppFormSection>
 
           <AppFormSection title="Secciones opcionales" description="Controla campos adicionales en el documento." :collapsible="isMobile" :defaultOpen="!isMobile">
@@ -288,12 +219,10 @@ import { useBreakpoint } from '../composables/useBreakpoint'
 import {
   DOCUMENT_PRESETS,
   DOCUMENT_THEMES,
-  DOCUMENT_VARIABLES,
   DEFAULT_DOCUMENT_SETTINGS,
   deriveThemeTokens,
   getDocumentThemeColors,
   normalizeDocumentSettings,
-  resolvePresetColors,
 } from '../utils/documentThemes'
 import {
   AppInput,
@@ -326,45 +255,29 @@ const themeOptions = computed(() => Object.entries(DOCUMENT_THEMES).map(([key, v
   background: value.background,
 })))
 
+const presetOptions = computed(() => DOCUMENT_PRESETS)
+
 const previewTokens = computed(() => {
   const colors = getDocumentThemeColors(form.value)
   return deriveThemeTokens(colors.primary, colors.accent, colors.background)
 })
 
-const presetCards = computed(() => Object.values(DOCUMENT_PRESETS).map((preset) => ({
-  ...preset,
-  swatch: resolvePresetColors(preset.key, previewTokens.value),
-})))
-
 const isCustomTheme = computed(() => form.value.color_theme === 'custom')
-const variableTokens = computed(() => Object.keys(DOCUMENT_VARIABLES))
 
 const profileFields = [
   { key: 'nombre_comercial', label: 'Nombre comercial' },
   { key: 'nit', label: 'NIT' },
-  { key: 'razon_social', label: 'Razon social' },
-  { key: 'telefono', label: 'Telefono' },
+  { key: 'razon_social', label: 'Razón social' },
+  { key: 'telefono', label: 'Teléfono' },
   { key: 'email', label: 'Email' },
   { key: 'ciudad', label: 'Ciudad' },
-  { key: 'direccion', label: 'Direccion' },
+  { key: 'direccion', label: 'Dirección' },
   { key: 'website', label: 'Website' },
   { key: 'slogan', label: 'Slogan' },
 ]
 
-const headerLayouts = [
-  { value: 1, label: 'Layout 1: logo izquierda' },
-  { value: 2, label: 'Layout 2: centrado' },
-  { value: 3, label: 'Layout 3: sin logo' },
-]
-
-const footerLayouts = [
-  { value: 1, label: 'Layout 1: centrado' },
-  { value: 2, label: 'Layout 2: dos columnas' },
-  { value: 3, label: 'Layout 3: texto libre' },
-]
-
 const logoSizeOptions = [
-  { value: 'small', label: 'Pequeno' },
+  { value: 'small', label: 'Pequeño' },
   { value: 'medium', label: 'Mediano' },
   { value: 'large', label: 'Grande' },
 ]
@@ -383,24 +296,6 @@ const issuedAtPreview = computed(() => new Intl.DateTimeFormat('es-CO', {
   hour12: false,
 }).format(new Date()))
 
-const applyPreset = (presetKey) => {
-  const preset = DOCUMENT_PRESETS[presetKey]
-  if (!preset) return
-
-  form.value.preset = presetKey
-  form.value.header_layout = preset.header_layout
-  form.value.footer_layout = preset.footer_layout
-}
-
-const applyThemePalette = (themeKey) => {
-  const selectedTheme = DOCUMENT_THEMES[themeKey]
-  if (!selectedTheme || themeKey === 'custom') return
-
-  form.value.color_primary = selectedTheme.primary
-  form.value.color_accent = selectedTheme.accent
-  form.value.color_background = selectedTheme.background
-}
-
 const selectTheme = (themeKey) => {
   if (themeKey === form.value.color_theme) return
 
@@ -417,15 +312,13 @@ const selectTheme = (themeKey) => {
   applyThemePalette(themeKey)
 }
 
-const insertToken = (scope, token) => {
-  if (scope === 'header') {
-    form.value.header_extra_text = `${form.value.header_extra_text || ''}${token}`
-    return
-  }
+const applyThemePalette = (themeKey) => {
+  const selectedTheme = DOCUMENT_THEMES[themeKey]
+  if (!selectedTheme || themeKey === 'custom') return
 
-  if (form.value.footer_layout === 3) {
-    form.value.footer_free_text = `${form.value.footer_free_text || ''}${token}`
-  }
+  form.value.color_primary = selectedTheme.primary
+  form.value.color_accent = selectedTheme.accent
+  form.value.color_background = selectedTheme.background
 }
 
 const loadData = async () => {
@@ -452,9 +345,6 @@ const loadData = async () => {
     profile.value = profileData || {}
     voucherConditions.value = String(settingsData?.voucher_conditions || '').trim()
     form.value = normalizeDocumentSettings(settings)
-    if (!form.value.preset) {
-      applyPreset('moderno')
-    }
     applyThemePalette(form.value.color_theme)
   } catch (error) {
     toast.error(error.message || 'No se pudo cargar la configuracion de documentos.')
