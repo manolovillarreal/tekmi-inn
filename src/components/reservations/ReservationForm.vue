@@ -193,13 +193,13 @@
             v-model="form.adults"
             label="Adultos"
             :min="1"
-            :max="20"
+            :max="99"
           />
           <AppCounter
             v-model="form.children"
             label="Niños"
             :min="0"
-            :max="20"
+            :max="99"
           />
         </AppFormGrid>
         <p class="text-sm text-[#6B7280]">

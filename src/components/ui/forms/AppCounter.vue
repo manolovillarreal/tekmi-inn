@@ -10,7 +10,7 @@
         :class="buttonClass"
         @click="decrease"
       >
-        âˆ’
+        -
       </button>
 
       <input
