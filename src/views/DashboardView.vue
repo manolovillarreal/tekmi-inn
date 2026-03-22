@@ -8,6 +8,8 @@
       </router-link>
     </div>
 
+    <AvailabilityWidget />
+
     <div v-if="overdueReservations.length > 0 || preregPendingReservations.length > 0" class="space-y-3">
       <AppInlineAlert
         v-for="res in overdueReservations"
@@ -149,6 +151,7 @@ import { useReservationsStore } from '../stores/reservations'
 import { useToast } from '../composables/useToast'
 import { AppInlineAlert } from '@/components/ui/forms'
 import { getNetAmount } from '../utils/reservations'
+import AvailabilityWidget from '../components/dashboard/AvailabilityWidget.vue'
 
 const store = useReservationsStore()
 const router = useRouter()

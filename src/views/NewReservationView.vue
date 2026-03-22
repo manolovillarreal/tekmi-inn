@@ -11,14 +11,20 @@
           <path d="M13 16l-5-6 5-6" />
         </svg>
       </button>
+      <h1 class="text-2xl font-semibold text-gray-900">Nueva reserva / consulta</h1>
     </div>
-    
-    <ReservationForm />
+
+    <GuidedReservationForm
+      :initialCheckIn="route.query.check_in || ''"
+      :initialCheckOut="route.query.check_out || ''"
+      :initialPersonas="Number(route.query.personas || 2)"
+    />
   </div>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
-import ReservationForm from '../components/reservations/ReservationForm.vue'
+import { useRouter, useRoute } from 'vue-router'
+import GuidedReservationForm from '../components/reservations/GuidedReservationForm.vue'
 const router = useRouter()
+const route = useRoute()
 </script>

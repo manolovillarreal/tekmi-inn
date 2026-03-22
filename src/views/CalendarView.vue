@@ -367,12 +367,13 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
 import BottomSheet from '../components/ui/BottomSheet.vue'
 import { useBreakpoint } from '../composables/useBreakpoint'
 
+const route = useRoute()
 const router = useRouter()
 const accountStore = useAccountStore()
 const { isMobile } = useBreakpoint()
@@ -902,7 +903,13 @@ function goToNextWeek() {
 onMounted(async () => {
   isTouchDevice.value = Boolean(window.matchMedia?.('(pointer: coarse)')?.matches || 'ontouchstart' in window)
 
-  applyPreset()
+  if (route.query.from && route.query.to) {
+    periodPreset.value = 'custom'
+    periodFrom.value = route.query.from
+    periodTo.value = route.query.to
+  } else {
+    applyPreset()
+  }
   await fetchMasterData()
   await fetchOccupancies()
 
