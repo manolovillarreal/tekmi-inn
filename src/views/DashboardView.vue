@@ -217,6 +217,11 @@ const getIncomeRange = () => {
   }
 }
 
+const formatDate = (value) => {
+  if (!value) return '-'
+  return new Date(String(value)).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
+}
+
 const formatRangeDate = (isoDate) => {
   if (!isoDate) return '-'
   return new Date(isoDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
