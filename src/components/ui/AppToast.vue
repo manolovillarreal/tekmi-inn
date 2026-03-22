@@ -20,6 +20,17 @@
               Cerrar
             </button>
           </div>
+          <div v-if="toast.actions?.length" class="mt-2 flex flex-wrap gap-3">
+            <button
+              v-for="action in toast.actions"
+              :key="action.label"
+              type="button"
+              class="text-xs font-semibold underline opacity-90 transition-opacity hover:opacity-100"
+              @click="action.callback(); toastStore.removeToast(toast.id)"
+            >
+              {{ action.label }}
+            </button>
+          </div>
         </div>
       </TransitionGroup>
     </div>

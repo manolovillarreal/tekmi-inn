@@ -243,7 +243,18 @@
             La llegada fÃ­sica solo se registra desde estado confirmed.
           </div>
         </div>
-
+        <!-- Occupancy sync alert -->
+        <div v-if="isSyncMissing" class="card border-amber-100 bg-amber-50/30">
+          <h2 class="text-sm font-semibold text-amber-800 mb-2">Ocupación desincronizada</h2>
+          <p class="text-xs text-amber-700 mb-3">El calendario puede no reflejar esta reserva correctamente.</p>
+          <button
+            class="touch-target w-full rounded-md border border-amber-200 bg-white px-4 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-50"
+            :disabled="syncingOccupancy"
+            @click="syncOccupancy"
+          >
+            {{ syncingOccupancy ? 'Sincronizando…' : 'Re-sincronizar ocupación' }}
+          </button>
+        </div>
         <div class="card">
           <h2 class="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wider">HuÃ©sped principal</h2>
           <div class="flex items-center gap-3 mb-4">
@@ -435,6 +446,14 @@ const deletingPayment = ref(false)
 const selectedPayment = ref(null)
 const showCheckinConfirmModal = ref(false)
 const checkinSubmitting = ref(false)
+const occupancyRowCount = ref(0)
+const syncingOccupancy = ref(false)
+
+const isSyncMissing = computed(() =>
+  res.value != null
+  && res.value.status !== 'cancelled'
+  && occupancyRowCount.value === 0
+)
 
 onMounted(async () => {
   await fetchReservation()
@@ -456,12 +475,36 @@ const fetchReservation = async () => {
     if (data) {
       res.value = data
       await fetchPayments()
+      // Check occupancy sync status
+      const accountId2 = accountStore.getRequiredAccountId()
+      const { count } = await supabase
+        .from('occupancies')
+        .select('id', { count: 'exact', head: true })
+        .eq('account_id', accountId2)
+        .eq('reservation_id', route.params.id)
+        .eq('occupancy_type', 'reservation')
+      occupancyRowCount.value = count ?? 0
     }
   } catch (err) {
     res.value = null
     console.error(err)
   } finally {
     loading.value = false
+  }
+}
+
+const syncOccupancy = async () => {
+  syncingOccupancy.value = true
+  try {
+    const r = await reservationsStore.retryReservationOccupancySync(res.value.id)
+    if (r.synced) {
+      occupancyRowCount.value = 1
+      toast.success('Ocupación sincronizada correctamente.')
+    } else {
+      toast.error('No se pudo sincronizar la ocupación. Intenta de nuevo más tarde.')
+    }
+  } finally {
+    syncingOccupancy.value = false
   }
 }
 

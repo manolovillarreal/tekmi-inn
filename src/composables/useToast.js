@@ -8,5 +8,6 @@ export const useToast = () => {
     error: (message, duration = 3000) => toastStore.pushToast({ type: 'error', message, duration }),
     info: (message, duration = 3000) => toastStore.pushToast({ type: 'info', message, duration }),
     warning: (message, duration = 3000) => toastStore.pushToast({ type: 'warning', message, duration }),
+    withActions: (message, actions, type = 'warning') => toastStore.pushToast({ type, message, persistent: true, actions }),
   }
 }

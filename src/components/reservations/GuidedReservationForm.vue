@@ -120,6 +120,12 @@
             hint="Opcional"
           />
         </AppFormGrid>
+        <AppInput
+          v-model="form.guest_email"
+          label="Email"
+          type="email"
+          hint="Opcional"
+        />
 
         <AppTextarea
           v-model="form.notes"
@@ -336,6 +342,7 @@ import { useAvailability } from '../../composables/useAvailability'
 import { useAccountStore } from '../../stores/account'
 import { useReservationsStore } from '../../stores/reservations'
 import { useInquiriesStore } from '../../stores/inquiries'
+import { useGuestsStore } from '../../stores/guests'
 import { supabase } from '../../services/supabase'
 import { useToast } from '../../composables/useToast'
 
@@ -352,6 +359,7 @@ const router = useRouter()
 const accountStore = useAccountStore()
 const reservationsStore = useReservationsStore()
 const inquiriesStore = useInquiriesStore()
+const guestsStore = useGuestsStore()
 const toast = useToast()
 const avail = useAvailability()
 
@@ -386,6 +394,7 @@ const form = ref({
   children: 0,
   guest_name: '',
   guest_phone: '',
+  guest_email: '',
   notes: '',
   price_per_night: '',
   discount_percentage: '',
@@ -508,12 +517,19 @@ const save = async () => {
         ? payment.value
         : null
 
+      const guestRecord = await guestsStore.createGuest({
+        name: form.value.guest_name,
+        phone: form.value.guest_phone || null,
+        email: form.value.guest_email || null
+      })
+
       const result = await reservationsStore.createReservationWithPayment(
         {
           check_in: form.value.check_in,
           check_out: form.value.check_out,
           adults: form.value.adults,
           children: form.value.children,
+          guest_id: guestRecord.id,
           guest_name: form.value.guest_name,
           guest_phone: form.value.guest_phone,
           unit_ids: form.value.unit_ids,
@@ -531,11 +547,29 @@ const save = async () => {
         paymentData
       )
 
-      toast.success('Reserva creada correctamente.')
       emit('saved', result)
 
       if (!props.inModal) {
         router.push(`/reservas/${result.id}`)
+      }
+
+      if (result.syncResult?.synced === false) {
+        toast.withActions(
+          'Reserva creada, pero la ocupación no pudo sincronizarse.',
+          [{
+            label: 'Reintentar',
+            callback: async () => {
+              const r = await reservationsStore.retryReservationOccupancySync(result.id)
+              if (r.synced) {
+                toast.success('Ocupación sincronizada.')
+              } else {
+                toast.error('No se pudo sincronizar la ocupación. Intenta de nuevo más tarde.')
+              }
+            }
+          }]
+        )
+      } else {
+        toast.success('Reserva creada correctamente.')
       }
     } else {
       const result = await inquiriesStore.createInquiry({
