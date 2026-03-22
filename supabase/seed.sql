@@ -318,8 +318,9 @@ BEGIN
   DELETE FROM guests WHERE account_id = v_account_id;
   DELETE FROM units WHERE account_id = v_account_id;
 
-  DELETE FROM source_details WHERE account_id = v_account_id;
-  DELETE FROM source_types WHERE account_id = v_account_id;
+  -- source_types and source_details are NOT deleted: UUIDs must remain stable
+  -- so that browser-cached references stay valid. The ON CONFLICT clauses below
+  -- handle idempotent upserts while preserving existing primary-key values.
 
   -- Keep venue stable across runs.
   INSERT INTO venues (id, name, description, address, is_active, account_id)
@@ -507,18 +508,18 @@ BEGIN
     occupancy_type
   )
   VALUES
-    (1,  'r01', 'g01', 'Habitacion Estandar 1', 'whatsapp',  'confirmada',  current_date + 3,  3, 165000, 2, 0, 'reservation'),
-    (2,  'r02', 'g02', 'Habitacion Estandar 2', 'instagram', 'confirmada',  current_date + 10, 2, 170000, 2, 0, 'reservation'),
-    (3,  'r03', 'g03', 'Suite Junior',          'booking',   'confirmada',  current_date + 20, 5, 310000, 3, 1, 'reservation'),
-    (4,  'r04', 'g04', 'Habitacion Doble',      'telefono',  'en_estadia',  current_date - 1,  4, 210000, 2, 1, 'reservation'),
-    (5,  'r05', 'g05', 'Cabana Vista al Mar',   'directo',   'en_estadia',  current_date,      5, 420000, 4, 1, 'reservation'),
-    (6,  'r06', 'g06', 'Habitacion Estandar 1', 'whatsapp',  'finalizada',  current_date - 28, 2, 160000, 2, 0, 'reservation'),
-    (7,  'r07', 'g07', 'Habitacion Estandar 2', 'instagram', 'finalizada',  current_date - 21, 4, 168000, 2, 0, 'reservation'),
-    (8,  'r08', 'g08', 'Habitacion Doble',      'telefono',  'finalizada',  current_date - 14, 3, 205000, 2, 1, 'reservation'),
-    (9,  'r09', 'g01', 'Suite Junior',          'booking',   'finalizada',  current_date - 7,  2, 305000, 2, 1, 'reservation'),
-    (10, 'r10', 'g02', 'Cabana Vista al Mar',   'directo',   'cancelada',   current_date - 18, 3, 410000, 3, 2, 'reservation'),
-    (11, 'r11', 'g03', 'Habitacion Doble',      'instagram', 'cancelada',   current_date - 5,  2, 198000, 2, 0, 'reservation'),
-    (12, 'r12', 'g04', 'Cabana Vista al Mar',   'airbnb',    'confirmada',  current_date + 6,  4, 430000, 4, 1, 'external');
+    (1,  'r01', 'g01', 'Habitacion Estandar 1', 'whatsapp',  'confirmed',  current_date + 3,  3, 165000, 2, 0, 'reservation'),
+    (2,  'r02', 'g02', 'Habitacion Estandar 2', 'instagram', 'confirmed',  current_date + 10, 2, 170000, 2, 0, 'reservation'),
+    (3,  'r03', 'g03', 'Suite Junior',          'booking',   'confirmed',  current_date + 20, 5, 310000, 3, 1, 'reservation'),
+    (4,  'r04', 'g04', 'Habitacion Doble',      'telefono',  'in_stay',    current_date - 1,  4, 210000, 2, 1, 'reservation'),
+    (5,  'r05', 'g05', 'Cabana Vista al Mar',   'directo',   'in_stay',    current_date,      5, 420000, 4, 1, 'reservation'),
+    (6,  'r06', 'g06', 'Habitacion Estandar 1', 'whatsapp',  'completed',  current_date - 28, 2, 160000, 2, 0, 'reservation'),
+    (7,  'r07', 'g07', 'Habitacion Estandar 2', 'instagram', 'completed',  current_date - 21, 4, 168000, 2, 0, 'reservation'),
+    (8,  'r08', 'g08', 'Habitacion Doble',      'telefono',  'completed',  current_date - 14, 3, 205000, 2, 1, 'reservation'),
+    (9,  'r09', 'g01', 'Suite Junior',          'booking',   'completed',  current_date - 7,  2, 305000, 2, 1, 'reservation'),
+    (10, 'r10', 'g02', 'Cabana Vista al Mar',   'directo',   'cancelled',  current_date - 18, 3, 410000, 3, 2, 'reservation'),
+    (11, 'r11', 'g03', 'Habitacion Doble',      'instagram', 'cancelled',  current_date - 5,  2, 198000, 2, 0, 'reservation'),
+    (12, 'r12', 'g04', 'Cabana Vista al Mar',   'airbnb',    'confirmed',  current_date + 6,  4, 430000, 4, 1, 'external');
 
   INSERT INTO reservations (
     id,
@@ -650,7 +651,7 @@ BEGIN
     rm.check_out,
     'Pago total para reserva completed'
   FROM tmp_reservations_map rm
-  WHERE rm.status = 'finalizada';
+  WHERE rm.status = 'completed';
 
   -- Confirmed: partial advance 50-70%.
   INSERT INTO payments (id, account_id, reservation_id, amount, method, reference, payment_date, notes)
@@ -662,9 +663,9 @@ BEGIN
     CASE WHEN rm.source_name IN ('airbnb', 'booking') THEN 'plataforma' ELSE 'transferencia' END,
     'PAY-' || rm.reservation_number || '-ADV',
     rm.check_in - 2,
-    'Anticipo parcial (60%) para reserva confirmada'
+    'Anticipo parcial (60%) para reserva confirmed'
   FROM tmp_reservations_map rm
-  WHERE rm.status = 'confirmada';
+  WHERE rm.status = 'confirmed';
 
   -- In stay: partial advance with pending balance.
   INSERT INTO payments (id, account_id, reservation_id, amount, method, reference, payment_date, notes)
@@ -678,7 +679,7 @@ BEGIN
     rm.check_in,
     'Anticipo parcial durante estadia'
   FROM tmp_reservations_map rm
-  WHERE rm.status = 'en_estadia';
+  WHERE rm.status = 'in_stay';
 
   -- Cancelled: one without payment and one with partial refund/retention pattern.
   INSERT INTO payments (id, account_id, reservation_id, amount, method, reference, payment_date, notes)
@@ -871,7 +872,7 @@ BEGIN
   FROM tmp_reservations_map rm
   JOIN reservations r ON r.id = rm.id
   JOIN reservation_units ru ON ru.reservation_id = r.id
-  WHERE r.status IN ('confirmada', 'en_estadia', 'finalizada');
+  WHERE r.status IN ('confirmed', 'in_stay', 'completed');
 
   RAISE NOTICE 'Seed demo TekMi Inn completado para account_id=%', v_account_id;
 END $$;
