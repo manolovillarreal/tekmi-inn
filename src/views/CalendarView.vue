@@ -50,11 +50,6 @@
           <input v-model="periodTo" type="date" class="mt-1 rounded-md border-gray-300 text-sm">
         </div>
 
-        <div v-if="periodPreset === 'this_week'" class="flex items-center gap-2 self-end">
-          <button class="btn-secondary text-sm" @click="goToPreviousWeek">← Semana anterior</button>
-          <span class="text-sm text-gray-600">{{ weekRangeLabel }}</span>
-          <button class="btn-secondary text-sm" @click="goToNextWeek">Semana siguiente →</button>
-        </div>
       </div>
     </div>
 
@@ -94,6 +89,12 @@
         <span>Ocupación: <span class="font-semibold text-gray-900">{{ calendarMetrics.occupancyPct }}%</span></span>
         <span>Llegadas: <span class="font-semibold text-gray-900">{{ calendarMetrics.arrivals }}</span></span>
         <span>Huéspedes: <span class="font-semibold text-gray-900">{{ calendarMetrics.totalGuests }}</span></span>
+      </div>
+
+      <div v-if="periodPreset === 'this_week'" class="mb-4 flex items-center justify-between gap-2">
+        <button class="btn-secondary text-sm" @click="goToPreviousWeek">← Semana anterior</button>
+        <span class="text-sm font-medium text-gray-700">{{ weekRangeLabel }}</span>
+        <button class="btn-secondary text-sm" @click="goToNextWeek">Semana siguiente →</button>
       </div>
 
       <div v-if="loading" class="rounded-md border border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500">
@@ -139,8 +140,9 @@
         <div
           v-for="day in calendarDays"
           :key="`classic-day-${day.date}`"
-          class="min-h-[120px] bg-white p-2 transition-colors hover:bg-gray-50"
+          class="relative min-h-[120px] overflow-visible bg-white p-2 transition-colors hover:bg-gray-50"
           :class="isMobile ? 'cursor-pointer min-h-[60px] p-1' : ''"
+          :style="!isMobile ? { minHeight: `${Math.max(120, 41 + (getClassicRowLaneCount(day.date) * 24))}px` } : undefined"
           @click="isMobile ? openDaySheet(day.date) : null"
         >
           <div class="text-right text-sm font-semibold text-gray-400">{{ day.dayNumber }}</div>
@@ -156,19 +158,26 @@
           </div>
 
           <button
-            v-for="occ in getOccupanciesForDay(day.date)"
-            :key="`classic-occ-${occ.id}`"
+            v-for="segment in getClassicSegmentsForDay(day.date)"
+            :key="`classic-occ-${day.date}-${segment.id}`"
             data-occ-trigger="true"
             type="button"
-            class="mt-1 block w-full truncate rounded p-1.5 text-left text-xs text-white shadow-sm"
-            :class="[occupancyColor(occ), occupancyBorderClass(occ, day.date), isMobile ? 'px-1 py-0.5 text-[10px]' : '']"
+            class="absolute z-10 truncate rounded px-1.5 py-1 text-left text-xs leading-tight text-white shadow-sm"
+            :class="[occupancyColor(segment), occupancyBorderClass(segment, segment.contextDate), isMobile ? 'px-1 py-0.5 text-[10px]' : '']"
+            :style="!isMobile
+              ? {
+                  top: `${28 + (segment.lane * 24)}px`,
+                  left: segment.leftStyle,
+                  width: segment.widthStyle
+                }
+              : undefined"
             v-show="!isMobile"
-            @mouseenter="openDesktopTooltip($event, occ, day.date)"
-            @mousemove="openDesktopTooltip($event, occ, day.date)"
+            @mouseenter="openDesktopTooltip($event, segment, segment.contextDate)"
+            @mousemove="openDesktopTooltip($event, segment, segment.contextDate)"
             @mouseleave="closeDesktopTooltip"
-            @click="onOccupancyClick($event, occ, day.date)"
+            @click="onOccupancyClick($event, segment, segment.contextDate)"
           >
-            {{ getOccupancyDisplayLabel(occ, 'clasica') }}
+            {{ getOccupancyDisplayLabel(segment, 'clasica') }}<span v-if="segment.occupancy_type === 'reservation' && segment.reservations?.guest_name" class="opacity-80"> · {{ segment.reservations.guest_name }}</span>
           </button>
         </div>
       </div>
@@ -555,6 +564,85 @@ const calendarDayIndexMap = computed(() => {
   return map
 })
 
+const classicRowLayoutMap = computed(() => {
+  const layout = new Map()
+  if (calendarDays.value.length === 0) return layout
+
+  for (let rowStartIndex = 0; rowStartIndex < calendarDays.value.length; rowStartIndex += 7) {
+    const rowStart = calendarDays.value[rowStartIndex]?.date
+    if (!rowStart) continue
+
+    const rowEndDay = calendarDays.value[Math.min(rowStartIndex + 6, calendarDays.value.length - 1)]?.date
+    if (!rowEndDay) continue
+
+    const rowEndExclusive = addIsoDays(rowEndDay, 1)
+
+    const segments = filteredOccupancies.value
+      .map((occ) => {
+        const occStart = normalizeIsoDate(occ.start_date)
+        const occEnd = normalizeIsoDate(occ.end_date)
+
+        if (occEnd <= rowStart || occStart >= rowEndExclusive) return null
+
+        const startClamped = occStart > rowStart ? occStart : rowStart
+        const endClamped = occEnd < rowEndExclusive ? occEnd : rowEndExclusive
+        const rowColStart = getIsoDayDiff(rowStart, startClamped) + 1
+        const spanDays = Math.max(1, getIsoDayDiff(startClamped, endClamped))
+
+        const checkinInView = occStart >= rowStart
+        const checkoutInView = occEnd < rowEndExclusive
+        const gap = 3
+        let leftStyle, widthStyle
+        if (checkinInView) {
+          leftStyle = `calc(50% + ${gap}px)`
+          widthStyle = checkoutInView
+            ? `calc(${spanDays * 100}% - ${gap * 2}px)`
+            : `calc(${(spanDays - 0.5) * 100}% - ${gap}px)`
+        } else {
+          leftStyle = `${gap}px`
+          widthStyle = checkoutInView
+            ? `calc(${(spanDays + 0.5) * 100}% - ${gap * 2}px)`
+            : `calc(${spanDays * 100}% - ${gap * 2}px)`
+        }
+
+        return {
+          ...occ,
+          contextDate: startClamped,
+          rowColStart,
+          spanDays,
+          checkinInView,
+          checkoutInView,
+          leftStyle,
+          widthStyle
+        }
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        if (a.rowColStart !== b.rowColStart) return a.rowColStart - b.rowColStart
+        return b.spanDays - a.spanDays
+      })
+
+    const laneEndCols = []
+    segments.forEach((segment) => {
+      // Include checkout day in lane occupancy to avoid overlap with next checkin on same day
+      const segEndCol = segment.rowColStart + segment.spanDays + (segment.checkoutInView ? 1 : 0)
+      let lane = 0
+      while (lane < laneEndCols.length && segment.rowColStart < laneEndCols[lane]) {
+        lane++
+      }
+      laneEndCols[lane] = segEndCol
+      segment.lane = lane
+    })
+
+    layout.set(rowStart, {
+      segments,
+      laneCount: laneEndCols.length
+    })
+  }
+
+  return layout
+})
+
 const selectedVenueSet = computed(() => new Set(selectedVenueIds.value))
 
 const visibleVenues = computed(() => {
@@ -700,6 +788,35 @@ function getUnitsByVenue(venueId) {
 
 function getOccupanciesForDay(dateStr) {
   return filteredOccupancies.value.filter((occ) => dateStr >= occ.start_date && dateStr < occ.end_date)
+}
+
+function getIsoDayDiff(startIso, endIso) {
+  const [sy, sm, sd] = startIso.split('-').map(Number)
+  const [ey, em, ed] = endIso.split('-').map(Number)
+  const startMs = Date.UTC(sy, sm - 1, sd)
+  const endMs = Date.UTC(ey, em - 1, ed)
+  return Math.round((endMs - startMs) / 86400000)
+}
+
+function getClassicSegmentsForDay(dateStr) {
+  const dayIndex = (calendarDayIndexMap.value.get(dateStr) || 1) - 1
+  const rowStartIndex = dayIndex - (dayIndex % 7)
+  const rowStart = calendarDays.value[rowStartIndex]?.date
+  if (!rowStart) return []
+
+  const dayInRow = dayIndex - rowStartIndex
+  const rowLayout = classicRowLayoutMap.value.get(rowStart)
+  if (!rowLayout) return []
+
+  return rowLayout.segments.filter((segment) => segment.rowColStart === dayInRow + 1)
+}
+
+function getClassicRowLaneCount(dateStr) {
+  const dayIndex = (calendarDayIndexMap.value.get(dateStr) || 1) - 1
+  const rowStartIndex = dayIndex - (dayIndex % 7)
+  const rowStart = calendarDays.value[rowStartIndex]?.date
+  if (!rowStart) return 0
+  return classicRowLayoutMap.value.get(rowStart)?.laneCount || 0
 }
 
 function getUnitOccupanciesForDay(unitId, dateStr) {
