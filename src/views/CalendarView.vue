@@ -97,6 +97,12 @@
         <button class="btn-secondary text-sm" @click="goToNextWeek">Semana siguiente →</button>
       </div>
 
+      <div v-if="periodPreset === 'this_month'" class="mb-4 flex items-center justify-between gap-2">
+        <button class="btn-secondary text-sm" @click="goToPreviousMonth">← Mes anterior</button>
+        <span class="text-sm font-medium text-gray-700">{{ monthLabel }}</span>
+        <button class="btn-secondary text-sm" @click="goToNextMonth">Mes siguiente →</button>
+      </div>
+
       <div v-if="loading" class="rounded-md border border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500">
         Cargando ocupaciones...
       </div>
@@ -245,9 +251,10 @@
                   class="relative z-10 truncate rounded px-1 py-0.5 text-left text-[10px] text-white"
                   :class="[
                     occupancyColor(segment),
-                    segment.checkinInView ? 'border-l-4 border-l-green-300' : ''
+                    segment.checkinInView ? 'border-l-4 border-l-green-300' : '',
+                    segment.checkoutInView ? 'border-r-4 border-r-red-300' : ''
                   ]"
-                  :style="{ gridRow: ui + 2, gridColumn: `${segment.colStart + 1} / ${segment.colEnd + 1}`, margin: '6px 0' }"
+                  :style="{ gridRow: ui + 2, gridColumn: `${segment.colStart + 1} / ${segment.colEnd + 1}`, margin: segment.segmentMargin }"
                   @mouseenter="openDesktopTooltip($event, segment, segment.contextDate)"
                   @mousemove="openDesktopTooltip($event, segment, segment.contextDate)"
                   @mouseleave="closeDesktopTooltip"
@@ -388,6 +395,7 @@ const periodPreset = ref('next_30')
 const periodFrom = ref('')
 const periodTo = ref('')
 const weekStart = ref(getWeekStartMonday(new Date()))
+const monthStart = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
 
 const selectedVenueIds = ref([])
 const collapsedVenues = ref({})
@@ -491,8 +499,8 @@ function applyPreset() {
   }
 
   if (periodPreset.value === 'this_month') {
-    periodFrom.value = toIsoDate(new Date(today.getFullYear(), today.getMonth(), 1))
-    periodTo.value = toIsoDate(new Date(today.getFullYear(), today.getMonth() + 1, 0))
+    periodFrom.value = toIsoDate(monthStart.value)
+    periodTo.value = toIsoDate(new Date(monthStart.value.getFullYear(), monthStart.value.getMonth() + 1, 0))
     return
   }
 
@@ -545,15 +553,24 @@ const weekRangeLabel = computed(() => {
   return `${start.getDate()} - ${end.getDate()} ${monthYear}`
 })
 
+const monthLabel = computed(() => {
+  const formatted = new Intl.DateTimeFormat('es-CO', { month: 'long', year: 'numeric' }).format(monthStart.value)
+  return formatted.charAt(0).toUpperCase() + formatted.slice(1)
+})
+
 const timelineGridStyle = computed(() => ({
   gridTemplateColumns: `repeat(${Math.max(calendarDays.value.length, 1)}, minmax(0, 1fr))`
 }))
 
 // Single CSS grid shared by header and every unit row → guaranteed perfect alignment.
-// Col 1: unit name (fixed 7rem). Cols 2…N+1: fixed 1.5rem per day (no 1fr so columns
-// don't stretch to fill the overflow-x-auto container).
+// Weekly mode uses wider day columns for a true week-like view while preserving room column.
+// Longer ranges remain compact to keep density.
 const completeGridStyle = computed(() => ({
-  gridTemplateColumns: `7rem repeat(${Math.max(calendarDays.value.length, 1)}, 1.7rem)`
+  '--complete-segment-gap': '5px',
+  '--complete-day-col-width': periodPreset.value === 'this_week' ? 'clamp(3rem, 7vw, 5.25rem)' : '1.7rem',
+  gridTemplateColumns: periodPreset.value === 'this_week'
+    ? `9rem repeat(${Math.max(calendarDays.value.length, 1)}, var(--complete-day-col-width))`
+    : `7rem repeat(${Math.max(calendarDays.value.length, 1)}, var(--complete-day-col-width))`
 }))
 
 const calendarDayIndexMap = computed(() => {
@@ -852,15 +869,23 @@ function getUnitSegmentsForComplete(unitId) {
 
       if (colEnd <= colStart) return null
 
+      const checkoutInView = occEnd < rangeEndExclusive
+      const checkinInView = occStart >= rangeStart
+      const marginLeft = checkinInView ? 'calc(var(--complete-day-col-width) / 3)' : '0px'
+      const marginRight = checkoutInView && colEnd < totalDays
+        ? 'calc((-1 * var(--complete-day-col-width) / 3) + var(--complete-segment-gap))'
+        : '0px'
+
       return {
         ...occ,
         colStart,
         colEnd,
         contextDate: startClamped,
         // true when the checkout falls within the visible range (not clamped to the right edge)
-        checkoutInView: occEnd < rangeEndExclusive,
+        checkoutInView,
         // true when the check-in falls within the visible range (not clamped to the left edge)
-        checkinInView: occStart >= rangeStart
+        checkinInView,
+        segmentMargin: `6px ${marginRight} 6px ${marginLeft}`
       }
     })
     .filter(Boolean)
@@ -1083,6 +1108,14 @@ function goToNextWeek() {
   weekStart.value = addDays(weekStart.value, 7)
 }
 
+function goToPreviousMonth() {
+  monthStart.value = new Date(monthStart.value.getFullYear(), monthStart.value.getMonth() - 1, 1)
+}
+
+function goToNextMonth() {
+  monthStart.value = new Date(monthStart.value.getFullYear(), monthStart.value.getMonth() + 1, 1)
+}
+
 onMounted(async () => {
   isTouchDevice.value = Boolean(window.matchMedia?.('(pointer: coarse)')?.matches || 'ontouchstart' in window)
 
@@ -1118,6 +1151,12 @@ watch(isMobile, (mobile) => {
 
 watch(weekStart, async () => {
   if (periodPreset.value !== 'this_week') return
+  applyPreset()
+  await fetchOccupancies()
+})
+
+watch(monthStart, async () => {
+  if (periodPreset.value !== 'this_month') return
   applyPreset()
   await fetchOccupancies()
 })
