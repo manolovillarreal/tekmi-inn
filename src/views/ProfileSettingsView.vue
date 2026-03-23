@@ -2,8 +2,8 @@
   <div v-if="can('settings', 'edit')" class="space-y-6">
     <div class="flex items-center justify-between gap-3">
       <div>
-        <h1 class="text-3xl font-semibold tracking-tight text-gray-900">Perfil</h1>
-        <p class="text-sm text-gray-500">Configura la informacion comercial y de contacto de tu cuenta.</p>
+        <h1 class="text-3xl font-semibold tracking-tight text-gray-900">Personalización</h1>
+        <p class="text-sm text-gray-500">Configura la informacion comercial, contacto y condiciones de tu cuenta.</p>
       </div>
       <RouterLink to="/configuracion" class="btn-secondary text-sm">Volver a configuracion</RouterLink>
     </div>
@@ -75,9 +75,23 @@
           <AppInlineAlert v-if="logoError" type="error" :message="logoError" />
         </AppFormSection>
 
+        <AppFormSection title="Condiciones del alojamiento" description="Este texto se mostrará en vouchers y cotizaciones." :collapsible="isMobile" :defaultOpen="!isMobile">
+          <textarea
+            v-model="voucherConditions"
+            rows="5"
+            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+            placeholder="Escribe aquí las condiciones del alojamiento..."
+          ></textarea>
+          <div class="mt-3 flex justify-end">
+            <button type="button" class="btn-primary text-sm" :disabled="savingConditions" @click="saveVoucherConditions">
+              {{ savingConditions ? 'Guardando...' : 'Guardar condiciones' }}
+            </button>
+          </div>
+        </AppFormSection>
+
         <div :class="isMobile ? 'sticky bottom-0 z-20 -mx-4 border-t border-[#E5E7EB] bg-white px-4 py-3 shadow-[0_-6px_18px_rgba(15,23,42,0.06)]' : ''">
           <AppFormActions
-            submit-label="Guardar perfil"
+            submit-label="Guardar personalización"
             cancel-label="Restablecer"
             :loading="savingProfile || loadingProfile"
             :submit-disabled="savingProfile || loadingProfile"
@@ -91,7 +105,7 @@
 
   <div v-else class="card border-amber-200 bg-amber-50/40">
     <h2 class="text-sm font-semibold uppercase tracking-wide text-amber-900">Sin acceso</h2>
-    <p class="mt-2 text-sm text-amber-800">No tienes permisos para editar el perfil.</p>
+    <p class="mt-2 text-sm text-amber-800">No tienes permisos para editar la personalización.</p>
   </div>
 </template>
 
@@ -120,10 +134,12 @@ const toast = useToast()
 
 const loadingProfile = ref(false)
 const savingProfile = ref(false)
+const savingConditions = ref(false)
 const logoInputRef = ref(null)
 const selectedLogoFile = ref(null)
 const selectedLogoPreviewUrl = ref('')
 const logoError = ref('')
+const voucherConditions = ref('')
 
 const profileForm = ref({
   commercial_name: '',
@@ -194,6 +210,48 @@ const loadProfile = async () => {
     toast.error(err.message || 'No se pudo cargar el perfil de la cuenta.')
   } finally {
     loadingProfile.value = false
+  }
+}
+
+const loadVoucherConditions = async () => {
+  if (!can('settings', 'edit')) return
+
+  try {
+    const accountId = accountStore.getRequiredAccountId()
+    const { data, error } = await supabase
+      .from('settings')
+      .select('voucher_conditions')
+      .eq('account_id', accountId)
+      .maybeSingle()
+
+    if (error) throw error
+    voucherConditions.value = String(data?.voucher_conditions || '')
+  } catch (err) {
+    toast.error(err.message || 'No se pudieron cargar las condiciones del alojamiento.')
+  }
+}
+
+const saveVoucherConditions = async () => {
+  if (!can('settings', 'edit')) return
+
+  savingConditions.value = true
+  try {
+    const accountId = accountStore.getRequiredAccountId()
+    const payload = {
+      account_id: accountId,
+      voucher_conditions: String(voucherConditions.value || '').trim(),
+    }
+
+    const { error } = await supabase
+      .from('settings')
+      .upsert(payload, { onConflict: 'account_id' })
+
+    if (error) throw error
+    toast.success('Condiciones guardadas correctamente.')
+  } catch (err) {
+    toast.error(err.message || 'No se pudieron guardar las condiciones.')
+  } finally {
+    savingConditions.value = false
   }
 }
 
@@ -314,7 +372,7 @@ const saveProfile = async () => {
     revokeSelectedLogoPreview()
     logoError.value = ''
 
-    toast.success('Perfil actualizado correctamente.')
+    toast.success('Personalización actualizada correctamente.')
   } catch (err) {
     toast.error(err.message || 'No se pudo guardar el perfil.')
   } finally {
@@ -326,5 +384,7 @@ onBeforeUnmount(() => {
   revokeSelectedLogoPreview()
 })
 
-onMounted(loadProfile)
+onMounted(async () => {
+  await Promise.all([loadProfile(), loadVoucherConditions()])
+})
 </script>
