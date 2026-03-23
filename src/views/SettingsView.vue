@@ -92,6 +92,49 @@
         </button>
       </div>
 
+      <!-- ---- Estado Push por dispositivo ---- -->
+      <div class="mb-6 rounded-md border border-gray-200 px-4 py-4">
+        <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Notificaciones push en este dispositivo</h3>
+
+        <!-- Browser no soporta push -->
+        <p v-if="!pushSupported" class="text-sm text-gray-500">
+          Tu navegador no soporta notificaciones push.
+        </p>
+
+        <template v-else>
+          <!-- Estado activo/inactivo -->
+          <p class="mb-3 flex items-center gap-2 text-sm">
+            <span
+              class="inline-block h-2 w-2 rounded-full"
+              :class="pushSubscribed ? 'bg-green-500' : 'bg-gray-300'"
+            />
+            <span :class="pushSubscribed ? 'text-green-700' : 'text-gray-600'">
+              {{ pushSubscribed ? 'Activas en este dispositivo' : 'No activas en este dispositivo' }}
+            </span>
+          </p>
+
+          <!-- Botón activar/desactivar -->
+          <button
+            type="button"
+            class="btn-secondary text-sm"
+            :disabled="pushLoading"
+            @click="handlePushToggle"
+          >
+            <template v-if="pushLoading">Procesando...</template>
+            <template v-else-if="pushSubscribed">🔔 Desactivar notificaciones push</template>
+            <template v-else>🔔 Activar notificaciones push</template>
+          </button>
+
+          <!-- Nota iOS -->
+          <p v-if="isIOS" class="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            En iPhone y iPad, las notificaciones push requieren tener la app instalada desde Safari
+            usando &ldquo;Agregar a pantalla de inicio&rdquo;. Asegúrate de abrir esta página desde
+            Safari antes de activarlas.
+          </p>
+        </template>
+      </div>
+      <!-- ---- Fin Estado Push ---- -->
+
       <div v-for="group in notifTypeGroups" :key="group.title" class="mb-6 last:mb-0">
         <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">{{ group.title }}</h3>
         <div class="divide-y divide-gray-100 rounded-md border border-gray-200">
@@ -266,6 +309,7 @@ import { usePermissions } from '../composables/usePermissions'
 import { useToast } from '../composables/useToast'
 import { useBreakpoint } from '../composables/useBreakpoint'
 import { getNotificationSettings, saveNotificationSettings as saveNotifSettingsApi } from '../services/notificationService'
+import { usePushNotifications } from '../composables/usePushNotifications'
 import BottomSheet from '../components/ui/BottomSheet.vue'
 import DataCard from '../components/ui/DataCard.vue'
 import { AppInlineAlert, AppSelect } from '@/components/ui/forms'
@@ -274,6 +318,15 @@ const accountStore = useAccountStore()
 const { can } = usePermissions()
 const { isMobile } = useBreakpoint()
 const toast = useToast()
+const {
+  isSupported: pushSupported,
+  isSubscribed: pushSubscribed,
+  isIOS,
+  subscribe: subscribePush,
+  unsubscribe: unsubscribePush,
+  checkSubscriptionStatus,
+} = usePushNotifications()
+const pushLoading = ref(false)
 
 const users = ref([])
 const loading = ref(false)
@@ -380,6 +433,24 @@ const fetchNotifSettings = async () => {
     notifSettings.value = await getNotificationSettings(accountId)
   } catch (err) {
     toast.error(err.message)
+  }
+}
+
+const handlePushToggle = async () => {
+  pushLoading.value = true
+  try {
+    if (pushSubscribed.value) {
+      await unsubscribePush()
+      toast.success('Notificaciones push desactivadas.')
+    } else {
+      const ok = await subscribePush()
+      if (ok) toast.success('Notificaciones push activadas en este dispositivo.')
+      else toast.error('No se pudo activar las notificaciones push.')
+    }
+  } catch (e) {
+    toast.error(e.message || 'Error al gestionar las notificaciones push.')
+  } finally {
+    pushLoading.value = false
   }
 }
 
@@ -514,5 +585,6 @@ const removeUser = async (item) => {
 
 onMounted(async () => {
   await Promise.all([fetchUsers(), fetchVoucherConditions(), fetchNotifSettings()])
+  if (pushSupported.value) checkSubscriptionStatus()
 })
 </script>

@@ -41,6 +41,36 @@
           </div>
         </div>
 
+        <!-- Push notification banner (lazy ask) -->
+        <!-- Solo visible si: browser soporta push, no hay suscripción activa,
+             el permiso no fue rechazado explícitamente, y el usuario no lo ha descartado. -->
+        <div
+          v-if="showPushBanner"
+          class="shrink-0 border-b border-indigo-100 bg-indigo-50 px-4 py-3"
+        >
+          <p class="text-sm font-medium text-indigo-800">Activa las notificaciones push</p>
+          <p class="mt-0.5 text-xs text-indigo-600">
+            Recibe alertas aunque la app esté cerrada o en segundo plano.
+          </p>
+          <div class="mt-2.5 flex items-center gap-2">
+            <button
+              type="button"
+              class="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
+              :disabled="subscribing"
+              @click="handleSubscribe"
+            >
+              {{ subscribing ? 'Activando...' : 'Activar notificaciones push' }}
+            </button>
+            <button
+              type="button"
+              class="text-xs text-indigo-500 hover:text-indigo-700"
+              @click="showPushBanner = false"
+            >
+              Ahora no
+            </button>
+          </div>
+        </div>
+
         <!-- List -->
         <div class="flex-1 overflow-y-auto">
           <!-- Empty state -->
@@ -75,9 +105,11 @@
 </template>
 
 <script setup>
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotificationsStore } from '../../stores/notifications'
 import { useBreakpoint } from '../../composables/useBreakpoint'
+import { usePushNotifications } from '../../composables/usePushNotifications'
 
 const props = defineProps({
   isOpen: { type: Boolean, default: false },
@@ -89,6 +121,35 @@ const emit = defineEmits(['close'])
 const store = useNotificationsStore()
 const router = useRouter()
 const { isMobile } = useBreakpoint()
+const { isSupported, isSubscribed, subscribe, checkSubscriptionStatus } = usePushNotifications()
+
+const subscribing = ref(false)
+
+// El banner se muestra si el browser soporta push, el dispositivo no está suscrito
+// y el usuario no ha rechazado explícitamente el permiso en este navegador.
+const pushPermissionNotDenied = computed(() =>
+  typeof Notification !== 'undefined' && Notification.permission !== 'denied'
+)
+
+const showPushBanner = computed({
+  get: () => isSupported.value && !isSubscribed.value && pushPermissionNotDenied.value && _showBanner.value,
+  set: (v) => { _showBanner.value = v },
+})
+const _showBanner = ref(true)
+
+onMounted(() => {
+  if (isSupported.value) checkSubscriptionStatus()
+})
+
+const handleSubscribe = async () => {
+  subscribing.value = true
+  try {
+    await subscribe()
+  } finally {
+    subscribing.value = false
+    _showBanner.value = false
+  }
+}
 
 const timeAgo = (dateStr) => {
   const diff = Date.now() - new Date(dateStr).getTime()

@@ -36,9 +36,48 @@ export async function createNotification(accountId, { type, title, message = nul
       related_type,
       related_id,
     })
+    // Fire-and-forget: enviar push a los dispositivos suscritos de la cuenta.
+    // El .catch() garantiza que un fallo de push nunca interrumpe el flujo.
+    sendPushNotification(accountId, { type, title, message, related_type, related_id })
+      .catch(err => console.error('[push] send-push failed:', err))
   } catch (e) {
     // silencioso — las notificaciones nunca interrumpen el flujo principal
     console.warn('[notifications] createNotification failed silently:', e?.message)
+  }
+}
+
+// ============================================================
+// PUSH NOTIFICATIONS — fire-and-forget
+// Llama a la Edge Function send-push con el payload de la
+// notificación recién creada. Nunca lanza errores al llamador.
+// ============================================================
+export async function sendPushNotification(accountId, notification) {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  if (!supabaseUrl) return
+
+  const { data: { session } } = await supabase.auth.getSession()
+  const token = session?.access_token
+  if (!token) return
+
+  const res = await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      account_id: accountId,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message ?? null,
+      related_type: notification.related_type ?? null,
+      related_id: notification.related_id ?? null,
+    }),
+  })
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`send-push HTTP ${res.status}: ${text}`)
   }
 }
 
