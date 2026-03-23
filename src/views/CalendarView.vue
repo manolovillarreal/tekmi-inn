@@ -25,6 +25,7 @@
             <option value="clasica">Clásica</option>
             <option value="completa">Completa</option>
             <option value="por_unidad">Por unidad</option>
+            <option value="agenda">Agenda</option>
           </select>
         </div>
 
@@ -89,15 +90,21 @@
         <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-gray-500"></span> Externo</span>
       </div>
 
+      <div v-if="calendarMetrics && !loading" class="mb-4 flex flex-wrap gap-6 rounded-md border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+        <span>Ocupación: <span class="font-semibold text-gray-900">{{ calendarMetrics.occupancyPct }}%</span></span>
+        <span>Llegadas: <span class="font-semibold text-gray-900">{{ calendarMetrics.arrivals }}</span></span>
+        <span>Huéspedes: <span class="font-semibold text-gray-900">{{ calendarMetrics.totalGuests }}</span></span>
+      </div>
+
       <div v-if="loading" class="rounded-md border border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500">
         Cargando ocupaciones...
       </div>
 
-      <div v-else-if="periodPreset === 'today'" class="space-y-3">
+      <div v-else-if="viewMode === 'agenda'" class="space-y-3">
         <div v-if="todayAgendaEvents.length === 0" class="rounded-md border border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-500">
           <p class="flex items-center gap-2">
             <span class="text-base text-gray-400">◌</span>
-            <span>No hay movimientos para hoy.</span>
+            <span>No hay movimientos para este día.</span>
           </p>
         </div>
 
@@ -128,34 +135,6 @@
         </button>
       </div>
 
-      <div v-else-if="periodPreset === 'this_week'" class="grid grid-cols-1 gap-3 md:grid-cols-7">
-        <div
-          v-for="day in weekDays"
-          :key="`week-${day.date}`"
-          class="rounded-md border border-gray-200 bg-white p-2"
-        >
-          <p class="text-sm font-semibold text-gray-800">{{ day.dayName }} {{ day.dayNumber }}</p>
-
-          <div class="mt-2 space-y-1">
-            <button
-              v-for="occ in getOccupanciesForDay(day.date)"
-              :key="`week-occ-${occ.id}`"
-              data-occ-trigger="true"
-              type="button"
-              class="block w-full truncate rounded px-2 py-1 text-left text-xs text-white"
-              :class="occupancyColor(occ)"
-              @mouseenter="openDesktopTooltip($event, occ, day.date)"
-              @mousemove="openDesktopTooltip($event, occ, day.date)"
-              @mouseleave="closeDesktopTooltip"
-              @click="onOccupancyClick($event, occ, day.date)"
-            >
-              {{ getOccupancyDisplayLabel(occ, viewMode) }}
-            </button>
-            <p v-if="getOccupanciesForDay(day.date).length === 0" class="text-xs text-gray-400">Sin eventos</p>
-          </div>
-        </div>
-      </div>
-
       <div v-else-if="viewMode === 'clasica'" class="grid grid-cols-7 gap-px border border-gray-200 bg-gray-200">
         <div
           v-for="day in calendarDays"
@@ -182,7 +161,7 @@
             data-occ-trigger="true"
             type="button"
             class="mt-1 block w-full truncate rounded p-1.5 text-left text-xs text-white shadow-sm"
-            :class="[occupancyColor(occ), isMobile ? 'px-1 py-0.5 text-[10px]' : '']"
+            :class="[occupancyColor(occ), occupancyBorderClass(occ, day.date), isMobile ? 'px-1 py-0.5 text-[10px]' : '']"
             v-show="!isMobile"
             @mouseenter="openDesktopTooltip($event, occ, day.date)"
             @mousemove="openDesktopTooltip($event, occ, day.date)"
@@ -383,7 +362,7 @@ const units = ref([])
 const venues = ref([])
 const loading = ref(false)
 
-const viewMode = ref('clasica')
+const viewMode = ref('completa')
 const periodPreset = ref('next_30')
 const periodFrom = ref('')
 const periodTo = ref('')
@@ -405,32 +384,15 @@ const selectedDayForSheet = ref('')
 const daySheetOpen = ref(false)
 
 const mobileViewOptions = [
-  { value: 'clasica', label: 'Clasica' },
   { value: 'today', label: 'Hoy' },
-  { value: 'this_week', label: 'Esta semana' }
+  { value: 'this_week', label: 'Semana' },
+  { value: 'next_30', label: '30 días' }
 ]
 
 const mobileViewPreset = computed({
-  get: () => {
-    if (periodPreset.value === 'today') return 'today'
-    if (periodPreset.value === 'this_week') return 'this_week'
-    return 'clasica'
-  },
+  get: () => periodPreset.value,
   set: (value) => {
-    if (value === 'today') {
-      viewMode.value = 'clasica'
-      periodPreset.value = 'today'
-      return
-    }
-
-    if (value === 'this_week') {
-      viewMode.value = 'clasica'
-      periodPreset.value = 'this_week'
-      return
-    }
-
-    viewMode.value = 'clasica'
-    periodPreset.value = 'next_30'
+    periodPreset.value = value
   }
 })
 
@@ -508,20 +470,17 @@ function applyPreset() {
 }
 
 const calendarDays = computed(() => {
-  if (!periodFrom.value || !periodTo.value) return []
-
-  const start = new Date(periodFrom.value)
-  const end = new Date(periodTo.value)
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) return []
+  // Normalize defensively: ensure pure YYYY-MM-DD strings regardless of how the refs were set
+  const from = periodFrom.value ? String(periodFrom.value).slice(0, 10) : ''
+  const to = periodTo.value ? String(periodTo.value).slice(0, 10) : ''
+  if (!from || !to || from > to) return []
 
   const days = []
-  const cursor = new Date(start)
-  while (cursor <= end) {
-    days.push({
-      date: toIsoDate(cursor),
-      dayNumber: cursor.getDate()
-    })
-    cursor.setDate(cursor.getDate() + 1)
+  let current = from
+  while (current <= to) {
+    days.push({ date: current, dayNumber: Number(current.slice(8, 10)) })
+    const [y, m, d] = current.split('-').map(Number)
+    current = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10)
   }
 
   return days
@@ -563,9 +522,44 @@ const filteredOccupancies = computed(() => {
   return occupancies.value.filter((occ) => selectedVenueSet.value.has(occ.units?.venue_id))
 })
 
-const todayAgendaEvents = computed(() => {
-  if (periodPreset.value !== 'today') return []
+const calendarMetrics = computed(() => {
+  if (calendarDays.value.length === 0 || !periodFrom.value || !periodTo.value) return null
 
+  const totalDays = calendarDays.value.length
+  const visibleUnitCount = visibleVenues.value.reduce((sum, v) => sum + getUnitsByVenue(v.id).length, 0)
+  const totalUnitDays = totalDays * visibleUnitCount
+
+  const [ey, em, ed] = periodTo.value.split('-').map(Number)
+  const toExclusive = new Date(Date.UTC(ey, em - 1, ed + 1)).toISOString().slice(0, 10)
+
+  let occupiedUnitDays = 0
+  let arrivals = 0
+  let totalGuests = 0
+  const seenReservations = new Set()
+
+  filteredOccupancies.value.forEach((occ) => {
+    if (occ.occupancy_type !== 'reservation') return
+
+    const start = occ.start_date > periodFrom.value ? occ.start_date : periodFrom.value
+    const end = occ.end_date < toExclusive ? occ.end_date : toExclusive
+    if (end <= start) return
+
+    occupiedUnitDays += Math.round((new Date(end) - new Date(start)) / 86400000)
+
+    const checkIn = occ.reservations?.check_in || occ.start_date
+    const resId = occ.reservation_id || occ.id
+    if (!seenReservations.has(resId) && checkIn >= periodFrom.value && checkIn <= periodTo.value) {
+      seenReservations.add(resId)
+      arrivals++
+      totalGuests += Number(occ.reservations?.adults || 0) + Number(occ.reservations?.children || 0)
+    }
+  })
+
+  const occupancyPct = totalUnitDays > 0 ? Math.round((occupiedUnitDays / totalUnitDays) * 100) : 0
+  return { occupancyPct, arrivals, totalGuests }
+})
+
+const todayAgendaEvents = computed(() => {
   const todayIso = periodFrom.value
   const grouped = new Map()
 
@@ -635,7 +629,7 @@ async function fetchOccupancies() {
         .select('id, unit_id, start_date, end_date, occupancy_type, reservation_id, inquiry_id, notes, units(name, venue_id, venues(name)), reservations(id, guest_name, adults, children, source, source_detail_info:source_details!reservations_source_detail_id_fkey(label_es), total_amount, paid_amount, check_in, check_out)')
       .eq('account_id', accountId)
       .lt('start_date', toExclusive)
-      .gt('end_date', periodFrom.value)
+      .gte('end_date', periodFrom.value)
       .or('occupancy_type.neq.inquiry_hold,expires_at.gt.now()')
 
     occupancies.value = data || []
@@ -702,6 +696,13 @@ function occupancyColor(occ) {
 
 function occupancyDotColor(occ) {
   return occupancyColor(occ).replace('bg-', 'bg-')
+}
+
+function occupancyBorderClass(occ, date) {
+  const type = getOccupancyTypeLabel(occ, date)
+  if (type === 'Entrada') return 'border-l-4 border-l-green-300'
+  if (type === 'Salida') return 'border-l-4 border-l-red-400'
+  return ''
 }
 
 function getOccupancyDisplayLabel(occ, mode) {
@@ -905,8 +906,8 @@ onMounted(async () => {
 
   if (route.query.from && route.query.to) {
     periodPreset.value = 'custom'
-    periodFrom.value = route.query.from
-    periodTo.value = route.query.to
+    periodFrom.value = String(route.query.from).slice(0, 10)
+    periodTo.value = String(route.query.to).slice(0, 10)
   } else {
     applyPreset()
   }
