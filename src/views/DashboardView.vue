@@ -8,9 +8,9 @@
       </router-link>
     </div>
 
-    <AvailabilityWidget />
-
     <NotificationsWidget />
+
+    <AvailabilityWidget />
 
     <template v-if="notificationsStore.notifications.length === 0">
     <div v-if="overdueReservations.length > 0 || preregPendingReservations.length > 0" class="space-y-3">
