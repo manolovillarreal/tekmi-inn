@@ -12,51 +12,13 @@
 
     <AvailabilityWidget />
 
-    <div class="card !py-4 flex flex-wrap items-end gap-4 bg-white">
-      <div class="w-full md:w-64">
-        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Rango de ingresos</label>
-        <select v-model="incomeFilterPreset" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-          <option value="last_week">Ultima semana</option>
-          <option value="this_month">Este mes</option>
-          <option value="last_30_days">Ultimo mes (30 dias)</option>
-          <option value="custom">Rango personalizado</option>
-        </select>
-      </div>
-
-      <div v-if="incomeFilterPreset === 'this_month'" class="rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-sm font-medium text-primary-dark">
-        {{ currentMonthLabel }}
-      </div>
-
-      <div v-if="incomeFilterPreset === 'custom'" class="w-full md:w-44">
-        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Desde</label>
-        <input v-model="customIncomeRange.from" type="date" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-      </div>
-
-      <div v-if="incomeFilterPreset === 'custom'" class="w-full md:w-44">
-        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Hasta</label>
-        <input v-model="customIncomeRange.to" type="date" class="mt-1 block w-full rounded-md border-gray-300 text-sm">
-      </div>
-    </div>
-
     <!-- Metrics Row -->
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
       
       <!-- Card 1 -->
       <div class="card">
-        <p class="text-[13px] font-medium text-gray-500 mb-1">Reservas ({{ incomeRangeLabel }})</p>
+        <p class="text-[13px] font-medium text-gray-500 mb-1">Reservas activas</p>
         <p class="text-3xl font-semibold text-gray-900">{{ metrics.monthReservations }}</p>
-      </div>
-
-      <!-- Card 2 -->
-      <div class="card">
-        <p class="text-[13px] font-medium text-gray-500 mb-1">Ingresos brutos</p>
-        <p class="text-3xl font-semibold text-gray-900">${{ formatCurrency(metrics.monthGrossIncome) }}</p>
-      </div>
-
-      <!-- Card 3 -->
-      <div class="card">
-        <p class="text-[13px] font-medium text-gray-500 mb-1">Ingresos netos</p>
-        <p class="text-3xl font-semibold text-gray-900">${{ formatCurrency(metrics.monthNetIncome) }}</p>
       </div>
 
       <!-- Card 4 -->
@@ -126,7 +88,6 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReservationsStore } from '../stores/reservations'
 import { useToast } from '../composables/useToast'
-import { getNetAmount } from '../utils/reservations'
 import AvailabilityWidget from '../components/dashboard/AvailabilityWidget.vue'
 import { useNotificationsStore } from '../stores/notifications'
 import NotificationsWidget from '../components/dashboard/NotificationsWidget.vue'
@@ -136,17 +97,10 @@ const router = useRouter()
 const toast = useToast()
 const notificationsStore = useNotificationsStore()
 
-const incomeFilterPreset = ref('last_week')
-const customIncomeRange = ref({
-  from: '',
-  to: ''
-})
 const currentWeekStart = ref(new Date())
 
 const metrics = ref({
   monthReservations: 0,
-  monthGrossIncome: 0,
-  monthNetIncome: 0,
   pendingCount: 0,
   arrivalsWeek: 0,
   departuresWeek: 0,
@@ -167,64 +121,10 @@ const shiftDays = (value, days) => {
   return date
 }
 
-const getIncomeRange = () => {
-  const today = new Date()
-  const todayIso = toIsoDate(today)
-
-  if (incomeFilterPreset.value === 'this_month') {
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-    return {
-      from: toIsoDate(monthStart),
-      to: todayIso
-    }
-  }
-
-  if (incomeFilterPreset.value === 'last_30_days') {
-    return {
-      from: toIsoDate(shiftDays(today, -29)),
-      to: todayIso
-    }
-  }
-
-  if (incomeFilterPreset.value === 'custom') {
-    return {
-      from: customIncomeRange.value.from || null,
-      to: customIncomeRange.value.to || null
-    }
-  }
-
-  return {
-    from: toIsoDate(shiftDays(today, -6)),
-    to: todayIso
-  }
-}
-
-const formatDate = (value) => {
-  if (!value) return '-'
-  return new Date(String(value)).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
-}
-
 const formatRangeDate = (isoDate) => {
   if (!isoDate) return '-'
   return new Date(isoDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
 }
-
-const incomeRangeLabel = computed(() => {
-  const range = getIncomeRange()
-  if (!range.from || !range.to) return 'rango personalizado'
-  return `${formatRangeDate(range.from)} - ${formatRangeDate(range.to)}`
-})
-
-const currentMonthLabel = computed(() => {
-  if (incomeFilterPreset.value !== 'this_month') return ''
-
-  const monthLabel = new Intl.DateTimeFormat('es-CO', {
-    month: 'long',
-    year: 'numeric'
-  }).format(new Date())
-
-  return monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)
-})
 
 const overdueReservations = computed(() => {
   const todayIso = toIsoDate(new Date())
@@ -262,37 +162,20 @@ onMounted(async () => {
   generateWeekDays()
 })
 
-watch([incomeFilterPreset, customIncomeRange], () => {
-  calculateMetrics()
-}, { deep: true })
-
 const calculateMetrics = () => {
   const today = new Date()
   const in7Days = new Date(today)
   in7Days.setDate(today.getDate() + 7)
-  const incomeRange = getIncomeRange()
   
   let monthRes = 0
-  let monthGross = 0
-  let monthNet = 0
   let arrivals = 0
   let departures = 0
 
   store.reservations.forEach(res => {
     const checkIn = new Date(res.check_in)
     const checkOut = new Date(res.check_out)
-    const deadline = res.payment_deadline ? new Date(res.payment_deadline) : null
 
-    const checkInIso = toIsoDate(checkIn)
-    const inIncomeRange = (!incomeRange.from || checkInIso >= incomeRange.from) && (!incomeRange.to || checkInIso <= incomeRange.to)
-
-    if (inIncomeRange) {
-      monthRes++
-      if (['confirmed', 'in_stay'].includes(res.status)) {
-        monthGross += Number(res.total_amount || 0)
-        monthNet += getNetAmount(res)
-      }
-    }
+    if (['confirmed', 'in_stay'].includes(res.status)) monthRes++
 
     // 7 días
     if (checkIn >= today && checkIn <= in7Days && res.status !== 'cancelled') {
@@ -305,8 +188,6 @@ const calculateMetrics = () => {
 
   metrics.value = {
     monthReservations: monthRes,
-    monthGrossIncome: monthGross,
-    monthNetIncome: monthNet,
     pendingCount: overdueReservations.value.length + preregPendingReservations.value.length,
     arrivalsWeek: arrivals,
     departuresWeek: departures
@@ -357,10 +238,6 @@ const getMiniCalendarStyles = (status) => {
     completed: 'bg-gray-100 text-gray-600',
   }
   return map[status] || 'bg-gray-100 text-gray-500'
-}
-
-const formatCurrency = (val) => {
-  return val.toLocaleString('es-CO')
 }
 
 const openDetails = (res) => {
