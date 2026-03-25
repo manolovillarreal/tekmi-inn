@@ -63,6 +63,7 @@
     { "id": 61, "t": "Descripción corta y URL de ubicación en configuración del alojamiento", "c": "Feature", "s": "d" },
     { "id": 62, "t": "Repositorio de mensajes predefinidos para WhatsApp", "c": "Feature", "s": "d" },
     { "id": 63, "t": "Mensajes con contexto de reserva o consulta — fase 2", "c": "Feature", "s": "e" },
-    { "id": 64, "t": "Editor dedicado de mensajes con preview Raw/Render", "c": "Feature", "s": "d" }
+    { "id": 64, "t": "Editor dedicado de mensajes con preview Raw/Render", "c": "Feature", "s": "d" },
+    { "id": 65, "t": "Editor mensajes — emojis, contexto navegable, mobile drawer", "c": "Ajuste UI", "s": "d" }
   ]
 }

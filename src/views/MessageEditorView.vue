@@ -3,7 +3,8 @@
     <div class="flex items-center justify-between gap-3">
       <button type="button" class="btn-secondary text-sm" @click="goBack">Volver</button>
       <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Editor de mensaje</h1>
-      <div class="w-[72px]"></div>
+      <button v-if="message" type="button" class="btn-secondary text-sm sm:hidden" @click="showDrawer = true">Variables</button>
+      <div class="hidden w-[72px] sm:block"></div>
     </div>
 
     <div v-if="loading" class="card text-sm text-gray-600">Cargando mensaje...</div>
@@ -14,7 +15,8 @@
     </div>
 
     <div v-else class="grid grid-cols-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <aside class="card space-y-5">
+      <!-- Panel izquierdo — oculto en mobile -->
+      <aside class="hidden sm:block card space-y-5">
         <div>
           <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Variables</h2>
           <p class="mt-1 text-xs text-gray-500">Haz clic para insertar en la posición actual del cursor.</p>
@@ -30,9 +32,23 @@
                 type="button"
                 class="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 transition hover:bg-indigo-100"
                 @click="insertVariable(item.token)"
-              >
-                {{ item.label }}
-              </button>
+              >{{ item.label }}</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="space-y-3 border-t border-gray-200 pt-4">
+          <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Emojis</h2>
+          <section v-for="group in emojiGroups" :key="group.title" class="space-y-1.5">
+            <h3 class="text-xs font-medium text-gray-500">{{ group.title }}</h3>
+            <div class="grid grid-cols-6 gap-1">
+              <button
+                v-for="emoji in group.emojis"
+                :key="emoji"
+                type="button"
+                class="flex items-center justify-center rounded p-1 text-xl leading-none transition hover:bg-gray-100"
+                @click="insertText(emoji)"
+              >{{ emoji }}</button>
             </div>
           </section>
         </div>
@@ -45,6 +61,7 @@
         </section>
       </aside>
 
+      <!-- Panel editor -->
       <section class="card space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -54,6 +71,35 @@
           <button type="button" class="btn-primary text-sm" :disabled="saving" @click="saveMessage">
             {{ saving ? 'Guardando...' : 'Guardar' }}
           </button>
+        </div>
+
+        <!-- Encabezado de contexto para preview -->
+        <div class="flex items-center justify-between gap-3 rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-500">Preview con:</span>
+              <span v-if="contextInfo.isMock" class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">Mock</span>
+            </div>
+            <p class="truncate text-sm font-medium text-gray-900">{{ contextInfo.guestName }}</p>
+            <p class="truncate text-xs text-gray-500">{{ contextInfo.dates }} · {{ contextInfo.reference }}</p>
+          </div>
+          <div class="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              class="rounded px-1.5 py-1 text-sm text-gray-500 transition hover:bg-white hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
+              :disabled="!canPrev"
+              @click="prevContext"
+            >←</button>
+            <span class="min-w-[44px] text-center text-xs text-gray-500">
+              {{ usingMock ? 'mock' : (contextIndex + 1) + '/' + activeContextList.length }}
+            </span>
+            <button
+              type="button"
+              class="rounded px-1.5 py-1 text-sm text-gray-500 transition hover:bg-white hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
+              :disabled="!canNext"
+              @click="nextContext"
+            >→</button>
+          </div>
         </div>
 
         <div class="flex items-center gap-2">
@@ -97,6 +143,63 @@
         </p>
       </section>
     </div>
+
+    <!-- Drawer mobile -->
+    <Teleport to="body">
+      <div v-if="showDrawer" class="fixed inset-0 z-50 flex sm:hidden">
+        <div class="absolute inset-0 bg-black/40" @click="showDrawer = false"></div>
+        <div class="relative z-10 flex h-full w-2/3 max-w-xs flex-col overflow-hidden bg-white shadow-xl">
+          <div class="flex shrink-0 items-center justify-between border-b border-gray-200 p-4">
+            <h2 class="font-semibold text-gray-900">Variables y emojis</h2>
+            <button type="button" class="text-xl leading-none text-gray-500 hover:text-gray-900" @click="showDrawer = false">✕</button>
+          </div>
+          <div class="flex-1 space-y-5 overflow-y-auto p-4">
+            <div>
+              <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Variables</h2>
+              <p class="mt-1 text-xs text-gray-500">Toca para insertar.</p>
+            </div>
+
+            <div class="space-y-4">
+              <section v-for="group in variableGroups" :key="'d-' + group.title" class="space-y-2">
+                <h3 class="text-sm font-semibold text-gray-900">{{ group.title }}</h3>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    v-for="item in group.items"
+                    :key="'d-' + item.token"
+                    type="button"
+                    class="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 transition hover:bg-indigo-100"
+                    @click="insertVariable(item.token, true)"
+                  >{{ item.label }}</button>
+                </div>
+              </section>
+            </div>
+
+            <div class="space-y-3 border-t border-gray-200 pt-4">
+              <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Emojis</h2>
+              <section v-for="group in emojiGroups" :key="'d-' + group.title" class="space-y-1.5">
+                <h3 class="text-xs font-medium text-gray-500">{{ group.title }}</h3>
+                <div class="grid grid-cols-6 gap-1">
+                  <button
+                    v-for="emoji in group.emojis"
+                    :key="'d-' + emoji"
+                    type="button"
+                    class="flex items-center justify-center rounded p-1 text-xl leading-none transition hover:bg-gray-100"
+                    @click="insertText(emoji, true)"
+                  >{{ emoji }}</button>
+                </div>
+              </section>
+            </div>
+
+            <section v-if="isSystemMessage" class="space-y-3 border-t border-gray-200 pt-4">
+              <h3 class="text-sm font-semibold text-gray-900">Bloques condicionales</h3>
+              <AppToggle v-model="systemForm.show_unit_count" label="Mostrar numero de unidades" />
+              <AppToggle v-model="systemForm.show_unit_name" label="Mostrar nombre de unidad" />
+              <AppToggle v-model="systemForm.show_unit_description" label="Mostrar descripcion por unidad" />
+            </section>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 
   <div v-else class="card border-amber-200 bg-amber-50/40">
@@ -135,12 +238,14 @@ const viewMode = ref('raw')
 const textareaRef = ref(null)
 const selectionStart = ref(0)
 const selectionEnd = ref(0)
+const showDrawer = ref(false)
 
 const profile = ref({})
 const accountSettings = ref({})
 const systemForm = ref({ ...DEFAULT_MESSAGE_SETTINGS })
-const latestInquiry = ref(null)
-const latestReservation = ref(null)
+const inquiryList = ref([])
+const reservationList = ref([])
+const contextIndex = ref(0)
 
 const variableGroups = [
   {
@@ -172,8 +277,55 @@ const variableGroups = [
   },
 ]
 
+const emojiGroups = [
+  {
+    title: 'Saludos y cortesía',
+    emojis: ['👋', '😊', '🙏', '✨', '🌟', '💫', '😄', '🤗', '😍', '🥰', '💝', '🎊'],
+  },
+  {
+    title: 'Confirmación y positivo',
+    emojis: ['✅', '🎉', '👍', '💯', '🔑', '🏆', '🥳', '🎁', '👏', '💪', '🌈', '⭐'],
+  },
+  {
+    title: 'Información y datos',
+    emojis: ['📋', '📅', '📍', '💰', '🏠', '📞', '📱', '💬', '📝', '🗓️', '🔐', '📎'],
+  },
+  {
+    title: 'Viajes y alojamiento',
+    emojis: ['🏡', '🛏️', '🛁', '🏊', '🌴', '🌊', '🏖️', '🗺️', '🧳', '✈️', '🚗', '🌅'],
+  },
+  {
+    title: 'Comida y servicios',
+    emojis: ['☕', '🍽️', '🥂', '🍾', '🧹', '🔧', '🛒️', '🌿', '🕯️', '🎶', '🌙', '🌞'],
+  },
+  {
+    title: 'Alertas y recordatorios',
+    emojis: ['⚠️', '⏰', '📌', '🔔', '❗', '❓', '🔴', '🟡', '🟢', '📣', '🚨', '💡'],
+  },
+  {
+    title: 'Corazones y sentimientos',
+    emojis: ['❤️', '🧡', '📛', '💚', '💙', '💜', '🖤', '🤍', '💕', '💞', '💓', '💗'],
+  },
+]
+
 const isSystemMessage = computed(() => message.value?.type === 'system')
 const isQuotationMessage = computed(() => message.value?.key === 'quotation')
+
+const activeContextList = computed(() =>
+  isQuotationMessage.value ? inquiryList.value : reservationList.value
+)
+
+const activeRecord = computed(() => {
+  if (activeContextList.value.length === 0) return null
+  return activeContextList.value[contextIndex.value] ?? null
+})
+
+const usingMock = computed(() => activeContextList.value.length === 0)
+const canPrev = computed(() => !usingMock.value && contextIndex.value > 0)
+const canNext = computed(() => !usingMock.value && contextIndex.value < activeContextList.value.length - 1)
+
+const prevContext = () => { if (canPrev.value) contextIndex.value -= 1 }
+const nextContext = () => { if (canNext.value) contextIndex.value += 1 }
 
 const moneyFormatter = new Intl.NumberFormat('es-CO', {
   style: 'currency',
@@ -208,9 +360,25 @@ const diffNights = (checkIn, checkOut) => {
   return diff > 0 ? Math.ceil(diff) : 0
 }
 
+const contextInfo = computed(() => {
+  if (usingMock.value) {
+    return isQuotationMessage.value
+      ? { guestName: 'Maria Garcia', dates: '15 al 20 de abril', reference: 'INQ-202604-0001', isMock: true }
+      : { guestName: 'Carlos Suarez', dates: '10 al 15 de mayo', reference: 'RES-202605-0012', isMock: true }
+  }
+  const record = activeRecord.value
+  if (!record) return { guestName: '-', dates: '-', reference: '-', isMock: false }
+  return {
+    guestName: record.guest_name || '-',
+    dates: formatDateRange(record.check_in, record.check_out),
+    reference: record.reference_code || record.reservation_number || '-',
+    isMock: false,
+  }
+})
+
 const quoteContext = computed(() => {
-  if (latestInquiry.value) {
-    const inquiry = latestInquiry.value
+  const inquiry = activeRecord.value
+  if (inquiry) {
     return {
       nombre_huesped: inquiry.guest_name || '-',
       telefono_huesped: inquiry.guest_phone || '-',
@@ -236,8 +404,8 @@ const quoteContext = computed(() => {
 })
 
 const reservationContext = computed(() => {
-  if (latestReservation.value) {
-    const reservation = latestReservation.value
+  const reservation = activeRecord.value
+  if (reservation) {
     return {
       nombre_huesped: reservation.guest_name || '-',
       telefono_huesped: reservation.guest_phone || '-',
@@ -284,19 +452,23 @@ const buildSystemTemplateFromSettings = (key, settings) => {
 
 const previewVariables = computed(() => {
   const context = isQuotationMessage.value ? quoteContext.value : reservationContext.value
+  const record = activeRecord.value
+
   const globalVars = buildGlobalVariables({
     profile: profile.value,
     accountSettings: accountSettings.value,
     context: {
       guest_name: context.nombre_huesped,
-      check_in: isQuotationMessage.value ? latestInquiry.value?.check_in : latestReservation.value?.check_in,
-      check_out: isQuotationMessage.value ? latestInquiry.value?.check_out : latestReservation.value?.check_out,
+      check_in: record?.check_in,
+      check_out: record?.check_out,
       nights: context.noches,
       personas: context.personas,
       reference: context.codigo_referencia,
-      total: isQuotationMessage.value ? Number(latestInquiry.value?.price_per_night || 0) * Number(context.noches || 0) : Number(latestReservation.value?.total_amount || 0),
-      paid: Number(latestReservation.value?.paid_amount || 0),
-      balance: Math.max(0, Number(latestReservation.value?.total_amount || 0) - Number(latestReservation.value?.paid_amount || 0)),
+      total: isQuotationMessage.value
+        ? Number(record?.price_per_night || 0) * Number(context.noches || 0)
+        : Number(record?.total_amount || 0),
+      paid: Number(record?.paid_amount || 0),
+      balance: Math.max(0, Number(record?.total_amount || 0) - Number(record?.paid_amount || 0)),
     },
   })
 
@@ -319,32 +491,36 @@ const syncCursor = () => {
   selectionEnd.value = node.selectionEnd ?? selectionStart.value
 }
 
-const insertVariable = async (token) => {
+const insertText = async (text, closeDrawer = false) => {
   if (viewMode.value !== 'raw') {
     viewMode.value = 'raw'
     await nextTick()
   }
 
   const node = textareaRef.value
-  const insertion = `{{${token}}}`
 
   if (!node) {
-    body.value = `${body.value}${insertion}`
+    body.value = `${body.value}${text}`
+    if (closeDrawer) showDrawer.value = false
     return
   }
 
   const start = node.selectionStart ?? selectionStart.value
   const end = node.selectionEnd ?? selectionEnd.value
 
-  body.value = `${body.value.slice(0, start)}${insertion}${body.value.slice(end)}`
+  body.value = `${body.value.slice(0, start)}${text}${body.value.slice(end)}`
 
   await nextTick()
-  const nextPos = start + insertion.length
+  const nextPos = start + text.length
   node.focus()
   node.setSelectionRange(nextPos, nextPos)
   selectionStart.value = nextPos
   selectionEnd.value = nextPos
+
+  if (closeDrawer) showDrawer.value = false
 }
+
+const insertVariable = (token, closeDrawer = false) => insertText(`{{${token}}}`, closeDrawer)
 
 const saveMessage = async () => {
   if (!message.value) return
@@ -398,8 +574,8 @@ const loadData = async () => {
       { data: row, error: messageError },
       { data: profileData, error: profileError },
       { data: settingsData, error: settingsError },
-      { data: inquiryData, error: inquiryError },
-      { data: reservationData, error: reservationError },
+      { data: inquiriesData, error: inquiryError },
+      { data: reservationsData, error: reservationError },
       messageSettings,
     ] = await Promise.all([
       supabase
@@ -423,15 +599,13 @@ const loadData = async () => {
         .select('id, guest_name, guest_phone, check_in, check_out, adults, children, reference_code, price_per_night, quote_expires_at, created_at')
         .eq('account_id', accountId)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(10),
       supabase
         .from('reservations')
         .select('id, guest_name, guest_phone, check_in, check_out, adults, children, reference_code, reservation_number, price_per_night, total_amount, paid_amount, created_at')
         .eq('account_id', accountId)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(10),
       getMessageSettings(accountId),
     ])
 
@@ -444,8 +618,9 @@ const loadData = async () => {
     message.value = row || null
     profile.value = profileData || {}
     accountSettings.value = settingsData || {}
-    latestInquiry.value = inquiryData || null
-    latestReservation.value = reservationData || null
+    inquiryList.value = inquiriesData || []
+    reservationList.value = reservationsData || []
+    contextIndex.value = 0
     systemForm.value = { ...DEFAULT_MESSAGE_SETTINGS, ...messageSettings }
 
     const persistedBody = String(row?.body || '')
