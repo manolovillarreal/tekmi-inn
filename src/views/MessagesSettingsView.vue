@@ -20,14 +20,17 @@
           <div class="flex items-center justify-between gap-3">
             <p class="font-semibold text-gray-900">Cotización</p>
             <div class="flex items-center gap-2">
+              <button type="button" class="btn-secondary text-xs" @click="toggleSystemPreview('quotation')">
+                {{ showQuotationPreview ? 'Ocultar mensaje' : 'Ver mensaje' }}
+              </button>
               <button type="button" class="btn-secondary text-xs" @click="toggleSystemEditor('quotation')">
                 {{ openSystemEditor === 'quotation' ? 'Cerrar' : 'Editar' }}
               </button>
               <button type="button" class="btn-secondary text-xs" @click="resetQuotationDefaults">Restablecer valores predeterminados</button>
             </div>
           </div>
-          <pre class="mt-3 whitespace-pre-wrap rounded bg-gray-50 p-3 text-sm text-gray-800">{{ quotationPreview.text }}</pre>
-          <p v-if="quotationPreview.missing.length" class="mt-2 text-xs text-amber-700">
+          <pre v-if="showQuotationPreview" class="mt-3 whitespace-pre-wrap rounded bg-gray-50 p-3 text-sm text-gray-800">{{ quotationPreview.text }}</pre>
+          <p v-if="showQuotationPreview && quotationPreview.missing.length" class="mt-2 text-xs text-amber-700">
             Faltan variables: {{ quotationPreview.missing.join(', ') }}
           </p>
 
@@ -43,14 +46,17 @@
           <div class="flex items-center justify-between gap-3">
             <p class="font-semibold text-gray-900">Voucher</p>
             <div class="flex items-center gap-2">
+              <button type="button" class="btn-secondary text-xs" @click="toggleSystemPreview('voucher')">
+                {{ showVoucherPreview ? 'Ocultar mensaje' : 'Ver mensaje' }}
+              </button>
               <button type="button" class="btn-secondary text-xs" @click="toggleSystemEditor('voucher')">
                 {{ openSystemEditor === 'voucher' ? 'Cerrar' : 'Editar' }}
               </button>
               <button type="button" class="btn-secondary text-xs" @click="resetVoucherDefaults">Restablecer valores predeterminados</button>
             </div>
           </div>
-          <pre class="mt-3 whitespace-pre-wrap rounded bg-gray-50 p-3 text-sm text-gray-800">{{ voucherPreview.text }}</pre>
-          <p v-if="voucherPreview.missing.length" class="mt-2 text-xs text-amber-700">
+          <pre v-if="showVoucherPreview" class="mt-3 whitespace-pre-wrap rounded bg-gray-50 p-3 text-sm text-gray-800">{{ voucherPreview.text }}</pre>
+          <p v-if="showVoucherPreview && voucherPreview.missing.length" class="mt-2 text-xs text-amber-700">
             Faltan variables: {{ voucherPreview.missing.join(', ') }}
           </p>
 
@@ -79,14 +85,6 @@
         <button type="button" class="btn-primary text-sm" @click="openNewCustom">Nuevo mensaje</button>
       </div>
 
-      <div class="flex flex-wrap gap-2 rounded-md border border-dashed border-gray-300 p-3 text-xs text-gray-600">
-        <span class="font-semibold text-gray-700">Variables disponibles:</span>
-        <span v-pre class="rounded bg-gray-100 px-2 py-1">{{nombre_alojamiento}}</span>
-        <span v-pre class="rounded bg-gray-100 px-2 py-1">{{telefono}}</span>
-        <span v-pre class="rounded bg-gray-100 px-2 py-1">{{ubicacion}}</span>
-        <span v-pre class="rounded bg-gray-100 px-2 py-1">{{descripcion_alojamiento}}</span>
-      </div>
-
       <div v-if="customMessages.length === 0" class="rounded-md border border-dashed border-gray-300 p-5 text-sm text-gray-500">
         No hay mensajes personalizados aún.
       </div>
@@ -96,7 +94,6 @@
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <p class="font-medium text-gray-900">{{ msg.name }}</p>
-              <p class="mt-1 line-clamp-2 text-sm text-gray-600">{{ msg.body }}</p>
             </div>
             <div class="flex shrink-0 items-center gap-2">
               <button type="button" class="btn-secondary text-xs" @click="moveMessage(index, -1)" :disabled="index === 0">↑</button>
@@ -167,6 +164,8 @@ const accountStore = useAccountStore()
 const toast = useToast()
 
 const openSystemEditor = ref('')
+const showQuotationPreview = ref(false)
+const showVoucherPreview = ref(false)
 const savingSystem = ref(false)
 const savingCustom = ref(false)
 const showCustomModal = ref(false)
@@ -273,6 +272,17 @@ const loadData = async () => {
 
 const toggleSystemEditor = (key) => {
   openSystemEditor.value = openSystemEditor.value === key ? '' : key
+}
+
+const toggleSystemPreview = (key) => {
+  if (key === 'quotation') {
+    showQuotationPreview.value = !showQuotationPreview.value
+    return
+  }
+
+  if (key === 'voucher') {
+    showVoucherPreview.value = !showVoucherPreview.value
+  }
 }
 
 const resetQuotationDefaults = () => {
