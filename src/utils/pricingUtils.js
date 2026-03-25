@@ -74,8 +74,9 @@ export const buildPricingSuggestion = ({
   const weekend = hasWeekendInRange(checkIn, checkOut)
 
   if (!selectedUnits.length) {
+    const baseGeneral = normalizedSettings.price_general_base
     const perPersonBase = normalizedSettings.price_per_person_base
-    if (perPersonBase === null) {
+    if (baseGeneral === null && perPersonBase === null) {
       return {
         nightly: null,
         originLabel: '',
@@ -86,14 +87,27 @@ export const buildPricingSuggestion = ({
     }
 
     const persons = Math.max(Number(adults || 0) + Number(children || 0), 1)
-    const nightly = perPersonBase * persons
+  const extraPersons = Math.max(persons - 2, 0)
+    const baseAmount = baseGeneral ?? 0
+  const perPersonAmount = (perPersonBase ?? 0) * extraPersons
+    const nightly = baseAmount + perPersonAmount
+
+    const formulaParts = []
+    if (baseGeneral !== null) {
+      formulaParts.push(`base $${baseAmount.toLocaleString('es-CO')}`)
+    }
+    if (perPersonBase !== null && extraPersons > 0) {
+      formulaParts.push(`${extraPersons} persona(s) × $${(perPersonBase ?? 0).toLocaleString('es-CO')}`)
+    }
+
+    const estimateExpression = formulaParts.length ? formulaParts.join(' + ') : '$0'
 
     return {
       nightly,
-      originLabel: 'Sugerido: tarifa por persona general',
+      originLabel: 'Sugerido: tarifa general sin unidad asignada',
       unitBreakdown: [],
       extras: null,
-      estimatedLabel: `Estimado: ${persons} personas × $${perPersonBase.toLocaleString('es-CO')} = $${nightly.toLocaleString('es-CO')}/noche`,
+      estimatedLabel: `Estimado: ${estimateExpression} = $${nightly.toLocaleString('es-CO')}/noche`,
     }
   }
 

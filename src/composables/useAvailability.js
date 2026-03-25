@@ -5,7 +5,7 @@ import { supabase } from '../services/supabase'
  * checkAvailability — query units + occupancies to determine availability.
  *
  * Returns:
- *   available   — units with no occupancy overlap AND capacity >= personas
+ *   available   — units with no occupancy overlap when total free capacity satisfies personas
  *   unavailable — units that have overlapping occupancies
  *   singleVenue — true when all available units share the same venue (for UI simplification)
  */
@@ -14,6 +14,8 @@ export function useAvailability() {
   const error = ref(null)
   const available = ref([])
   const unavailable = ref([])
+  const totalAvailableCapacity = ref(0)
+  const insufficientCapacity = ref(false)
   const singleVenue = ref(false)
   const checked = ref(false)
 
@@ -24,6 +26,8 @@ export function useAvailability() {
     error.value = null
     available.value = []
     unavailable.value = []
+    totalAvailableCapacity.value = 0
+    insufficientCapacity.value = false
     singleVenue.value = false
     checked.value = false
 
@@ -62,22 +66,32 @@ export function useAvailability() {
 
       const occupiedUnitIds = new Set((occsData || []).map((o) => o.unit_id))
 
-      // 3. Split units into available / unavailable, applying capacity filter
-      const avail = []
+      // 3. Split units into free / unavailable.
+      //    A request can use multiple rooms, so capacity is evaluated as the
+      //    sum of free units rather than per-unit capacity.
+      const freeUnits = []
       const unavail = []
       for (const unit of allUnits) {
         if (occupiedUnitIds.has(unit.id)) {
           unavail.push(unit)
-        } else if ((unit.capacity || 2) >= personas) {
-          avail.push(unit)
+        } else {
+          freeUnits.push(unit)
         }
       }
 
-      available.value = avail
+      const capacitySum = freeUnits.reduce((sum, unit) => {
+        const capacity = Number(unit.capacity || 2)
+        return sum + (Number.isNaN(capacity) ? 2 : Math.max(capacity, 1))
+      }, 0)
+
+      totalAvailableCapacity.value = capacitySum
+      insufficientCapacity.value = capacitySum < Number(personas || 1)
+
+      available.value = insufficientCapacity.value ? [] : freeUnits
       unavailable.value = unavail
 
       // 4. Determine if all available units share one venue (for UI: hide venue column)
-      const venueIds = new Set(avail.map((u) => u.venue_id))
+      const venueIds = new Set(freeUnits.map((u) => u.venue_id))
       singleVenue.value = venueIds.size <= 1
       checked.value = true
     } catch (err) {
@@ -90,11 +104,13 @@ export function useAvailability() {
   const reset = () => {
     available.value = []
     unavailable.value = []
+    totalAvailableCapacity.value = 0
+    insufficientCapacity.value = false
     singleVenue.value = false
     checked.value = false
     error.value = null
     loading.value = false
   }
 
-  return { loading, error, available, unavailable, singleVenue, checked, checkAvailability, reset }
+  return { loading, error, available, unavailable, totalAvailableCapacity, insufficientCapacity, singleVenue, checked, checkAvailability, reset }
 }

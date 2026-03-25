@@ -51,7 +51,7 @@
     <div v-if="checked && !loading && available.length === 0" class="space-y-3">
       <AppInlineAlert
         type="warning"
-        message="No hay unidades disponibles para el rango y número de personas indicados."
+        :message="noAvailabilityMessage"
       >
         <template #actions>
           <button type="button" class="text-sm font-medium underline" @click="goToCalendar">
@@ -99,7 +99,7 @@ import { AppDatePicker, AppCounter, AppInlineAlert } from '@/components/ui/forms
 
 const router = useRouter()
 const accountStore = useAccountStore()
-const { loading, error, available, singleVenue, checked, checkAvailability, reset } = useAvailability()
+const { loading, error, available, totalAvailableCapacity, insufficientCapacity, singleVenue, checked, checkAvailability, reset } = useAvailability()
 
 const checkIn = ref('')
 const checkOut = ref('')
@@ -112,6 +112,15 @@ const checkOutError = computed(() => {
   if (!checkOut.value) return 'Requerido'
   if (checkIn.value && checkOut.value <= checkIn.value) return 'Debe ser posterior al check-in'
   return ''
+})
+
+const noAvailabilityMessage = computed(() => {
+  if (available.value.length > 0) return ''
+  if (insufficientCapacity.value) {
+    return `No hay capacidad suficiente para ${personas.value} persona(s) en ese rango. La suma de cupos disponibles es ${totalAvailableCapacity.value}.`
+  }
+
+  return 'No hay unidades disponibles para el rango y número de personas indicados.'
 })
 
 const onDateChange = () => {

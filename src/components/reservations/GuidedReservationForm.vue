@@ -52,6 +52,10 @@
           <AppCounter v-model="form.children" label="Niños" :min="0" :max="20" />
         </AppFormGrid>
 
+        <p v-if="nights > 0" class="text-sm text-gray-500">
+          {{ nights }} noche{{ nights !== 1 ? 's' : '' }}
+        </p>
+
         <p class="text-sm text-gray-500">
           Total de personas: <strong class="text-gray-900">{{ totalPersonas }}</strong>
         </p>
@@ -62,7 +66,7 @@
         <AppInlineAlert
           v-if="avail.available.value.length === 0"
           type="warning"
-          message="No hay unidades disponibles para ese rango y número de personas."
+          :message="availabilityWarningMessage"
         />
         <p v-else class="text-sm font-semibold text-emerald-700">
           ✓ {{ avail.available.value.length }} {{ avail.available.value.length === 1 ? 'unidad disponible' : 'unidades disponibles' }}
@@ -218,6 +222,21 @@
           <svg class="h-4 w-4 text-gray-400 transition-transform" :class="panels.unit ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
         </button>
         <div v-if="panels.unit" class="border-t border-gray-100 px-4 pb-4 pt-3 space-y-1">
+          <label
+            v-if="availableUnitsForVenue.length > 0"
+            class="mb-2 flex cursor-pointer items-center gap-2 rounded border border-dashed px-2 py-2 text-sm"
+            :class="isFullHouseSelected ? 'border-primary/50 bg-primary/5' : 'border-gray-300 hover:bg-gray-50'"
+          >
+            <input
+              type="checkbox"
+              :checked="isFullHouseSelected"
+              class="rounded border-gray-300"
+              @change="toggleFullHouseSelection($event.target.checked)"
+            />
+            <span class="font-semibold text-gray-900">Full house</span>
+            <span class="text-xs text-gray-500">· Selecciona todas las unidades disponibles en estas fechas</span>
+          </label>
+
           <label
             v-for="unit in availableUnitsForVenue"
             :key="unit.id"
@@ -498,6 +517,15 @@ const reservationValidationError = computed(() => {
   return ''
 })
 
+const availabilityWarningMessage = computed(() => {
+  if (avail.available.value.length > 0) return ''
+  if (avail.insufficientCapacity.value) {
+    return `No hay capacidad suficiente para ${totalPersonas.value} persona(s) en ese rango. La suma de cupos disponibles es ${avail.totalAvailableCapacity.value}.`
+  }
+
+  return 'No hay unidades disponibles para ese rango y número de personas.'
+})
+
 // Sedes derivadas de las unidades disponibles (con count por sede)
 const availableVenues = computed(() => {
   const map = new Map()
@@ -526,6 +554,8 @@ const allUnitsSelected = computed(() => {
   const selectedSet = new Set(form.value.unit_ids || [])
   return venueUnits.every((unit) => selectedSet.has(unit.id))
 })
+
+const isFullHouseSelected = computed(() => allUnitsSelected.value)
 
 const hasFullHouseTariff = computed(() => {
   const config = accountPricing.value
@@ -749,6 +779,24 @@ const onSourceSuggestions = (payload) => {
 // ── Panel toggle ───────────────────────────────────────
 const togglePanel = (panel) => {
   panels.value[panel] = !panels.value[panel]
+}
+
+const toggleFullHouseSelection = (enabled) => {
+  const venueUnitIds = availableUnitsForVenue.value.map((unit) => unit.id)
+  if (!venueUnitIds.length) return
+
+  const current = new Set(form.value.unit_ids || [])
+  if (enabled) {
+    for (const unitId of venueUnitIds) {
+      current.add(unitId)
+    }
+  } else {
+    for (const unitId of venueUnitIds) {
+      current.delete(unitId)
+    }
+  }
+
+  form.value.unit_ids = [...current]
 }
 
 // ── Save ───────────────────────────────────────────────
