@@ -46,6 +46,19 @@
         </div>
 
         <div class="space-y-3 border-t border-gray-200 pt-4">
+          <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Bloques</h2>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="block in blockSnippets"
+              :key="block.label"
+              type="button"
+              class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 transition hover:bg-amber-100"
+              @click="insertText(block.snippet)"
+            >{{ block.label }}</button>
+          </div>
+        </div>
+
+        <div class="space-y-3 border-t border-gray-200 pt-4">
           <button
             type="button"
             class="flex w-full items-center justify-between text-left"
@@ -202,6 +215,19 @@
             </div>
 
             <div class="space-y-3 border-t border-gray-200 pt-4">
+              <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Bloques</h2>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="block in blockSnippets"
+                  :key="'d-' + block.label"
+                  type="button"
+                  class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 transition hover:bg-amber-100"
+                  @click="insertText(block.snippet, true)"
+                >{{ block.label }}</button>
+              </div>
+            </div>
+
+            <div class="space-y-3 border-t border-gray-200 pt-4">
               <button
                 type="button"
                 class="flex w-full items-center justify-between text-left"
@@ -317,6 +343,25 @@ const variableGroups = [
       { label: 'Amenidades comunes', token: 'amenidades_comunes' },
       { label: 'URL cotizacion', token: 'url_cotizacion' },
     ],
+  },
+]
+
+const blockSnippets = [
+  {
+    label: 'Unidades',
+    snippet: '{{#unidades}}\n🚪 {{nombre_unidad}}\n{{descripcion_unidad}}\n{{/unidades}}',
+  },
+  {
+    label: 'Descuento',
+    snippet: '{{#descuento}}\n🎁 Descuento ({{porcentaje_descuento}}%): -{{valor_descuento}}\n{{/descuento}}',
+  },
+  {
+    label: 'Amenidades comunes',
+    snippet: '{{#amenidades_comunes}}\n{{amenidades_comunes}}\n{{/amenidades_comunes}}',
+  },
+  {
+    label: 'Vigencia condicional',
+    snippet: '{{#fecha_vigencia}}\n⏰ Válida hasta: {{fecha_vigencia}}\n{{/fecha_vigencia}}',
   },
 ]
 

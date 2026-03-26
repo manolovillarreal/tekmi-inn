@@ -43,18 +43,64 @@ const countNights = (checkIn, checkOut) => {
 
 export const resolveTemplate = (template, variables) => {
   const missing = new Set()
-  const resolved = String(template || '').replace(/{{\s*([^}]+?)\s*}}/g, (_match, rawKey) => {
-    const key = String(rawKey || '').trim()
-    const value = variables[key]
-    if (value === undefined || value === null || value === '') {
-      missing.add(key)
-      return `{{${key}}}`
-    }
-    return String(value)
-  })
+
+  const isEmptyValue = (value) => {
+    if (value === undefined || value === null) return true
+    if (typeof value === 'string') return value.trim() === ''
+    if (Array.isArray(value)) return value.length === 0
+    if (typeof value === 'object') return Object.keys(value).length === 0
+    return value === false
+  }
+
+  const resolveValue = (ctx, key) => {
+    if (!ctx || typeof ctx !== 'object') return undefined
+    return ctx[key]
+  }
+
+  const renderSection = (input, ctx) => {
+    const source = String(input || '')
+    const blockPattern = /{{#\s*([^}]+?)\s*}}([\s\S]*?){{\/\s*\1\s*}}/g
+
+    const withBlocks = source.replace(blockPattern, (_match, rawKey, inner) => {
+      const key = String(rawKey || '').trim()
+      const value = resolveValue(ctx, key)
+
+      if (Array.isArray(value)) {
+        if (value.length === 0) return ''
+        const renderedItems = value
+          .map((item) => {
+            const nextCtx = item && typeof item === 'object'
+              ? { ...ctx, ...item }
+              : { ...ctx, [key]: item }
+            return renderSection(inner, nextCtx).trim()
+          })
+          .filter(Boolean)
+        return renderedItems.join('\n')
+      }
+
+      if (isEmptyValue(value)) {
+        return ''
+      }
+
+      const nextCtx = value && typeof value === 'object'
+        ? { ...ctx, ...value }
+        : { ...ctx, [key]: value }
+      return renderSection(inner, nextCtx)
+    })
+
+    return withBlocks.replace(/{{\s*([^#\/][^}]*)\s*}}/g, (_match, rawKey) => {
+      const key = String(rawKey || '').trim()
+      const value = resolveValue(ctx, key)
+      if (value === undefined || value === null || value === '') {
+        missing.add(key)
+        return `{{${key}}}`
+      }
+      return String(value)
+    })
+  }
 
   return {
-    text: resolved,
+    text: renderSection(template, variables || {}),
     missing: [...missing],
   }
 }

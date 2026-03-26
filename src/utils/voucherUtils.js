@@ -8,18 +8,30 @@ Te compartimos tu cotización de {{nombre_alojamiento}}.
 🗓 Check-out: {{fecha_checkout_larga}}
 🌙 {{noches}} noches · {{personas}} personas
 
+{{#unidades}}
 🚪 {{nombre_unidad}}
 {{descripcion_unidad}}
+{{/unidades}}
 
-☀️ {{amenidades_comunes}}
+{{#amenidades_comunes}}
+{{amenidades_comunes}}
+{{/amenidades_comunes}}
 
-💳 Código de referencia: {{codigo_referencia}}
+💳 Código: {{codigo_referencia}}
 💰 Precio por noche: {{precio_noche}}
-🎁 Descuento ({{porcentaje_descuento}}%): -{{valor_descuento}}
-💵 Total: {{total}}
-⏰ Válida hasta: {{fecha_vigencia}}
 
-Para confirmar la reserva se realiza un anticipo del {{porcentaje_anticipo}}%.
+{{#descuento}}
+🎁 Descuento ({{porcentaje_descuento}}%): -{{valor_descuento}}
+{{/descuento}}
+
+💵 Total: {{total}}
+
+{{#fecha_vigencia}}
+⏰ Válida hasta: {{fecha_vigencia}}
+{{/fecha_vigencia}}
+
+Para confirmar se realiza un anticipo del
+{{porcentaje_anticipo}}%.
 Escríbenos para cualquier duda.
 {{nombre_alojamiento}} · {{telefono}}`
 
@@ -147,33 +159,19 @@ export const buildQuotationWhatsAppMessage = (inquiry, profile, quoteUrl = '', o
   const selectedUnits = units.length
     ? units
     : (inquiry?.inquiry_units || []).map((row) => row?.units || {}).filter(Boolean)
-
-  const unitBlocks = selectedUnits
+  const unidades = selectedUnits
     .map((unit) => {
-      const name = String(unit?.name || '').trim()
-      const description = String(unit?.description || '').trim()
-      if (!name && !description) return ''
-      const safeName = name || 'Unidad'
-      return description ? `🚪 ${safeName}\n${description}` : `🚪 ${safeName}`
+      const nombreUnidad = String(unit?.name || '').trim()
+      const descripcionUnidad = String(unit?.description || '').trim()
+      if (!nombreUnidad && !descripcionUnidad) return null
+      return {
+        nombre_unidad: nombreUnidad || 'Unidad',
+        descripcion_unidad: descripcionUnidad,
+      }
     })
     .filter(Boolean)
 
-  const unitsJoined = unitBlocks.join('\n\n')
-
   const templateToUse = systemTemplate || DEFAULT_QUOTATION_TEMPLATE
-
-  const applyIterativeUnitBlock = (template) => {
-    if (!template.includes('{{nombre_unidad}}') && !template.includes('{{descripcion_unidad}}')) {
-      return template
-    }
-
-    const replacement = unitsJoined || '🚪 -'
-    return String(template)
-      .replace(/🚪\s*{{\s*nombre_unidad\s*}}\s*\n\s*{{\s*descripcion_unidad\s*}}/g, replacement)
-      .replace(/{{\s*nombre_unidad\s*}}\s*\n\s*{{\s*descripcion_unidad\s*}}/g, replacement)
-      .replace(/{{\s*nombre_unidad\s*}}/g, unitsJoined || '-')
-      .replace(/{{\s*descripcion_unidad\s*}}/g, '')
-  }
 
   const templateVariables = {
     ...buildGlobalVariables({
@@ -201,14 +199,18 @@ export const buildQuotationWhatsAppMessage = (inquiry, profile, quoteUrl = '', o
     fecha_checkin_larga: formatDateLongEs(checkIn),
     fecha_checkout_larga: formatDateLongEs(checkOut),
     fecha_vigencia: validityDate,
-    nombre_unidad: unitsJoined || '-',
-    descripcion_unidad: '',
-    amenidades_comunes: String(inquiry?.amenidades_comunes || profile?.short_description || '').trim() || '-',
+    unidades,
+    descuento: discountPercentage > 0
+      ? {
+          porcentaje_descuento: discountPercentage,
+          valor_descuento: formatCop(discountAmount),
+        }
+      : null,
+    amenidades_comunes: String(inquiry?.amenidades_comunes || profile?.short_description || '').trim(),
     url_cotizacion: quoteUrl || '-',
   }
 
-  const expandedTemplate = applyIterativeUnitBlock(templateToUse)
-  const resolved = resolveTemplate(expandedTemplate, templateVariables)
+  const resolved = resolveTemplate(templateToUse, templateVariables)
   return resolved.text.trim()
 }
 
