@@ -1,4 +1,27 @@
 import { formatReferenceDisplay } from './referenceUtils'
+import { buildGlobalVariables, resolveTemplate } from './messageUtils'
+
+export const DEFAULT_QUOTATION_TEMPLATE = `Hola {{nombre_huesped}}! 👋
+Te compartimos tu cotización de {{nombre_alojamiento}}.
+
+🗓 Check-in: {{fecha_checkin_larga}}
+🗓 Check-out: {{fecha_checkout_larga}}
+🌙 {{noches}} noches · {{personas}} personas
+
+🚪 {{nombre_unidad}}
+{{descripcion_unidad}}
+
+☀️ {{amenidades_comunes}}
+
+💳 Código de referencia: {{codigo_referencia}}
+💰 Precio por noche: {{precio_noche}}
+🎁 Descuento ({{porcentaje_descuento}}%): -{{valor_descuento}}
+💵 Total: {{total}}
+⏰ Válida hasta: {{fecha_vigencia}}
+
+Para confirmar la reserva se realiza un anticipo del {{porcentaje_anticipo}}%.
+Escríbenos para cualquier duda.
+{{nombre_alojamiento}} · {{telefono}}`
 
 const currencyFormatter = new Intl.NumberFormat('es-CO', {
   style: 'currency',
@@ -87,7 +110,10 @@ export const copyAsWhatsApp = async (reservation, profile) => {
   return message
 }
 
-export const copyQuotationAsWhatsApp = async (inquiry, profile, quoteUrl = '') => {
+export const buildQuotationWhatsAppMessage = (inquiry, profile, quoteUrl = '', options = {}) => {
+  const systemTemplate = String(options?.systemTemplate || '').trim()
+  const accountSettings = options?.accountSettings || {}
+
   const guestName = inquiry?.guest_name || 'huesped'
   const businessName = profile?.commercial_name || profile?.legal_name || 'nuestro alojamiento'
   const contactPhone = profile?.phone || '-'
@@ -97,7 +123,7 @@ export const copyQuotationAsWhatsApp = async (inquiry, profile, quoteUrl = '') =
   const adults = Number(inquiry?.adults || 0)
   const children = Number(inquiry?.children || 0)
   const totalGuests = adults + children
-  const unitsLabel = String(inquiry?.units_label || '').trim()
+  const units = Array.isArray(options?.units) ? options.units : []
   const referenceCode = inquiry?.reference_code || inquiry?.quotation_number || '-'
   const referenceDisplay = formatReferenceDisplay(referenceCode, inquiry?.guest_name)
   const pricePerNight = Number(inquiry?.price_per_night || 0)
@@ -117,50 +143,77 @@ export const copyQuotationAsWhatsApp = async (inquiry, profile, quoteUrl = '') =
     }).format(date)
   }
 
-  const lines = [
-    `Hola ${guestName}! 👋`,
-    '',
-    `Te compartimos tu cotización de ${businessName}.`,
-  ]
+  const validityDate = inquiry?.quote_expires_at ? longDateWithoutWeekday(inquiry.quote_expires_at) : '-'
+  const selectedUnits = units.length
+    ? units
+    : (inquiry?.inquiry_units || []).map((row) => row?.units || {}).filter(Boolean)
 
-  if (checkIn && checkOut && nights > 0) {
-    lines.push('')
-    lines.push(`🗓 Check-in: ${formatDateLongEs(checkIn)}`)
-    lines.push(`🗓 Check-out: ${formatDateLongEs(checkOut)}`)
-    lines.push(`🌙 ${nights} noches · ${totalGuests} personas`)
-  }
+  const unitBlocks = selectedUnits
+    .map((unit) => {
+      const name = String(unit?.name || '').trim()
+      const description = String(unit?.description || '').trim()
+      if (!name && !description) return ''
+      const safeName = name || 'Unidad'
+      return description ? `🚪 ${safeName}\n${description}` : `🚪 ${safeName}`
+    })
+    .filter(Boolean)
 
-  if (unitsLabel) {
-    lines.push(`🏠 ${unitsLabel}`)
-  }
+  const unitsJoined = unitBlocks.join('\n\n')
 
-  lines.push('')
-  lines.push(`💳 Código de referencia: ${referenceDisplay}`)
+  const templateToUse = systemTemplate || DEFAULT_QUOTATION_TEMPLATE
 
-  if (pricePerNight > 0 && nights > 0) {
-    lines.push('')
-    lines.push(`💰 Precio por noche: ${formatCop(pricePerNight)}`)
-    if (discountPercentage > 0) {
-      lines.push(`🎁 Descuento (${discountPercentage}%): -${formatCop(discountAmount)}`)
+  const applyIterativeUnitBlock = (template) => {
+    if (!template.includes('{{nombre_unidad}}') && !template.includes('{{descripcion_unidad}}')) {
+      return template
     }
-    lines.push(`💵 Total: ${formatCop(total)}`)
+
+    const replacement = unitsJoined || '🚪 -'
+    return String(template)
+      .replace(/🚪\s*{{\s*nombre_unidad\s*}}\s*\n\s*{{\s*descripcion_unidad\s*}}/g, replacement)
+      .replace(/{{\s*nombre_unidad\s*}}\s*\n\s*{{\s*descripcion_unidad\s*}}/g, replacement)
+      .replace(/{{\s*nombre_unidad\s*}}/g, unitsJoined || '-')
+      .replace(/{{\s*descripcion_unidad\s*}}/g, '')
   }
 
-  if (inquiry?.quote_expires_at) {
-    lines.push('')
-    lines.push(`⏰ Válida hasta: ${longDateWithoutWeekday(inquiry.quote_expires_at)}`)
+  const templateVariables = {
+    ...buildGlobalVariables({
+      profile,
+      accountSettings,
+      context: {
+        guest_name: guestName,
+        check_in: checkIn,
+        check_out: checkOut,
+        nights,
+        personas: totalGuests,
+        reference: referenceDisplay,
+        total,
+      },
+    }),
+    nombre_huesped: guestName,
+    telefono_huesped: inquiry?.guest_phone || '-',
+    fechas: checkIn && checkOut ? `${formatDateLongEs(checkIn)} al ${formatDateLongEs(checkOut)}` : '-',
+    noches: nights,
+    personas: totalGuests,
+    codigo_referencia: referenceDisplay,
+    precio_noche: formatCop(pricePerNight),
+    porcentaje_descuento: discountPercentage,
+    valor_descuento: formatCop(discountAmount),
+    fecha_checkin_larga: formatDateLongEs(checkIn),
+    fecha_checkout_larga: formatDateLongEs(checkOut),
+    fecha_vigencia: validityDate,
+    nombre_unidad: unitsJoined || '-',
+    descripcion_unidad: '',
+    amenidades_comunes: String(inquiry?.amenidades_comunes || profile?.short_description || '').trim() || '-',
+    url_cotizacion: quoteUrl || '-',
   }
 
-  if (quoteUrl) {
-    lines.push('')
-    lines.push(`🔗 Ver cotización: ${quoteUrl}`)
-  }
+  const expandedTemplate = applyIterativeUnitBlock(templateToUse)
+  const resolved = resolveTemplate(expandedTemplate, templateVariables)
+  return resolved.text.trim()
+}
 
-  lines.push('')
-  lines.push('Para confirmar escríbenos.')
-  lines.push(`${businessName} · ${contactPhone}`)
-
-  const message = lines.join('\n')
+export const copyQuotationAsWhatsApp = async (inquiry, profile, quoteUrl = '', options = {}) => {
+  const message = buildQuotationWhatsAppMessage(inquiry, profile, quoteUrl, options)
   await navigator.clipboard.writeText(message)
   return message
 }

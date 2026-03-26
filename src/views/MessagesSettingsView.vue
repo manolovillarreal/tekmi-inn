@@ -121,9 +121,9 @@ import {
 } from '../services/messageSettingsService'
 import {
   buildGlobalVariables,
-  buildQuotationMessage,
   buildVoucherMessage,
 } from '../utils/messageUtils'
+import { buildQuotationWhatsAppMessage } from '../utils/voucherUtils'
 
 const { can } = usePermissions()
 const accountStore = useAccountStore()
@@ -198,13 +198,31 @@ const globalVars = computed(() => buildGlobalVariables({
   },
 }))
 
-const quotationPreview = computed(() => buildQuotationMessage({
-  inquiry: sampleInquiry.value,
-  systemSettings: systemForm.value,
-  globalVariables: globalVars.value,
-  selectedUnits: [],
-  venueUnits: [],
-}))
+const quotationPreview = computed(() => {
+  const quotationTemplate = String(
+    messages.value.find((msg) => msg.type === 'system' && msg.key === 'quotation')?.body || ''
+  ).trim()
+
+  return {
+    text: buildQuotationWhatsAppMessage(
+      {
+        ...sampleInquiry.value,
+        nights: 3,
+      },
+      profile.value,
+      'https://example.com/public-quote?token=demo',
+      {
+        systemTemplate: quotationTemplate,
+        accountSettings: accountSettings.value,
+        units: [
+          { name: 'Cabaña 1', description: 'Vista al mar y jacuzzi' },
+          { name: 'Cabaña 2', description: 'Balcón y cocina equipada' },
+        ],
+      }
+    ),
+    missing: [],
+  }
+})
 
 const voucherPreview = computed(() => buildVoucherMessage({
   reservation: sampleReservation.value,

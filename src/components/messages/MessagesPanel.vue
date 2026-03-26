@@ -61,10 +61,10 @@ import { computed } from 'vue'
 import BottomSheet from '../ui/BottomSheet.vue'
 import {
   buildGlobalVariables,
-  buildQuotationMessage,
   buildVoucherMessage,
   resolveTemplate,
 } from '../../utils/messageUtils'
+import { buildQuotePublicUrl, buildQuotationWhatsAppMessage } from '../../utils/voucherUtils'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -130,13 +130,30 @@ const globalVars = computed(() => buildGlobalVariables({
 
 const systemQuotation = computed(() => {
   if (props.mode === 'inquiry') {
-    return buildQuotationMessage({
-      inquiry: props.inquiry,
-      systemSettings: props.systemSettings,
-      globalVariables: globalVars.value,
-      selectedUnits: props.availableUnits,
-      venueUnits: props.availableUnits,
-    })
+    const inquiry = props.inquiry || {}
+    const quotationTemplate = String(
+      (props.messages || []).find((msg) => msg.type === 'system' && msg.key === 'quotation')?.body || ''
+    ).trim()
+
+    const text = buildQuotationWhatsAppMessage(
+      {
+        ...inquiry,
+        nights: currentContext.value.nights,
+      },
+      props.profile,
+      buildQuotePublicUrl(inquiry.quote_token),
+      {
+        systemTemplate: quotationTemplate,
+        accountSettings: props.accountSettings,
+        units: (props.availableUnits || [])
+          .filter((unit) => (inquiry?.unit_ids || []).includes(unit.id)),
+      }
+    )
+
+    return {
+      text,
+      missing: [],
+    }
   }
 
   return {

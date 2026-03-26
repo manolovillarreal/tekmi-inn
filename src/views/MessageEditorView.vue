@@ -1,11 +1,19 @@
 <template>
-  <div v-if="can('settings', 'edit')" class="space-y-6">
+  <div v-if="can('settings', 'edit')" class="relative space-y-6">
     <div class="flex items-center justify-between gap-3">
       <button type="button" class="btn-secondary text-sm" @click="goBack">Volver</button>
       <h1 class="text-2xl font-semibold tracking-tight text-gray-900">Editor de mensaje</h1>
-      <button v-if="message" type="button" class="btn-secondary text-sm sm:hidden" @click="showDrawer = true">Variables</button>
       <div class="hidden w-[72px] sm:block"></div>
     </div>
+
+    <button
+      v-if="message && !loading && !showDrawer"
+      type="button"
+      class="fixed left-0 top-1/2 z-40 -translate-y-1/2 rounded-r-full border border-l-0 border-indigo-200 bg-indigo-50 px-2 py-3 text-xs font-semibold tracking-wide text-indigo-700 shadow-sm transition hover:bg-indigo-100 sm:hidden"
+      @click="showDrawer = true"
+    >
+      Variables
+    </button>
 
     <div v-if="loading" class="card text-sm text-gray-600">Cargando mensaje...</div>
 
@@ -38,27 +46,37 @@
         </div>
 
         <div class="space-y-3 border-t border-gray-200 pt-4">
-          <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Emojis</h2>
-          <section v-for="group in emojiGroups" :key="group.title" class="space-y-1.5">
-            <h3 class="text-xs font-medium text-gray-500">{{ group.title }}</h3>
-            <div class="grid grid-cols-6 gap-1">
+          <button
+            type="button"
+            class="flex w-full items-center justify-between text-left"
+            @click="toggleEmojisSection"
+          >
+            <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Emojis</h2>
+            <span class="text-xs text-gray-500">{{ emojisExpanded ? 'Ocultar' : 'Mostrar' }}</span>
+          </button>
+          <div v-if="emojisExpanded" class="space-y-2">
+            <section v-for="group in emojiGroups" :key="group.title" class="space-y-1.5">
               <button
-                v-for="emoji in group.emojis"
-                :key="emoji"
                 type="button"
-                class="flex items-center justify-center rounded p-1 text-xl leading-none transition hover:bg-gray-100"
-                @click="insertText(emoji)"
-              >{{ emoji }}</button>
-            </div>
-          </section>
+                class="flex w-full items-center justify-between text-left"
+                @click="toggleEmojiGroup(group.title)"
+              >
+                <h3 class="text-xs font-medium text-gray-500">{{ group.title }}</h3>
+                <span class="text-xs text-gray-400">{{ isEmojiGroupExpanded(group.title) ? '−' : '+' }}</span>
+              </button>
+              <div v-if="isEmojiGroupExpanded(group.title)" class="grid grid-cols-6 gap-1">
+                <button
+                  v-for="emoji in group.emojis"
+                  :key="emoji"
+                  type="button"
+                  class="flex items-center justify-center rounded p-1 text-xl leading-none transition hover:bg-gray-100"
+                  @click="insertText(emoji)"
+                >{{ emoji }}</button>
+              </div>
+            </section>
+          </div>
         </div>
 
-        <section v-if="isSystemMessage" class="space-y-3 border-t border-gray-200 pt-4">
-          <h3 class="text-sm font-semibold text-gray-900">Bloques condicionales</h3>
-          <AppToggle v-model="systemForm.show_unit_count" label="Mostrar numero de unidades" />
-          <AppToggle v-model="systemForm.show_unit_name" label="Mostrar nombre de unidad" />
-          <AppToggle v-model="systemForm.show_unit_description" label="Mostrar descripcion por unidad" />
-        </section>
       </aside>
 
       <!-- Panel editor -->
@@ -68,9 +86,18 @@
             <p class="text-xs uppercase tracking-wide text-gray-500">{{ message.type === 'system' ? 'Sistema' : 'Personalizado' }}</p>
             <h2 class="text-xl font-semibold text-gray-900">{{ message.name }}</h2>
           </div>
-          <button type="button" class="btn-primary text-sm" :disabled="saving" @click="saveMessage">
-            {{ saving ? 'Guardando...' : 'Guardar' }}
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              v-if="isSystemMessage"
+              type="button"
+              class="btn-secondary text-sm"
+              :disabled="saving"
+              @click="restoreDefaultMessage"
+            >Restaurar por defecto</button>
+            <button type="button" class="btn-primary text-sm" :disabled="saving" @click="saveMessage">
+              {{ saving ? 'Guardando...' : 'Guardar' }}
+            </button>
+          </div>
         </div>
 
         <!-- Encabezado de contexto para preview -->
@@ -175,27 +202,37 @@
             </div>
 
             <div class="space-y-3 border-t border-gray-200 pt-4">
-              <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Emojis</h2>
-              <section v-for="group in emojiGroups" :key="'d-' + group.title" class="space-y-1.5">
-                <h3 class="text-xs font-medium text-gray-500">{{ group.title }}</h3>
-                <div class="grid grid-cols-6 gap-1">
+              <button
+                type="button"
+                class="flex w-full items-center justify-between text-left"
+                @click="toggleEmojisSection"
+              >
+                <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Emojis</h2>
+                <span class="text-xs text-gray-500">{{ emojisExpanded ? 'Ocultar' : 'Mostrar' }}</span>
+              </button>
+              <div v-if="emojisExpanded" class="space-y-2">
+                <section v-for="group in emojiGroups" :key="'d-' + group.title" class="space-y-1.5">
                   <button
-                    v-for="emoji in group.emojis"
-                    :key="'d-' + emoji"
                     type="button"
-                    class="flex items-center justify-center rounded p-1 text-xl leading-none transition hover:bg-gray-100"
-                    @click="insertText(emoji, true)"
-                  >{{ emoji }}</button>
-                </div>
-              </section>
+                    class="flex w-full items-center justify-between text-left"
+                    @click="toggleEmojiGroup(group.title)"
+                  >
+                    <h3 class="text-xs font-medium text-gray-500">{{ group.title }}</h3>
+                    <span class="text-xs text-gray-400">{{ isEmojiGroupExpanded(group.title) ? '−' : '+' }}</span>
+                  </button>
+                  <div v-if="isEmojiGroupExpanded(group.title)" class="grid grid-cols-6 gap-1">
+                    <button
+                      v-for="emoji in group.emojis"
+                      :key="'d-' + emoji"
+                      type="button"
+                      class="flex items-center justify-center rounded p-1 text-xl leading-none transition hover:bg-gray-100"
+                      @click="insertText(emoji, true)"
+                    >{{ emoji }}</button>
+                  </div>
+                </section>
+              </div>
             </div>
 
-            <section v-if="isSystemMessage" class="space-y-3 border-t border-gray-200 pt-4">
-              <h3 class="text-sm font-semibold text-gray-900">Bloques condicionales</h3>
-              <AppToggle v-model="systemForm.show_unit_count" label="Mostrar numero de unidades" />
-              <AppToggle v-model="systemForm.show_unit_name" label="Mostrar nombre de unidad" />
-              <AppToggle v-model="systemForm.show_unit_description" label="Mostrar descripcion por unidad" />
-            </section>
           </div>
         </div>
       </div>
@@ -215,14 +252,13 @@ import { supabase } from '../services/supabase'
 import { usePermissions } from '../composables/usePermissions'
 import { useToast } from '../composables/useToast'
 import { useAccountStore } from '../stores/account'
-import AppToggle from '../components/ui/forms/AppToggle.vue'
 import {
   DEFAULT_MESSAGE_SETTINGS,
   getMessageSettings,
-  saveMessageSettings,
   savePredefinedMessage,
 } from '../services/messageSettingsService'
 import { buildGlobalVariables, resolveTemplate } from '../utils/messageUtils'
+import { buildQuotePublicUrl, buildQuotationWhatsAppMessage, DEFAULT_QUOTATION_TEMPLATE } from '../utils/voucherUtils'
 
 const route = useRoute()
 const router = useRouter()
@@ -267,12 +303,19 @@ const variableGroups = [
   {
     title: 'Reserva / Consulta',
     items: [
-      { label: 'Fechas', token: 'fechas' },
+      { label: 'Check-in largo', token: 'fecha_checkin_larga' },
+      { label: 'Check-out largo', token: 'fecha_checkout_larga' },
       { label: 'Noches', token: 'noches' },
       { label: 'Personas', token: 'personas' },
       { label: 'Codigo', token: 'codigo_referencia' },
       { label: 'Precio', token: 'precio_noche' },
+      { label: 'Porcentaje descuento', token: 'porcentaje_descuento' },
+      { label: 'Valor descuento', token: 'valor_descuento' },
       { label: 'Vigencia', token: 'fecha_vigencia' },
+      { label: 'Nombre unidad (itera)', token: 'nombre_unidad' },
+      { label: 'Descripcion unidad (itera)', token: 'descripcion_unidad' },
+      { label: 'Amenidades comunes', token: 'amenidades_comunes' },
+      { label: 'URL cotizacion', token: 'url_cotizacion' },
     ],
   },
 ]
@@ -307,6 +350,24 @@ const emojiGroups = [
     emojis: ['❤️', '🧡', '📛', '💚', '💙', '💜', '🖤', '🤍', '💕', '💞', '💓', '💗'],
   },
 ]
+
+const emojisExpanded = ref(true)
+const emojiGroupsExpanded = ref(
+  Object.fromEntries(emojiGroups.map((group) => [group.title, true]))
+)
+
+const toggleEmojisSection = () => {
+  emojisExpanded.value = !emojisExpanded.value
+}
+
+const isEmojiGroupExpanded = (title) => Boolean(emojiGroupsExpanded.value[title])
+
+const toggleEmojiGroup = (title) => {
+  emojiGroupsExpanded.value = {
+    ...emojiGroupsExpanded.value,
+    [title]: !isEmojiGroupExpanded(title),
+  }
+}
 
 const isSystemMessage = computed(() => message.value?.type === 'system')
 const isQuotationMessage = computed(() => message.value?.key === 'quotation')
@@ -478,7 +539,54 @@ const previewVariables = computed(() => {
   }
 })
 
-const renderedPreview = computed(() => resolveTemplate(body.value, previewVariables.value))
+const renderedPreview = computed(() => {
+  if (isSystemMessage.value && isQuotationMessage.value) {
+    const record = activeRecord.value
+    const nights = quoteContext.value.noches
+    const text = buildQuotationWhatsAppMessage(
+      {
+        ...record,
+        guest_name: record?.guest_name || quoteContext.value.nombre_huesped,
+        guest_phone: record?.guest_phone || quoteContext.value.telefono_huesped,
+        check_in: record?.check_in,
+        check_out: record?.check_out,
+        adults: Number(record?.adults || 0),
+        children: Number(record?.children || 0),
+        reference_code: record?.reference_code || quoteContext.value.codigo_referencia,
+        quotation_number: record?.inquiry_number,
+        price_per_night: Number(record?.price_per_night || 0),
+        discount_percentage: Number(record?.discount_percentage || 0),
+        quote_expires_at: record?.quote_expires_at,
+        nights,
+      },
+      profile.value,
+      buildQuotePublicUrl(record?.quote_token),
+      {
+        systemTemplate: body.value,
+        accountSettings: accountSettings.value,
+        units: (record?.inquiry_units || []).map((row) => row.units).filter(Boolean),
+      }
+    )
+
+    return {
+      text,
+      missing: resolveTemplate(body.value, previewVariables.value).missing,
+    }
+  }
+
+  return resolveTemplate(body.value, previewVariables.value)
+})
+
+const restoreDefaultMessage = () => {
+  if (!isSystemMessage.value) return
+
+  if (isQuotationMessage.value) {
+    body.value = DEFAULT_QUOTATION_TEMPLATE
+    return
+  }
+
+  body.value = buildSystemTemplateFromSettings(message.value?.key, systemForm.value)
+}
 
 const goBack = () => {
   router.push('/mensajes')
@@ -542,15 +650,6 @@ const saveMessage = async () => {
       })
     }
 
-    if (isSystemMessage.value) {
-      systemForm.value = await saveMessageSettings(accountId, {
-        ...systemForm.value,
-        show_unit_count: Boolean(systemForm.value.show_unit_count),
-        show_unit_name: Boolean(systemForm.value.show_unit_name),
-        show_unit_description: Boolean(systemForm.value.show_unit_description),
-      })
-    }
-
     toast.success('Mensaje guardado.')
   } catch (err) {
     toast.error(err.message || 'No se pudo guardar el mensaje.')
@@ -596,7 +695,7 @@ const loadData = async () => {
         .maybeSingle(),
       supabase
         .from('inquiries')
-        .select('id, guest_name, guest_phone, check_in, check_out, adults, children, reference_code, price_per_night, quote_expires_at, created_at')
+        .select('id, guest_name, guest_phone, check_in, check_out, adults, children, reference_code, inquiry_number, price_per_night, discount_percentage, quote_expires_at, quote_token, created_at, inquiry_units(unit_id, units(name, description))')
         .eq('account_id', accountId)
         .order('created_at', { ascending: false })
         .limit(10),
@@ -627,7 +726,9 @@ const loadData = async () => {
     if (persistedBody.trim()) {
       body.value = persistedBody
     } else if (row?.type === 'system') {
-      body.value = buildSystemTemplateFromSettings(row.key, systemForm.value)
+      body.value = row.key === 'quotation'
+        ? DEFAULT_QUOTATION_TEMPLATE
+        : buildSystemTemplateFromSettings(row.key, systemForm.value)
     } else {
       body.value = ''
     }

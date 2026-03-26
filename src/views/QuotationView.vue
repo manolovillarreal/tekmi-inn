@@ -95,6 +95,7 @@ import { useBreakpoint } from '../composables/useBreakpoint'
 import { copyQuotationAsWhatsApp, formatCop, buildQuotePublicUrl } from '../utils/voucherUtils'
 import { formatReferenceDisplay } from '../utils/referenceUtils'
 import { getDocumentSettings } from '../services/documentSettingsService'
+import { getMessageSettings, getPredefinedMessages } from '../services/messageSettingsService'
 
 const route = useRoute()
 const router = useRouter()
@@ -107,8 +108,11 @@ const loadError = ref('')
 const inquiry = ref(null)
 const profile = ref({})
 const voucherConditions = ref('')
+const accountSettings = ref({})
 const now = ref(new Date())
 const documentSettings = ref(null)
+const systemMessageSettings = ref({})
+const predefinedMessages = ref([])
 
 const fetchData = async () => {
   loading.value = true
@@ -122,10 +126,12 @@ const fetchData = async () => {
       { data: profileData },
       { data: settingsData },
       loadedDocumentSettings,
+      loadedMessageSettings,
+      loadedMessages,
     ] = await Promise.all([
       supabase
         .from('inquiries')
-        .select('id, account_id, inquiry_number, reference_code, quote_token, guest_name, guest_phone, check_in, check_out, adults, children, price_per_night, discount_percentage, quote_expires_at, source_detail_info:source_details!inquiries_source_detail_id_fkey(id, name, label_es), inquiry_units(unit_id, units(name))') 
+        .select('id, account_id, inquiry_number, reference_code, quote_token, guest_name, guest_phone, check_in, check_out, adults, children, price_per_night, discount_percentage, quote_expires_at, source_detail_info:source_details!inquiries_source_detail_id_fkey(id, name, label_es), inquiry_units(unit_id, units(name, description))') 
         .eq('account_id', accountId)
         .eq('id', route.params.id)
         .single(),
@@ -136,18 +142,23 @@ const fetchData = async () => {
         .maybeSingle(),
       supabase
         .from('settings')
-        .select('voucher_conditions')
+        .select('voucher_conditions, property_name, price_general_min')
         .eq('account_id', accountId)
         .maybeSingle(),
       getDocumentSettings(accountId),
+      getMessageSettings(accountId),
+      getPredefinedMessages(accountId),
     ])
 
     if (inquiryError) throw inquiryError
 
     inquiry.value = inquiryData
     profile.value = profileData || {}
+    accountSettings.value = settingsData || {}
     voucherConditions.value = String(settingsData?.voucher_conditions || '').trim()
     documentSettings.value = loadedDocumentSettings
+    systemMessageSettings.value = loadedMessageSettings || {}
+    predefinedMessages.value = loadedMessages || []
     now.value = new Date()
   } catch (error) {
     loadError.value = error.message || 'No se pudo cargar la cotizacion.'
@@ -239,6 +250,10 @@ const handleCopyWhatsApp = async () => {
   if (!inquiry.value) return
 
   try {
+    const quotationTemplate = String(
+      predefinedMessages.value.find((msg) => msg.type === 'system' && msg.key === 'quotation')?.body || ''
+    ).trim()
+
     await copyQuotationAsWhatsApp(
       {
         ...inquiry.value,
@@ -248,7 +263,12 @@ const handleCopyWhatsApp = async () => {
         total_amount: totalCustomer.value,
       },
       profile.value,
-      buildQuotePublicUrl(inquiry.value.quote_token)
+      buildQuotePublicUrl(inquiry.value.quote_token),
+      {
+        systemTemplate: quotationTemplate,
+        accountSettings: accountSettings.value,
+        units: (inquiry.value?.inquiry_units || []).map((row) => row.units).filter(Boolean),
+      }
     )
 
     toast.success('Copiado al portapapeles')

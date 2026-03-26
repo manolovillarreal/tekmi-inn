@@ -565,6 +565,10 @@ const confirmMarkAsLost = async () => {
 const copyInquiryAsWhatsApp = async () => {
   if (!inquiry.value) return
   try {
+    const quotationTemplate = String(
+      predefinedMessages.value.find((msg) => msg.type === 'system' && msg.key === 'quotation')?.body || ''
+    ).trim()
+
     await copyQuotationAsWhatsApp(
       {
         ...inquiry.value,
@@ -574,7 +578,14 @@ const copyInquiryAsWhatsApp = async () => {
         total_amount: inquiryCustomerTotal.value,
       },
       profile.value,
-      quotePublicUrl.value || ''
+      quotePublicUrl.value || '',
+      {
+        systemTemplate: quotationTemplate,
+        accountSettings: accountSettings.value,
+        units: (inquiry.value?.unit_ids || [])
+          .map((id) => units.value.find((unit) => unit.id === id))
+          .filter(Boolean),
+      }
     )
     toast.success('Mensaje de WhatsApp copiado al portapapeles.')
   } catch (error) {

@@ -5,6 +5,7 @@ export const DEFAULT_MESSAGE_SETTINGS = {
   show_unit_count: true,
   show_unit_name: true,
   show_unit_description: false,
+  show_quote_url: true,
   quotation_greeting: 'Hola {{nombre_huesped}}! 👋',
   quotation_intro: 'Te compartimos tu cotización de {{nombre_alojamiento}}.',
   quotation_closing: 'Para confirmar la reserva se solicita un anticipo del {{porcentaje_anticipo}}%.',
@@ -26,6 +27,11 @@ const normalizeMessageSettings = (data = {}) => ({
   ...DEFAULT_MESSAGE_SETTINGS,
   ...data,
 })
+
+const isMissingShowQuoteUrlColumnError = (error) => {
+  const message = String(error?.message || '')
+  return message.includes("'show_quote_url' column") && message.includes("message_settings")
+}
 
 const ensureSystemMessages = async (accountId) => {
   const { data, error } = await supabase
@@ -73,33 +79,47 @@ export const getMessageSettings = async (accountId) => {
 export const saveMessageSettings = async (accountId, payload) => {
   const normalized = normalizeMessageSettings(payload)
 
-  const { data, error } = await supabase
-    .from('message_settings')
-    .upsert(
-      {
-        account_id: accountId,
-        show_unit_amenities: Boolean(normalized.show_unit_amenities),
-        show_unit_count: Boolean(normalized.show_unit_count),
-        show_unit_name: Boolean(normalized.show_unit_name),
-        show_unit_description: Boolean(normalized.show_unit_description),
-        quotation_greeting: normalized.quotation_greeting || null,
-        quotation_intro: normalized.quotation_intro || null,
-        quotation_closing: normalized.quotation_closing || null,
-        quotation_signature: normalized.quotation_signature || null,
-        voucher_greeting: normalized.voucher_greeting || null,
-        voucher_intro: normalized.voucher_intro || null,
-        voucher_closing: normalized.voucher_closing || null,
-        voucher_signature: normalized.voucher_signature || null,
-        checkin_time: normalized.checkin_time || null,
-        checkout_time: normalized.checkout_time || null,
-      },
-      { onConflict: 'account_id' }
-    )
-    .select('*')
-    .single()
+  const basePayload = {
+    account_id: accountId,
+    show_unit_amenities: Boolean(normalized.show_unit_amenities),
+    show_unit_count: Boolean(normalized.show_unit_count),
+    show_unit_name: Boolean(normalized.show_unit_name),
+    show_unit_description: Boolean(normalized.show_unit_description),
+    quotation_greeting: normalized.quotation_greeting || null,
+    quotation_intro: normalized.quotation_intro || null,
+    quotation_closing: normalized.quotation_closing || null,
+    quotation_signature: normalized.quotation_signature || null,
+    voucher_greeting: normalized.voucher_greeting || null,
+    voucher_intro: normalized.voucher_intro || null,
+    voucher_closing: normalized.voucher_closing || null,
+    voucher_signature: normalized.voucher_signature || null,
+    checkin_time: normalized.checkin_time || null,
+    checkout_time: normalized.checkout_time || null,
+  }
 
-  if (error) throw error
-  return normalizeMessageSettings(data)
+  const upsertSettings = async (record) => {
+    const { data, error } = await supabase
+      .from('message_settings')
+      .upsert(record, { onConflict: 'account_id' })
+      .select('*')
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  try {
+    const data = await upsertSettings({
+      ...basePayload,
+      show_quote_url: Boolean(normalized.show_quote_url),
+    })
+    return normalizeMessageSettings(data)
+  } catch (error) {
+    if (!isMissingShowQuoteUrlColumnError(error)) throw error
+
+    const data = await upsertSettings(basePayload)
+    return normalizeMessageSettings(data)
+  }
 }
 
 export const getPredefinedMessages = async (accountId, { includeSystem = true } = {}) => {
