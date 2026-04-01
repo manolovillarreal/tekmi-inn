@@ -173,11 +173,6 @@
 
       <!-- Side Column (1/3) -->
       <div class="space-y-6">
-        
-        <!-- Alerts -->
-        <DeadlineAlert v-if="isDeadlineOverdue" :show="true">
-          El plazo de pago ($ {{ formatCurrency(res.balance) }}) venció el {{ formatDate(res.payment_deadline) }}.
-        </DeadlineAlert>
 
         <div class="card">
           <h2 class="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wider">Pre-registro de huéspedes</h2>
@@ -417,7 +412,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../services/supabase'
 import { useReservationsStore } from '../stores/reservations'
 import ReservationBadge from '../components/ui/ReservationBadge.vue'
-import DeadlineAlert from '../components/ui/DeadlineAlert.vue'
 import BaseModal from '../components/ui/BaseModal.vue'
 import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
 import PreRegistroForm from '../components/preregistro/PreRegistroForm.vue'
@@ -670,12 +664,6 @@ const preregistroReservation = computed(() => ({
   check_out: res.value?.check_out,
   guests_count: Number(res.value?.adults || 0) + Number(res.value?.children || 0) || 1,
 }))
-
-const isDeadlineOverdue = computed(() => {
-  if (res.value?.status !== 'confirmed' || !res.value?.payment_deadline) return false
-  const today = new Date().toISOString().split('T')[0]
-  return res.value.payment_deadline < today
-})
 
 const canViewFinancial = computed(() => {
   return can('payments', 'view') || can('reports', 'view_financial')

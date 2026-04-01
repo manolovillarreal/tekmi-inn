@@ -144,12 +144,6 @@
           :adults="Number(form.adults || 1)"
           :children="Number(form.children || 0)"
         />
-
-        <AppDatePicker
-          v-model="form.payment_deadline"
-          label="Fecha límite de pago"
-          hint="Opcional"
-        />
       </AppFormSection>
 
       <AppFormSection title="Origen" :divider="true">
@@ -299,7 +293,6 @@ function buildEmptyForm() {
     source: null,
     source_type_id: '',
     source_detail_id: '',
-    payment_deadline: '',
     notes: ''
   }
 }
@@ -468,7 +461,6 @@ const hydrateForm = () => {
     source: inquiry.source || null,
     source_type_id: inquiry.source_type_id || '',
     source_detail_id: inquiry.source_detail_id || '',
-    payment_deadline: '',
     notes: ''
   }
   touched.guest_name = false
@@ -559,7 +551,6 @@ const submitConversion = async () => {
       source: form.value.source || null,
       source_type_id: form.value.source_type_id || null,
       source_detail_id: form.value.source_detail_id || null,
-      payment_deadline: form.value.payment_deadline || null,
       notes: form.value.notes || null,
       status: 'confirmed',
       inquiry_id: props.inquiry.id,

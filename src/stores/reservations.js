@@ -412,7 +412,6 @@ export const useReservationsStore = defineStore('reservations', () => {
         source: reservationData.source || null,
         source_type_id: reservationData.source_type_id || null,
         source_detail_id: reservationData.source_detail_id || null,
-        payment_deadline: normalizeDate(reservationData.payment_deadline),
         reference_code: referenceCode,
         notes: reservationData.notes || null
       }

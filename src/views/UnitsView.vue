@@ -49,6 +49,7 @@
             <tr>
               <th class="px-6 py-4">Nombre</th>
               <th class="px-6 py-4">Sede</th>
+              <th class="px-6 py-4">Capacidad</th>
               <th class="px-6 py-4">Estado</th>
               <th class="px-6 py-4">Reservas Activas</th>
               <th class="px-6 py-4 text-right">Acciones</th>
@@ -57,15 +58,16 @@
 
           <tbody class="divide-y divide-gray-200 text-sm">
             <tr v-if="store.loading">
-              <td colspan="5" class="px-6 py-12 text-center text-gray-400">Cargando unidades...</td>
+              <td colspan="6" class="px-6 py-12 text-center text-gray-400">Cargando unidades...</td>
             </tr>
             <tr v-else-if="store.units.length === 0">
-              <td colspan="5" class="px-6 py-12 text-center text-gray-500 italic">No hay unidades registradas.</td>
+              <td colspan="6" class="px-6 py-12 text-center text-gray-500 italic">No hay unidades registradas.</td>
             </tr>
 
             <tr v-for="unit in store.units" :key="unit.id" class="hover:bg-gray-50 transition-colors">
               <td class="px-6 py-4 font-medium text-gray-900">{{ unit.name }}</td>
               <td class="px-6 py-4 text-gray-600">{{ unit.venues?.name }}</td>
+              <td class="px-6 py-4 text-gray-600">{{ formatCapacity(unit.capacity) }}</td>
               <td class="px-6 py-4">
                 <span :class="unit.is_active ? 'text-emerald-600' : 'text-red-600'">
                   {{ unit.is_active ? 'Activa' : 'Inactiva' }}
@@ -123,6 +125,7 @@
             placeholder="Seleccionar sede"
           />
           <AppInput v-model="form.name" label="Nombre" required />
+          <AppInput v-model="form.capacity" type="number" label="Capacidad" min="1" required />
           <AppTextarea v-model="form.description" label="Descripción" :rows="2" :autoResize="true" />
           <AppToggle v-model="form.is_active" label="Unidad activa" />
         </AppFormSection>
@@ -237,6 +240,7 @@ const deleteMessage = ref('')
 const form = ref({
   venue_id: '',
   name: '',
+  capacity: 2,
   description: '',
   is_active: true,
   price_base: '',
@@ -290,11 +294,28 @@ const toNumberOrNull = (value) => {
   return number
 }
 
+const buildUnitPayload = (values) => ({
+  venue_id: values.venue_id,
+  name: values.name,
+  capacity: Math.max(1, toNumberOrNull(values.capacity) ?? 1),
+  description: values.description,
+  is_active: values.is_active,
+  price_base: toNumberOrNull(values.price_base),
+  price_min: toNumberOrNull(values.price_min),
+  price_extra_person: toNumberOrNull(values.price_extra_person),
+})
+
 const formatCop = (value) => Number(value || 0).toLocaleString('es-CO')
 
 const generalHint = (value) => {
   if (value === null || value === undefined || value === '') return 'General: no configurado'
   return `General: $${formatCop(value)}`
+}
+
+const formatCapacity = (value) => {
+  const capacity = Number(value || 0)
+  if (Number.isNaN(capacity) || capacity <= 0) return '-'
+  return `${capacity} ${capacity === 1 ? 'persona' : 'personas'}`
 }
 
 const fetchFilteredUnits = async () => {
@@ -309,7 +330,7 @@ const getActiveReservations = (unitId) => {
 }
 
 const unitMeta = (unit) => {
-  const meta = []
+  const meta = [{ label: 'Capacidad', value: formatCapacity(unit.capacity) }]
   if (unit.description) {
     meta.push({ label: 'Descripción', value: unit.description })
   }
@@ -318,6 +339,7 @@ const unitMeta = (unit) => {
 
 const buildUnitCardMeta = (unit) => {
   return [
+    { label: 'Capacidad', value: formatCapacity(unit.capacity) },
     unit.description ? { label: 'Descripción', value: unit.description } : null
   ].filter(Boolean)
 }
@@ -327,6 +349,7 @@ const openCreateModal = () => {
   form.value = {
     venue_id: selectedVenue.value,
     name: '',
+    capacity: 2,
     description: '',
     is_active: true,
     price_base: '',
@@ -339,7 +362,10 @@ const openCreateModal = () => {
 const openEditModal = (unit) => {
   editingUnit.value = unit
   form.value = {
-    ...unit,
+    venue_id: unit.venue_id ?? '',
+    name: unit.name ?? '',
+    capacity: unit.capacity ?? 2,
+    description: unit.description ?? '',
     is_active: unit.is_active !== false,
     price_base: unit.price_base ?? '',
     price_min: unit.price_min ?? '',
@@ -356,12 +382,7 @@ const closeModal = () => {
 const submitForm = async () => {
   submitting.value = true
   try {
-    const payload = {
-      ...form.value,
-      price_base: toNumberOrNull(form.value.price_base),
-      price_min: toNumberOrNull(form.value.price_min),
-      price_extra_person: toNumberOrNull(form.value.price_extra_person),
-    }
+    const payload = buildUnitPayload(form.value)
 
     if (editingUnit.value) {
       await store.updateUnit(editingUnit.value.id, payload)

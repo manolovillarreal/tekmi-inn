@@ -126,16 +126,6 @@ const formatRangeDate = (isoDate) => {
   return new Date(isoDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
 }
 
-const overdueReservations = computed(() => {
-  const todayIso = toIsoDate(new Date())
-
-  return store.reservations.filter((res) => {
-    if (!res?.payment_deadline) return false
-    if (!['confirmed', 'in_stay'].includes(res.status)) return false
-    return String(res.payment_deadline) < todayIso
-  })
-})
-
 const preregPendingReservations = computed(() => {
   const today = new Date()
   const maxDate = shiftDays(today, 7)
@@ -188,7 +178,7 @@ const calculateMetrics = () => {
 
   metrics.value = {
     monthReservations: monthRes,
-    pendingCount: overdueReservations.value.length + preregPendingReservations.value.length,
+    pendingCount: preregPendingReservations.value.length,
     arrivalsWeek: arrivals,
     departuresWeek: departures
   }

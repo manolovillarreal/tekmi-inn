@@ -129,7 +129,6 @@ CREATE TABLE reservations (
     commission_percentage numeric(5,2),
     status text NOT NULL DEFAULT 'confirmed' CHECK (status IN ('confirmed', 'in_stay', 'completed', 'cancelled')),
     source text CHECK (source IN ('whatsapp', 'instagram', 'telefono', 'agencia', 'directo')),
-    payment_deadline date,
     preregistro_completado boolean NOT NULL DEFAULT false,
     preregistro_completado_at timestamptz,
     preregistro_token text UNIQUE,

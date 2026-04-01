@@ -99,7 +99,6 @@
             <td class="px-6 py-4 whitespace-nowrap">
               <div class="flex items-center gap-2">
                 <ReservationBadge :status="res.status" />
-                <span v-if="isDeadlineOverdue(res)" title="Deadline vencido" class="text-xs">⚠️</span>
               </div>
             </td>
             
@@ -226,21 +225,12 @@ const isToday = (dateStr) => {
   return dateStr === today
 }
 
-const isDeadlineOverdue = (res) => {
-  if (res.status !== 'confirmed' || !res.payment_deadline) return false
-  const d = new Date()
-  const today = d.toISOString().split('T')[0]
-  return res.payment_deadline < today
-}
-
 const getRowClass = (res) => {
-  if (isDeadlineOverdue(res)) return 'bg-orange-50/50 hover:bg-orange-50'
   if (res.status === 'in_stay' && isToday(res.check_in)) return 'bg-emerald-50/30'
   return ''
 }
 
 const getLeftBorderClass = (res) => {
-  if (isDeadlineOverdue(res)) return '!border-orange-400'
   return ''
 }
 

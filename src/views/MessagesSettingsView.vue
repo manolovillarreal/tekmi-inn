@@ -20,6 +20,17 @@
               <button type="button" class="btn-secondary text-xs" @click="toggleSystemPreview('quotation')">
                 {{ showQuotationPreview ? 'Ocultar mensaje' : 'Ver mensaje' }}
               </button>
+              <button
+                type="button"
+                class="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+                @click="copyToClipboard(quotationPreview.text)"
+                title="Copiar mensaje"
+              >
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
               <button type="button" class="btn-secondary text-xs" :disabled="!systemMessageByKey.quotation" @click="openMessageEditor(systemMessageByKey.quotation)">Editar</button>
             </div>
           </div>
@@ -35,6 +46,17 @@
             <div class="flex items-center gap-2">
               <button type="button" class="btn-secondary text-xs" @click="toggleSystemPreview('voucher')">
                 {{ showVoucherPreview ? 'Ocultar mensaje' : 'Ver mensaje' }}
+              </button>
+              <button
+                type="button"
+                class="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+                @click="copyToClipboard(voucherPreview.text)"
+                title="Copiar mensaje"
+              >
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
               </button>
               <button type="button" class="btn-secondary text-xs" :disabled="!systemMessageByKey.voucher" @click="openMessageEditor(systemMessageByKey.voucher)">Editar</button>
             </div>
@@ -60,12 +82,27 @@
       <div v-else class="space-y-3">
         <div v-for="(msg, index) in customMessages" :key="msg.id" class="rounded-md border border-gray-200 p-3">
           <div class="flex items-start justify-between gap-3">
+           <div class="flex items-center gap-2">
+          <button
+                type="button"
+                class="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+                @click="copyToClipboard(msg.body)"
+                title="Copiar mensaje"
+              >
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
             <div class="min-w-0">
               <p class="font-medium text-gray-900">{{ msg.name }}</p>
             </div>
+           </div>
+            
             <div class="flex shrink-0 items-center gap-2">
               <button type="button" class="btn-secondary text-xs" @click="moveMessage(index, -1)" :disabled="index === 0">↑</button>
               <button type="button" class="btn-secondary text-xs" @click="moveMessage(index, 1)" :disabled="index === customMessages.length - 1">↓</button>
+              
               <button type="button" class="btn-secondary text-xs" @click="openMessageEditor(msg.id)">Editar</button>
               <button type="button" class="btn-secondary text-xs text-red-700" @click="removeCustom(msg.id)">Eliminar</button>
             </div>
@@ -284,6 +321,11 @@ const closeCustomModal = () => {
 const openMessageEditor = (id) => {
   if (!id) return
   router.push(`/mensajes/${id}/editar`)
+}
+
+const copyToClipboard = async (text) => {
+  await navigator.clipboard.writeText(String(text || ''))
+  toast.success('Mensaje copiado al portapapeles.')
 }
 
 const saveCustomMessage = async () => {

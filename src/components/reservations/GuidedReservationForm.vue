@@ -336,7 +336,6 @@
           </AppFormGrid>
           <AppInput v-model="payment.reference" label="Referencia" hint="Opcional" />
           <AppDatePicker v-model="payment.payment_date" label="Fecha de pago" />
-          <AppDatePicker v-model="form.payment_deadline" label="Límite de pago" hint="Opcional" />
         </div>
       </div>
 
@@ -461,8 +460,7 @@ const form = ref({
   source: null,
   source_type_id: '',
   source_detail_id: '',
-  unit_ids: [],
-  payment_deadline: ''
+  unit_ids: []
 })
 
 const payment = ref({
@@ -835,7 +833,6 @@ const save = async () => {
           source_type_id: form.value.source_type_id || null,
           source_detail_id: form.value.source_detail_id || null,
           status: 'confirmed',
-          payment_deadline: form.value.payment_deadline || null,
           notes: form.value.notes || null
         },
         payment.value
