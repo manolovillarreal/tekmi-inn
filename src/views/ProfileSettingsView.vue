@@ -375,7 +375,7 @@ const saveProfile = async () => {
       website: profileForm.value.website || null,
       slogan: profileForm.value.slogan || null,
       logo_url: logoUrl,
-      reference_prefix: profilePrefix.value,
+      reference_prefix: profileForm.value.reference_prefix,
       short_description: profileForm.value.short_description || null,
       location_url: profileForm.value.location_url || null,
     }

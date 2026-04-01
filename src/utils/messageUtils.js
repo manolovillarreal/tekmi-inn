@@ -300,3 +300,135 @@ export const buildVoucherMessage = ({
     missing,
   }
 }
+
+// ---------------------------------------------------------------------------
+// Catálogo centralizado de variables y bloques del motor Mustache
+// ---------------------------------------------------------------------------
+
+export const VARIABLE_CATALOG = {
+  simples: {
+    huesped: [
+      { key: 'nombre_huesped', label: 'Nombre huésped', ejemplo: 'Santiago Montero' },
+      { key: 'personas', label: 'Personas', ejemplo: '4' },
+    ],
+    fechas: [
+      { key: 'fecha_checkin_larga', label: 'Check-in (texto)', ejemplo: 'viernes, 12 de junio de 2026' },
+      { key: 'fecha_checkout_larga', label: 'Check-out (texto)', ejemplo: 'lunes, 15 de junio de 2026' },
+      { key: 'fecha_checkin', label: 'Check-in (fecha)', ejemplo: '2026-06-12' },
+      { key: 'fecha_checkout', label: 'Check-out (fecha)', ejemplo: '2026-06-15' },
+      { key: 'noches', label: 'Noches', ejemplo: '3' },
+    ],
+    precio: [
+      { key: 'precio_noche', label: 'Precio por noche', ejemplo: '$840.000' },
+      { key: 'total', label: 'Total', ejemplo: '$2.394.000' },
+      { key: 'pagado', label: 'Pagado', ejemplo: '$600.000' },
+      { key: 'saldo_pendiente', label: 'Saldo pendiente', ejemplo: '$600.000' },
+      { key: 'porcentaje_anticipo', label: '% Anticipo', ejemplo: '50' },
+      { key: 'codigo_referencia', label: 'Código', ejemplo: '25KBXM' },
+      { key: 'fecha_vigencia', label: 'Vigencia', ejemplo: '31 de marzo de 2026' },
+    ],
+    alojamiento: [
+      { key: 'nombre_alojamiento', label: 'Nombre', ejemplo: 'Marmanu House' },
+      { key: 'telefono', label: 'Teléfono', ejemplo: '3102040245' },
+      { key: 'ubicacion', label: 'Ubicación', ejemplo: 'https://maps.app.goo.gl/xxxxx' },
+      { key: 'descripcion_alojamiento', label: 'Descripción', ejemplo: 'Casa vacacional frente al mar...' },
+    ],
+    checkin: [
+      { key: 'hora_checkin', label: 'Hora check-in', ejemplo: '3:00 PM' },
+      { key: 'hora_checkout', label: 'Hora check-out', ejemplo: '12:00 PM' },
+      { key: 'condiciones', label: 'Condiciones', ejemplo: 'No mascotas. No fiestas.' },
+    ],
+  },
+  bloques: [
+    {
+      key: 'unidades',
+      label: 'Unidades',
+      descripcion: 'Se repite por cada unidad. Si no hay unidades el bloque desaparece completo.',
+      variables_internas: ['nombre_unidad', 'descripcion_unidad'],
+      template: '{{#unidades}}\n🚪 {{nombre_unidad}}\n{{descripcion_unidad}}\n{{/unidades}}',
+    },
+    {
+      key: 'descuento',
+      label: 'Descuento',
+      descripcion: 'Solo aparece si hay descuento aplicado.',
+      variables_internas: ['porcentaje_descuento', 'valor_descuento'],
+      template: '{{#descuento}}\n🎁 Descuento ({{porcentaje_descuento}}%): -{{valor_descuento}}\n{{/descuento}}',
+    },
+    {
+      key: 'amenidades_comunes',
+      label: 'Amenidades comunes',
+      descripcion: 'Solo aparece si el alojamiento tiene amenidades configuradas.',
+      variables_internas: ['amenidades_comunes'],
+      template: '{{#amenidades_comunes}}\n{{amenidades_comunes}}\n{{/amenidades_comunes}}',
+    },
+    {
+      key: 'fecha_vigencia',
+      label: 'Vigencia condicional',
+      descripcion: 'Solo aparece si hay fecha de vigencia definida.',
+      variables_internas: [],
+      template: '{{#fecha_vigencia}}\n⏰ Válida hasta: {{fecha_vigencia}}\n{{/fecha_vigencia}}',
+    },
+    {
+      key: 'pago_completo',
+      label: 'Pago completo',
+      descripcion: 'Solo aparece si el pago está completo.',
+      variables_internas: ['total', 'pagado'],
+      template: '{{#pago_completo}}\n💵 Total: {{total}}\n✅ Pagado: {{pagado}}\n{{/pago_completo}}',
+    },
+    {
+      key: 'saldo_pendiente',
+      label: 'Saldo pendiente',
+      descripcion: 'Solo aparece si hay saldo pendiente.',
+      variables_internas: ['total', 'pagado', 'saldo_pendiente'],
+      template: '{{#saldo_pendiente}}\n💵 Total: {{total}}\n💳 Pagado: {{pagado}}\n⚠️ Saldo pendiente: {{saldo_pendiente}}\n{{/saldo_pendiente}}',
+    },
+    {
+      key: 'sin_pagos',
+      label: 'Sin pagos',
+      descripcion: 'Solo aparece si no hay ningún pago registrado.',
+      variables_internas: ['total'],
+      template: '{{#sin_pagos}}\n💵 Total: {{total}}\n⏳ Pendiente: {{total}}\n{{/sin_pagos}}',
+    },
+    {
+      key: 'condiciones',
+      label: 'Condiciones',
+      descripcion: 'Solo aparece si hay condiciones del alojamiento configuradas.',
+      variables_internas: ['condiciones'],
+      template: '{{#condiciones}}\n📋 {{condiciones}}\n{{/condiciones}}',
+    },
+  ],
+}
+
+export function generateAiPrompt() {
+  const simplesLines = []
+  for (const vars of Object.values(VARIABLE_CATALOG.simples)) {
+    for (const v of vars) {
+      simplesLines.push(`  {{${v.key}}} → ${v.label} — Ej: ${v.ejemplo}`)
+    }
+  }
+
+  const bloquesLines = []
+  for (const b of VARIABLE_CATALOG.bloques) {
+    bloquesLines.push(`  {{#${b.key}}}...{{/${b.key}}}`)
+    bloquesLines.push(`  → ${b.descripcion}`)
+  }
+
+  return [
+    'Necesito construir un mensaje de WhatsApp para mi alojamiento usando un sistema de plantillas con variables y bloques.',
+    '',
+    'VARIABLES SIMPLES — se reemplazan por el valor real:',
+    ...simplesLines,
+    '',
+    'BLOQUES ITERANTES Y CONDICIONALES:',
+    ...bloquesLines,
+    '',
+    'REGLAS IMPORTANTES:',
+    '  - Usar exactamente la sintaxis {{variable}} con dobles llaves',
+    '  - Los bloques abren con {{#nombre}} y cierran con {{/nombre}}',
+    '  - Puedes usar emojis libremente',
+    '  - El texto fuera de bloques siempre aparece',
+    '  - Puedes combinar variables dentro de bloques',
+    '',
+    'Antes de construir el mensaje, hazme las preguntas necesarias para entender qué tipo de mensaje necesito, para qué situación es, qué información quiero mostrar y qué tono prefiero. Una vez tengas todo claro, construye el mensaje usando únicamente las variables y bloques del sistema descritos arriba.',
+  ].join('\n')
+}

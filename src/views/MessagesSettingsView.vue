@@ -20,17 +20,6 @@
               <button type="button" class="btn-secondary text-xs" @click="toggleSystemPreview('quotation')">
                 {{ showQuotationPreview ? 'Ocultar mensaje' : 'Ver mensaje' }}
               </button>
-              <button
-                type="button"
-                class="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
-                @click="copyToClipboard(quotationPreview.text)"
-                title="Copiar mensaje"
-              >
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-              </button>
               <button type="button" class="btn-secondary text-xs" :disabled="!systemMessageByKey.quotation" @click="openMessageEditor(systemMessageByKey.quotation)">Editar</button>
             </div>
           </div>
@@ -46,17 +35,6 @@
             <div class="flex items-center gap-2">
               <button type="button" class="btn-secondary text-xs" @click="toggleSystemPreview('voucher')">
                 {{ showVoucherPreview ? 'Ocultar mensaje' : 'Ver mensaje' }}
-              </button>
-              <button
-                type="button"
-                class="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
-                @click="copyToClipboard(voucherPreview.text)"
-                title="Copiar mensaje"
-              >
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
               </button>
               <button type="button" class="btn-secondary text-xs" :disabled="!systemMessageByKey.voucher" @click="openMessageEditor(systemMessageByKey.voucher)">Editar</button>
             </div>
@@ -80,13 +58,21 @@
       </div>
 
       <div v-else class="space-y-3">
-        <div v-for="(msg, index) in customMessages" :key="msg.id" class="rounded-md border border-gray-200 p-3">
+        <div v-for="(msg, index) in renderedCustomMessages" :key="msg.id" class="rounded-md border border-gray-200 p-3">
           <div class="flex items-start justify-between gap-3">
-           <div class="flex items-center gap-2">
-          <button
+            <div class="min-w-0">
+              <p class="font-medium text-gray-900">{{ msg.name }}</p>
+            </div>
+            <div class="flex shrink-0 items-center gap-2">
+              <button type="button" class="btn-secondary text-xs" @click="moveMessage(index, -1)" :disabled="index === 0">↑</button>
+              <button type="button" class="btn-secondary text-xs" @click="moveMessage(index, 1)" :disabled="index === customMessages.length - 1">↓</button>
+              <button type="button" class="btn-secondary text-xs" @click="toggleCustomPreview(msg.id)">
+                {{ isCustomPreviewOpen(msg.id) ? 'Ocultar mensaje' : 'Ver mensaje' }}
+              </button>
+              <button
                 type="button"
                 class="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
-                @click="copyToClipboard(msg.body)"
+                @click="copyToClipboard(msg.renderedText)"
                 title="Copiar mensaje"
               >
                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -94,18 +80,15 @@
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                 </svg>
               </button>
-            <div class="min-w-0">
-              <p class="font-medium text-gray-900">{{ msg.name }}</p>
-            </div>
-           </div>
-            
-            <div class="flex shrink-0 items-center gap-2">
-              <button type="button" class="btn-secondary text-xs" @click="moveMessage(index, -1)" :disabled="index === 0">↑</button>
-              <button type="button" class="btn-secondary text-xs" @click="moveMessage(index, 1)" :disabled="index === customMessages.length - 1">↓</button>
-              
               <button type="button" class="btn-secondary text-xs" @click="openMessageEditor(msg.id)">Editar</button>
               <button type="button" class="btn-secondary text-xs text-red-700" @click="removeCustom(msg.id)">Eliminar</button>
             </div>
+          </div>
+          <div v-if="isCustomPreviewOpen(msg.id)" class="mt-3 border-t border-gray-100 pt-3">
+            <pre class="whitespace-pre-wrap rounded bg-gray-50 p-3 text-sm text-gray-800">{{ msg.renderedText }}</pre>
+            <p v-if="msg.missing.length" class="mt-2 text-xs text-amber-700">
+              Faltan variables: {{ msg.missing.join(', ') }}
+            </p>
           </div>
         </div>
       </div>
@@ -159,6 +142,7 @@ import {
 import {
   buildGlobalVariables,
   buildVoucherMessage,
+  resolveTemplate,
 } from '../utils/messageUtils'
 import { buildQuotationWhatsAppMessage } from '../utils/voucherUtils'
 
@@ -169,6 +153,7 @@ const router = useRouter()
 
 const showQuotationPreview = ref(false)
 const showVoucherPreview = ref(false)
+const openCustomPreviewIds = ref(new Set())
 const savingCustom = ref(false)
 const showCustomModal = ref(false)
 
@@ -181,6 +166,18 @@ const customForm = ref({ name: '', body: '' })
 
 const customMessages = computed(() => {
   return messages.value.filter((msg) => msg.type === 'custom')
+})
+
+const renderedCustomMessages = computed(() => {
+  return customMessages.value.map((msg) => {
+    const resolved = resolveTemplate(msg.body || '', globalVars.value)
+    return {
+      id: msg.id,
+      name: msg.name,
+      renderedText: resolved.text,
+      missing: resolved.missing,
+    }
+  })
 })
 
 const systemMessageByKey = computed(() => {
@@ -296,6 +293,14 @@ const loadData = async () => {
     toast.error(err.message || 'No se pudieron cargar los mensajes.')
   }
 }
+
+const toggleCustomPreview = (id) => {
+  const next = new Set(openCustomPreviewIds.value)
+  if (next.has(id)) { next.delete(id) } else { next.add(id) }
+  openCustomPreviewIds.value = next
+}
+
+const isCustomPreviewOpen = (id) => openCustomPreviewIds.value.has(id)
 
 const toggleSystemPreview = (key) => {
   if (key === 'quotation') {

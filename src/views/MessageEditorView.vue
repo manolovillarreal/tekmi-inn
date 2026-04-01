@@ -107,6 +107,11 @@
               :disabled="saving"
               @click="restoreDefaultMessage"
             >Restaurar por defecto</button>
+            <button
+              type="button"
+              class="btn-secondary text-sm"
+              @click="buildWithAI"
+            >Construir con IA 🤖</button>
             <button type="button" class="btn-primary text-sm" :disabled="saving" @click="saveMessage">
               {{ saving ? 'Guardando...' : 'Guardar' }}
             </button>
@@ -283,7 +288,7 @@ import {
   getMessageSettings,
   savePredefinedMessage,
 } from '../services/messageSettingsService'
-import { buildGlobalVariables, resolveTemplate } from '../utils/messageUtils'
+import { buildGlobalVariables, resolveTemplate, VARIABLE_CATALOG, generateAiPrompt } from '../utils/messageUtils'
 import {
   buildQuotePublicUrl,
   buildQuotationWhatsAppMessage,
@@ -314,81 +319,20 @@ const inquiryList = ref([])
 const reservationList = ref([])
 const contextIndex = ref(0)
 
-const variableGroups = [
-  {
-    title: 'Alojamiento',
-    items: [
-      { label: 'Nombre', token: 'nombre_alojamiento' },
-      { label: 'Telefono', token: 'telefono' },
-      { label: 'Ubicacion', token: 'ubicacion' },
-      { label: 'Descripcion', token: 'descripcion_alojamiento' },
-      { label: 'Porcentaje Anticipo', token: 'porcentaje_anticipo' },
-    ],
-  },
-  {
-    title: 'Huesped',
-    items: [
-      { label: 'Nombre huesped', token: 'nombre_huesped' },
-      { label: 'Telefono huesped', token: 'telefono_huesped' },
-    ],
-  },
-  {
-    title: 'Reserva / Consulta',
-    items: [
-      { label: 'Check-in largo', token: 'fecha_checkin_larga' },
-      { label: 'Check-out largo', token: 'fecha_checkout_larga' },
-      { label: 'Noches', token: 'noches' },
-      { label: 'Personas', token: 'personas' },
-      { label: 'Codigo', token: 'codigo_referencia' },
-      { label: 'Precio', token: 'precio_noche' },
-      { label: 'Porcentaje descuento', token: 'porcentaje_descuento' },
-      { label: 'Valor descuento', token: 'valor_descuento' },
-      { label: 'Vigencia', token: 'fecha_vigencia' },
-      { label: 'Hora check-in', token: 'hora_checkin' },
-      { label: 'Hora check-out', token: 'hora_checkout' },
-      { label: 'Condiciones', token: 'condiciones' },
-      { label: 'Nombre unidad (itera)', token: 'nombre_unidad' },
-      { label: 'Descripcion unidad (itera)', token: 'descripcion_unidad' },
-      { label: 'Amenidades comunes', token: 'amenidades_comunes' },
-      { label: 'URL cotizacion', token: 'url_cotizacion' },
-    ],
-  },
-]
+const CATEGORY_LABELS = {
+  huesped: 'Huésped',
+  fechas: 'Fechas',
+  precio: 'Precio',
+  alojamiento: 'Alojamiento',
+  checkin: 'Check-in / Check-out',
+}
 
-const blockSnippets = [
-  {
-    label: 'Unidades',
-    snippet: '{{#unidades}}\n🚪 {{nombre_unidad}}\n{{descripcion_unidad}}\n{{/unidades}}',
-  },
-  {
-    label: 'Descuento',
-    snippet: '{{#descuento}}\n🎁 Descuento ({{porcentaje_descuento}}%): -{{valor_descuento}}\n{{/descuento}}',
-  },
-  {
-    label: 'Amenidades comunes',
-    snippet: '{{#amenidades_comunes}}\n{{amenidades_comunes}}\n{{/amenidades_comunes}}',
-  },
-  {
-    label: 'Vigencia condicional',
-    snippet: '{{#fecha_vigencia}}\n⏰ Válida hasta: {{fecha_vigencia}}\n{{/fecha_vigencia}}',
-  },
-  {
-    label: 'Pago completo',
-    snippet: '{{#pago_completo}}\n💵 Total: {{total}}\n✅ Pagado: {{pagado}}\n{{/pago_completo}}',
-  },
-  {
-    label: 'Saldo pendiente',
-    snippet: '{{#saldo_pendiente}}\n💵 Total: {{total}}\n💳 Pagado: {{pagado}}\n⚠️ Saldo pendiente: {{saldo_pendiente}}\n{{/saldo_pendiente}}',
-  },
-  {
-    label: 'Sin pagos',
-    snippet: '{{#sin_pagos}}\n💵 Total: {{total}}\n⏳ Pendiente: {{total}}\n{{/sin_pagos}}',
-  },
-  {
-    label: 'Condiciones',
-    snippet: '{{#condiciones}}\n📋 {{condiciones}}\n{{/condiciones}}',
-  },
-]
+const variableGroups = Object.entries(VARIABLE_CATALOG.simples).map(([key, vars]) => ({
+  title: CATEGORY_LABELS[key] || key,
+  items: vars.map((v) => ({ label: v.label, token: v.key })),
+}))
+
+const blockSnippets = VARIABLE_CATALOG.bloques.map((b) => ({ label: b.label, snippet: b.template }))
 
 const emojiGroups = [
   {
@@ -698,6 +642,12 @@ const restoreDefaultMessage = () => {
 
 const goBack = () => {
   router.push('/mensajes')
+}
+
+const buildWithAI = async () => {
+  const prompt = generateAiPrompt()
+  await navigator.clipboard.writeText(prompt)
+  toast.success('Prompt copiado — pégalo en tu IA favorita 🤖')
 }
 
 const syncCursor = () => {
