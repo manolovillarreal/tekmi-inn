@@ -67,14 +67,19 @@
 
         <!-- Content Cells -->
         <div v-for="day in weekDays" :key="`content-${day.date}`" class="bg-white p-2 min-h-[120px]">
-          <div v-for="res in getReservationsForDay(day.dateObject)" :key="res.id" 
-               class="mb-1 p-1 text-xs rounded truncate cursor-pointer transition-transform hover:scale-[1.02]"
-               :class="getMiniCalendarStyles(res.status)"
+          <div v-for="res in getReservationsForDay(day.dateObject)" :key="res.id + '-' + res._dayType"
+               class="mb-1 text-xs rounded cursor-pointer transition-transform hover:scale-[1.02]"
+               :class="[getMiniCalendarStyles(res.status, res._dayType), res._dayType === 'checkout' ? 'px-1 py-0.5' : 'p-1']"
                @click="openDetails(res)"
-               :title="`${res.guest_display_name || 'Reserva'} · ${res.unit_names_display || 'Sin unidades'}`"
+               :title="(res.guest_display_name || 'Reserva') + ' · ' + (res.unit_names_display || 'Sin unidades')"
           >
-            <p class="truncate font-medium">{{ res.guest_display_name?.split(' ')[0] || 'Reserva' }}</p>
-            <p class="truncate opacity-80">{{ res.unit_names_display || 'Sin unidad' }}</p>
+            <template v-if="res._dayType === 'checkout'">
+              <p class="truncate">🚪 {{ res.guest_display_name?.split(' ')[0] || '' }}</p>
+            </template>
+            <template v-else>
+              <p class="truncate font-medium">{{ res.guest_display_name?.split(' ')[0] || 'Reserva' }}</p>
+              <p class="truncate opacity-80">{{ res.unit_names_display || 'Sin unidad' }}</p>
+            </template>
           </div>
         </div>
 
@@ -219,14 +224,30 @@ const goToNextWeek = () => {
 
 const getReservationsForDay = (dateObj) => {
   const dStr = dateObj.toISOString().split('T')[0]
-  return store.reservations.filter(res => {
-    // Basic inclusion (assuming full days for simple mini-calendar)
-    if (res.status === 'cancelled') return false
-    return dStr >= res.check_in && dStr < res.check_out // < checkout because leaving day is not occupied night
-  })
+  const items = []
+  for (const res of store.reservations) {
+    if (res.status === 'cancelled') continue
+    if (dStr === res.check_out) {
+      // Día de salida: mostrar stub compacto de checkout
+      items.push({ ...res, _dayType: 'checkout' })
+    } else if (dStr >= res.check_in && dStr < res.check_out) {
+      items.push({ ...res, _dayType: dStr === res.check_in ? 'checkin' : 'stay' })
+    }
+  }
+  // Checkouts primero — salen por la mañana, los entrantes van después
+  items.sort((a, b) => (a._dayType === 'checkout' ? 0 : 1) - (b._dayType === 'checkout' ? 0 : 1))
+  return items
 }
 
-const getMiniCalendarStyles = (status) => {
+const getMiniCalendarStyles = (status, dayType) => {
+  if (dayType === 'checkout') {
+    const map = {
+      confirmed: 'bg-blue-50 text-blue-400 border-r-2 border-blue-300',
+      in_stay: 'bg-emerald-50 text-emerald-500 border-r-2 border-emerald-300',
+      completed: 'bg-gray-100 text-gray-400',
+    }
+    return map[status] || 'bg-gray-100 text-gray-400'
+  }
   const map = {
     confirmed: 'bg-blue-50 text-blue-700 border-l-2 border-blue-400',
     in_stay: 'bg-emerald-50 text-emerald-800 border-l-2 border-emerald-400',

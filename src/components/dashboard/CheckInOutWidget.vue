@@ -1,116 +1,81 @@
 ﻿<template>
   <div class="card">
-    <h2 class="mb-4 text-sm font-semibold uppercase tracking-wider text-gray-500">Entradas y Salidas</h2>
+    <!-- Header -->
+    <div class="mb-4 flex items-center justify-between gap-3">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500">Entradas y Salidas</h2>
+      <!-- Day toggle -->
+      <div class="day-toggle">
+        <button
+          type="button"
+          :class="['day-toggle-btn', day === 'hoy' ? 'day-toggle-active' : '']"
+          @click="day = 'hoy'"
+        >Hoy</button>
+        <button
+          type="button"
+          :class="['day-toggle-btn', day === 'manana' ? 'day-toggle-active' : '']"
+          @click="day = 'manana'"
+        >Manana</button>
+      </div>
+    </div>
 
-    <div v-if="loading" class="py-4 text-center text-sm text-gray-400">Cargando...</div>
-    <div v-else class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+    <div v-if="loading" class="py-6 text-center text-sm text-gray-400">Cargando...</div>
 
-      <!-- HOY -->
+    <div v-else class="grid grid-cols-2 gap-4">
+      <!-- Entradas -->
       <div>
-        <p class="mb-3 text-sm font-semibold text-gray-800">Hoy</p>
-        <div class="space-y-3">
-          <div>
-            <p class="mb-1.5 text-xs font-medium uppercase tracking-wide text-emerald-700">Entradas</p>
-            <p v-if="todayEntradas.length === 0" class="text-xs italic text-gray-400">Ninguna</p>
-            <div v-else class="space-y-1.5">
-              <button
-                v-for="item in todayEntradas"
-                :key="'te-' + item.reservationId"
-                type="button"
-                class="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-left transition-shadow hover:border-gray-300 hover:shadow-sm"
-                @click="goTo(item.reservationId)"
-              >
-                <div class="flex items-center justify-between gap-2">
-                  <div class="min-w-0">
-                    <p class="truncate text-sm font-semibold text-gray-900">{{ item.guestName }}</p>
-                    <p class="truncate text-xs text-gray-500">{{ item.unitLabel }}</p>
-                  </div>
-                  <ReservationBadge :status="item.status" />
-                </div>
-              </button>
+        <p class="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+          <span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
+          Entradas
+          <span v-if="currentEntradas.length > 0" class="ml-auto rounded-full bg-emerald-100 px-1.5 py-0.5 text-emerald-700">{{ currentEntradas.length }}</span>
+        </p>
+        <p v-if="currentEntradas.length === 0" class="text-xs italic text-gray-400">Ninguna</p>
+        <div v-else class="space-y-2">
+          <button
+            v-for="item in currentEntradas"
+            :key="'e-' + item.reservationId"
+            type="button"
+            class="group w-full rounded-lg border border-l-2 border-emerald-300 bg-white px-3 py-2.5 text-left transition-shadow hover:border-gray-300 hover:shadow-sm"
+            @click="goTo(item.reservationId)"
+          >
+            <p class="truncate text-sm font-semibold text-gray-900">{{ item.guestName }}</p>
+            <div class="mt-1 flex items-center justify-between gap-1">
+              <p class="truncate text-xs text-gray-500">{{ item.unitLabel }}</p>
+              <ReservationBadge :status="item.status" class="shrink-0" />
             </div>
-          </div>
-
-          <div>
-            <p class="mb-1.5 text-xs font-medium uppercase tracking-wide text-orange-700">Salidas</p>
-            <p v-if="todaySalidas.length === 0" class="text-xs italic text-gray-400">Ninguna</p>
-            <div v-else class="space-y-1.5">
-              <button
-                v-for="item in todaySalidas"
-                :key="'ts-' + item.reservationId"
-                type="button"
-                class="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-left transition-shadow hover:border-gray-300 hover:shadow-sm"
-                @click="goTo(item.reservationId)"
-              >
-                <div class="flex items-center justify-between gap-2">
-                  <div class="min-w-0">
-                    <p class="truncate text-sm font-semibold text-gray-900">{{ item.guestName }}</p>
-                    <p class="truncate text-xs text-gray-500">{{ item.unitLabel }}</p>
-                  </div>
-                  <ReservationBadge :status="item.status" />
-                </div>
-              </button>
-            </div>
-          </div>
+          </button>
         </div>
       </div>
 
-      <!-- MANANA -->
+      <!-- Salidas -->
       <div>
-        <p class="mb-3 text-sm font-semibold text-gray-800">Manana</p>
-        <div class="space-y-3">
-          <div>
-            <p class="mb-1.5 text-xs font-medium uppercase tracking-wide text-emerald-700">Entradas</p>
-            <p v-if="tomorrowEntradas.length === 0" class="text-xs italic text-gray-400">Ninguna</p>
-            <div v-else class="space-y-1.5">
-              <button
-                v-for="item in tomorrowEntradas"
-                :key="'mne-' + item.reservationId"
-                type="button"
-                class="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-left transition-shadow hover:border-gray-300 hover:shadow-sm"
-                @click="goTo(item.reservationId)"
-              >
-                <div class="flex items-center justify-between gap-2">
-                  <div class="min-w-0">
-                    <p class="truncate text-sm font-semibold text-gray-900">{{ item.guestName }}</p>
-                    <p class="truncate text-xs text-gray-500">{{ item.unitLabel }}</p>
-                  </div>
-                  <ReservationBadge :status="item.status" />
-                </div>
-              </button>
+        <p class="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-orange-700">
+          <span class="inline-block h-2 w-2 rounded-full bg-orange-500"></span>
+          Salidas
+          <span v-if="currentSalidas.length > 0" class="ml-auto rounded-full bg-orange-100 px-1.5 py-0.5 text-orange-700">{{ currentSalidas.length }}</span>
+        </p>
+        <p v-if="currentSalidas.length === 0" class="text-xs italic text-gray-400">Ninguna</p>
+        <div v-else class="space-y-2">
+          <button
+            v-for="item in currentSalidas"
+            :key="'s-' + item.reservationId"
+            type="button"
+            class="group w-full rounded-lg border border-r-2 border-orange-300 bg-white px-3 py-2.5 text-left transition-shadow hover:border-gray-300 hover:shadow-sm"
+            @click="goTo(item.reservationId)"
+          >
+            <p class="truncate text-sm font-semibold text-gray-900">{{ item.guestName }}</p>
+            <div class="mt-1 flex items-center justify-between gap-1">
+              <p class="truncate text-xs text-gray-500">{{ item.unitLabel }}</p>
+              <ReservationBadge :status="item.status" class="shrink-0" />
             </div>
-          </div>
-
-          <div>
-            <p class="mb-1.5 text-xs font-medium uppercase tracking-wide text-orange-700">Salidas</p>
-            <p v-if="tomorrowSalidas.length === 0" class="text-xs italic text-gray-400">Ninguna</p>
-            <div v-else class="space-y-1.5">
-              <button
-                v-for="item in tomorrowSalidas"
-                :key="'mns-' + item.reservationId"
-                type="button"
-                class="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-left transition-shadow hover:border-gray-300 hover:shadow-sm"
-                @click="goTo(item.reservationId)"
-              >
-                <div class="flex items-center justify-between gap-2">
-                  <div class="min-w-0">
-                    <p class="truncate text-sm font-semibold text-gray-900">{{ item.guestName }}</p>
-                    <p class="truncate text-xs text-gray-500">{{ item.unitLabel }}</p>
-                  </div>
-                  <ReservationBadge :status="item.status" />
-                </div>
-              </button>
-            </div>
-          </div>
+          </button>
         </div>
       </div>
-
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../services/supabase'
 import { useAccountStore } from '../../stores/account'
@@ -120,10 +85,15 @@ const router = useRouter()
 const accountStore = useAccountStore()
 
 const loading = ref(true)
+const day = ref('hoy')
+
 const todayEntradas = ref([])
 const todaySalidas = ref([])
 const tomorrowEntradas = ref([])
 const tomorrowSalidas = ref([])
+
+const currentEntradas = computed(() => day.value === 'hoy' ? todayEntradas.value : tomorrowEntradas.value)
+const currentSalidas = computed(() => day.value === 'hoy' ? todaySalidas.value : tomorrowSalidas.value)
 
 const goTo = (id) => {
   router.push('/reservas/' + id)
@@ -193,3 +163,49 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.day-toggle {
+  display: inline-flex;
+  border: 1px solid #E5E7EB;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #FFFFFF;
+}
+
+.day-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 400;
+  border: 1px solid #E5E7EB;
+  margin: -1px;
+  background: #FFFFFF;
+  color: #6B7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.day-toggle-btn:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.day-toggle-btn:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.day-toggle-btn:hover {
+  background: #F9FAFB;
+  color: #4B5563;
+}
+
+.day-toggle-active {
+  background: #EEF2FF;
+  border-color: #4C2FFF;
+  color: #4C2FFF;
+  font-weight: 500;
+}
+</style>

@@ -200,7 +200,7 @@
             </div>
           </div>
 
-          <div v-else-if="res.status === 'confirmed'" class="space-y-3 text-sm text-gray-700">
+          <div v-else-if="res.status === 'confirmed' || res.status === 'in_stay'" class="space-y-3 text-sm text-gray-700">
             <p class="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">Pendiente</p>
             <button v-if="can('reservations', 'edit')" class="touch-target w-full rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200" @click="showPreregistroModal = true">
               Completar pre-registro
@@ -212,7 +212,7 @@
           </div>
 
           <div v-else class="text-sm text-gray-500">
-            El pre-registro solo está disponible para reservas en estado confirmed.
+            El pre-registro solo está disponible para reservas confirmadas o en estadía.
           </div>
         </div>
 
@@ -235,7 +235,7 @@
           <!-- in_stay: registrar salida o finalizar anticipado -->
           <div v-else-if="res.status === 'in_stay'" class="space-y-3">
             <div class="space-y-2 text-sm text-gray-700">
-              <p v-if="res.checkin_at">Llegada: <span class="font-medium text-gray-900">{{ formatDateTime(res.checkin_at) }}</span></p>
+              <p v-if="res.checkin_date">Llegada: <span class="font-medium text-gray-900">{{ formatDateTime(res.checkin_date) }}</span></p>
             </div>
             <button
               v-if="can('reservations', 'edit') && isCheckoutDay"

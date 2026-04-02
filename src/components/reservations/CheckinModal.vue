@@ -109,7 +109,7 @@ const submit = async () => {
   try {
     const accountId = accountStore.getRequiredAccountId()
     const now = new Date().toISOString()
-    const checkinDate = `${form.date}T${form.time}:00`
+    const checkinDate = new Date(`${form.date}T${form.time}:00`).toISOString()
 
     const { error: updateError } = await supabase
       .from('reservations')
