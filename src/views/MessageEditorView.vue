@@ -641,7 +641,11 @@ const restoreDefaultMessage = () => {
 }
 
 const goBack = () => {
-  router.push('/mensajes')
+  if (window.history.state?.back) {
+    router.back()
+    return
+  }
+  router.push('/configuracion')
 }
 
 const buildWithAI = async () => {

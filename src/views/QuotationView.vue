@@ -239,7 +239,11 @@ const formatDateTime = (value) => {
 }
 
 const goBack = () => {
-  router.push(`/consultas/${route.params.id}`)
+  if (window.history.state?.back) {
+    router.back()
+    return
+  }
+  router.push('/consultas')
 }
 
 const printQuotation = () => {

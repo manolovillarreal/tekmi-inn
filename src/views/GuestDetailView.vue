@@ -1,9 +1,9 @@
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between gap-3">
-      <RouterLink to="/huespedes" class="text-sm font-medium text-gray-500 hover:text-gray-900">
+      <button type="button" class="text-sm font-medium text-gray-500 hover:text-gray-900" @click="goBack">
         ← Volver a huéspedes
-      </RouterLink>
+      </button>
       <button v-if="can('guests', 'edit') && guest" type="button" class="btn-secondary text-sm" @click="openEditModal">
         Editar
       </button>
@@ -236,6 +236,14 @@ const statusBadge = (status) => {
 const goToReservation = (id) => {
   if (!id) return
   router.push(`/reservas/${id}`)
+}
+
+const goBack = () => {
+  if (window.history.state?.back) {
+    router.back()
+    return
+  }
+  router.push('/huespedes')
 }
 
 onMounted(loadData)

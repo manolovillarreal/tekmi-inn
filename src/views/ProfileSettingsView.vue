@@ -5,7 +5,7 @@
         <h1 class="text-3xl font-semibold tracking-tight text-gray-900">Personalización</h1>
         <p class="text-sm text-gray-500">Configura la informacion comercial, contacto y condiciones de tu cuenta.</p>
       </div>
-      <RouterLink to="/configuracion" class="btn-secondary text-sm">Volver a configuracion</RouterLink>
+      <button type="button" class="btn-secondary text-sm" @click="goBack">Volver a configuracion</button>
     </div>
 
     <div class="card">
@@ -126,6 +126,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
 import { usePermissions } from '../composables/usePermissions'
@@ -144,6 +145,7 @@ import {
 } from '@/components/ui/forms'
 
 const accountStore = useAccountStore()
+const router = useRouter()
 const { can } = usePermissions()
 const { isMobile } = useBreakpoint()
 const toast = useToast()
@@ -156,6 +158,14 @@ const selectedLogoFile = ref(null)
 const selectedLogoPreviewUrl = ref('')
 const logoError = ref('')
 const voucherConditions = ref('')
+
+const goBack = () => {
+  if (window.history.state?.back) {
+    router.back()
+    return
+  }
+  router.push('/configuracion')
+}
 
 const profileForm = ref({
   commercial_name: '',

@@ -62,6 +62,7 @@
               <div class="flex flex-wrap items-center gap-2">
                 <p class="font-medium text-gray-900">{{ unitNames || '-' }}</p>
                 <button
+                  v-if="!isEditLocked"
                   type="button"
                   class="touch-target inline-flex items-center text-sm font-medium text-primary hover:text-primary-dark"
                   @click="openEditUnitsModal"
@@ -530,6 +531,10 @@ const isSyncMissing = computed(() =>
   res.value != null
   && res.value.status !== 'cancelled'
   && occupancyRowCount.value === 0
+)
+
+const isEditLocked = computed(() =>
+  ['in_stay', 'completed', 'finalized'].includes(res.value?.status)
 )
 
 onMounted(async () => {

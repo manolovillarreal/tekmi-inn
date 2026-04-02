@@ -1,7 +1,7 @@
 <template>
   <div class="mx-auto max-w-4xl space-y-6">
     <div class="flex items-center justify-between">
-      <router-link to="/consultas" class="text-sm font-medium text-gray-500 hover:text-gray-900">← Volver a Consultas</router-link>
+      <button type="button" class="text-sm font-medium text-gray-500 hover:text-gray-900" @click="goBack">← Volver a Consultas</button>
       <div class="flex items-center gap-2">
         <button
           v-if="inquiry && inquiry.guest_name"
@@ -771,6 +771,14 @@ const confirmDelete = async () => {
 
 const openConversionModal = () => {
   showConversionModal.value = true
+}
+
+const goBack = () => {
+  if (window.history.state?.back) {
+    router.back()
+    return
+  }
+  router.push('/consultas')
 }
 
 const onReservationCreated = async (reservationId) => {

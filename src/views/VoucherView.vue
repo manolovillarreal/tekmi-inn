@@ -274,7 +274,11 @@ const issuedAtLabel = computed(() => formatDateTime(issuedAt.value))
 const generatedAtLabel = computed(() => formatDateTime(new Date()))
 
 const goBack = () => {
-  router.push(`/reservas/${route.params.id}`)
+  if (window.history.state?.back) {
+    router.back()
+    return
+  }
+  router.push('/reservas')
 }
 
 const printVoucher = () => {

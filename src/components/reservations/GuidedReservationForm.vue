@@ -292,8 +292,8 @@
             <p class="font-semibold text-gray-900">Adicional personas: ${{ Math.round(pricingSuggestion.extras.nightlyTotal).toLocaleString('es-CO') }}/noche</p>
           </div>
 
-          <div v-if="showFullHouseToggle" class="space-y-2 rounded-md border border-gray-200 p-3">
-            <AppToggle v-model="useFullHousePricing" label="Aplicar tarifa full house" description="Reemplaza la suma por unidad por tarifa de propiedad completa" />
+          <div v-if="showFullHouseToggle" class="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary-dark">
+            Tarifa full house aplicada automaticamente
           </div>
 
           <div v-if="hasPeakPolicy" class="rounded-md border border-gray-200 p-3">
@@ -584,10 +584,8 @@ const pricingSuggestion = computed(() => buildPricingSuggestion({
 const suggestionHint = computed(() => pricingSuggestion.value.originLabel || '')
 
 watch(showFullHouseToggle, (enabled) => {
-  if (!enabled) {
-    useFullHousePricing.value = false
-  }
-})
+  useFullHousePricing.value = enabled
+}, { immediate: true })
 
 watch(hasPeakPolicy, (enabled) => {
   if (!enabled) {

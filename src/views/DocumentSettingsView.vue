@@ -5,7 +5,7 @@
         <h1 class="text-3xl font-semibold tracking-tight text-gray-900">Documentos</h1>
         <p class="text-sm text-gray-500">Personaliza vouchers y cotizaciones con vista previa en tiempo real.</p>
       </div>
-      <RouterLink to="/configuracion" class="btn-secondary text-sm">Volver a configuracion</RouterLink>
+      <button type="button" class="btn-secondary text-sm" @click="goBack">Volver a configuracion</button>
     </div>
 
     <div v-if="!isDesktop" class="rounded-xl border border-gray-200 bg-white p-1">
@@ -208,7 +208,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { useRouter } from 'vue-router'
 import DocumentTemplate from '../components/documents/DocumentTemplate.vue'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
@@ -235,6 +235,7 @@ import {
 } from '@/components/ui/forms'
 
 const accountStore = useAccountStore()
+const router = useRouter()
 const { can } = usePermissions()
 const { isMobile, isDesktop } = useBreakpoint()
 const toast = useToast()
@@ -244,6 +245,14 @@ const saving = ref(false)
 const activeTab = ref('edit')
 const profile = ref({})
 const voucherConditions = ref('')
+
+const goBack = () => {
+  if (window.history.state?.back) {
+    router.back()
+    return
+  }
+  router.push('/configuracion')
+}
 
 const form = ref(normalizeDocumentSettings(DEFAULT_DOCUMENT_SETTINGS))
 
