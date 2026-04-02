@@ -175,6 +175,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/configuracion/operacion',
+      name: 'configuracion-operacion',
+      component: () => import('../views/OperationalSettingsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/account-association-error',
       name: 'account-association-error',
       component: () => import('../views/AccountAssociationErrorView.vue'),

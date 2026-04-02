@@ -1,6 +1,12 @@
 <template>
   <BaseModal :isOpen="isOpen" title="Registrar salida" size="md" :fullScreenOnMobile="true" @close="handleClose">
     <form class="space-y-5" @submit.prevent="submit">
+
+      <AppInlineAlert
+        v-if="preregistroBlocked"
+        type="warning"
+        message="Esta reserva requiere pre-registro completo antes de registrar la salida. Completa el pre-registro del huesped primero."
+      />
       <AppFormSection title="Fecha y hora de salida" :divider="true">
         <AppFormGrid :columns="2">
           <AppDatePicker
@@ -33,7 +39,7 @@
         submit-label="Registrar salida"
         cancel-label="Cancelar"
         :loading="saving"
-        :submit-disabled="saving || !isFormValid"
+        :submit-disabled="saving || !isFormValid || preregistroBlocked"
         @submit="submit"
         @cancel="handleClose"
       />
@@ -46,6 +52,7 @@ import { ref, reactive, computed, watch } from 'vue'
 import { supabase } from '../../services/supabase'
 import { useAccountStore } from '../../stores/account'
 import { useToast } from '../../composables/useToast'
+import { useOperationalSettings } from '../../composables/useOperationalSettings'
 import BaseModal from '../ui/BaseModal.vue'
 import {
   AppInput,
@@ -66,6 +73,12 @@ const emit = defineEmits(['close', 'saved'])
 
 const accountStore = useAccountStore()
 const toast = useToast()
+const { operationalSettings, loadOperationalSettings } = useOperationalSettings()
+
+const preregistroBlocked = computed(() =>
+  !operationalSettings.value.allow_checkout_without_preregistro &&
+  !props.reservation?.preregistro_completado
+)
 
 const todayIso = () => {
   const d = new Date()
@@ -92,7 +105,12 @@ const resetForm = () => {
   errorMessage.value = ''
 }
 
-watch(() => props.isOpen, (val) => { if (val) resetForm() })
+watch(() => props.isOpen, (val) => {
+  if (val) {
+    resetForm()
+    loadOperationalSettings()
+  }
+})
 
 const handleClose = () => {
   if (saving.value) return

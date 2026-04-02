@@ -29,6 +29,10 @@
         <span>Notificaciones</span>
         <span class="text-gray-400">›</span>
       </RouterLink>
+      <RouterLink to="/configuracion/operacion" class="flex items-center justify-between border-b border-gray-100 px-4 py-3 text-sm text-gray-800">
+        <span>Operación</span>
+        <span class="text-gray-400">›</span>
+      </RouterLink>
     </div>
 
     <div v-if="can('settings', 'edit') && !isMobile" class="card">
@@ -87,6 +91,18 @@
         </div>
         <RouterLink to="/configuracion/notificaciones" class="btn-primary text-sm">
           Abrir configuración de notificaciones
+        </RouterLink>
+      </div>
+    </div>
+
+    <div v-if="can('settings', 'edit') && !isMobile" class="card">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900">Operación</h2>
+          <p class="text-sm text-gray-500">Parámetros del flujo operativo: pre-registro, check-in, check-out y reglas de negocio.</p>
+        </div>
+        <RouterLink to="/configuracion/operacion" class="btn-primary text-sm">
+          Abrir configuración de operación
         </RouterLink>
       </div>
     </div>
