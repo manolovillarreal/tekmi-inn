@@ -9,6 +9,10 @@ export const useNotificationsStore = defineStore('notifications', () => {
 
   const unreadCount = computed(() => notifications.value.filter(n => !n.is_read).length)
 
+  const ephemeralNotifications = computed(() =>
+    notifications.value.filter(n => !n.is_alert && !n.is_read)
+  )
+
   const fetchNotifications = async (limit = 50) => {
     try {
       const accountId = accountStore.getRequiredAccountId()
@@ -28,11 +32,14 @@ export const useNotificationsStore = defineStore('notifications', () => {
 
   const markAsRead = async (id) => {
     try {
-      await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', id)
-      notifications.value = notifications.value.filter(n => n.id !== id)
+      const item = notifications.value.find(n => n.id === id)
+      if (item?.is_alert) {
+        await supabase.from('notifications').update({ is_read: true }).eq('id', id)
+        notifications.value = notifications.value.map(n => n.id === id ? { ...n, is_read: true } : n)
+      } else {
+        await supabase.from('notifications').delete().eq('id', id)
+        notifications.value = notifications.value.filter(n => n.id !== id)
+      }
     } catch (e) {
       console.warn('[notifications] markAsRead failed:', e?.message)
     }
@@ -59,6 +66,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
   return {
     notifications,
     unreadCount,
+    ephemeralNotifications,
     fetchNotifications,
     markAsRead,
     markAllAsRead,

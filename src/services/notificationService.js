@@ -25,7 +25,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS = {
 // ============================================================
 // CORE: insertar notificación (fire-and-forget, nunca lanza)
 // ============================================================
-export async function createNotification(accountId, { type, title, message = null, related_type = null, related_id = null }) {
+export async function createNotification(accountId, { type, title, message = null, related_type = null, related_id = null, is_alert = false }) {
   try {
     await supabase.from('notifications').insert({
       account_id: accountId,
@@ -34,6 +34,7 @@ export async function createNotification(accountId, { type, title, message = nul
       message,
       related_type,
       related_id,
+      is_alert,
     })
     // Fire-and-forget: enviar push a los dispositivos suscritos de la cuenta.
     // El .catch() garantiza que un fallo de push nunca interrumpe el flujo.
@@ -249,6 +250,7 @@ async function _runCheckinDelDia(accountId) {
       message: 'Llegada programada para hoy',
       related_type: 'reservation',
       related_id: res.id,
+      is_alert: true,
     })
   }
 }
@@ -275,6 +277,7 @@ async function _runCheckoutDelDia(accountId) {
       message: 'Salida programada para hoy',
       related_type: 'reservation',
       related_id: res.id,
+      is_alert: true,
     })
   }
 }
@@ -301,6 +304,7 @@ async function _runCheckoutVencido(accountId) {
       message: `Salida era el ${formatDate(res.check_out)}`,
       related_type: 'reservation',
       related_id: res.id,
+      is_alert: true,
     })
   }
 }
@@ -334,6 +338,7 @@ async function _runPreregistroPending(accountId) {
       message: `Check-in: ${formatDate(res.check_in)} (faltan ${days} días o menos)`,
       related_type: 'reservation',
       related_id: res.id,
+      is_alert: true,
     })
   }
 }
@@ -424,6 +429,7 @@ async function _runBalancePendingPostCheckin(accountId) {
       message: `Saldo: $${balance.toLocaleString('es-CO')} · Lleva más de ${hours}h en el alojamiento`,
       related_type: 'reservation',
       related_id: res.id,
+      is_alert: true,
     })
   }
 }

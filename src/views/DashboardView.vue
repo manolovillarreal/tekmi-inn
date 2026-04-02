@@ -8,6 +8,7 @@
       </router-link>
     </div>
 
+    <AlertsWidget />
     <NotificationsWidget />
 
     <AvailabilityWidget />
@@ -80,6 +81,8 @@
       </div>
     </div>
 
+    <CheckInOutWidget />
+
   </div>
 </template>
 
@@ -90,7 +93,9 @@ import { useReservationsStore } from '../stores/reservations'
 import { useToast } from '../composables/useToast'
 import AvailabilityWidget from '../components/dashboard/AvailabilityWidget.vue'
 import { useNotificationsStore } from '../stores/notifications'
+import AlertsWidget from '../components/dashboard/AlertsWidget.vue'
 import NotificationsWidget from '../components/dashboard/NotificationsWidget.vue'
+import CheckInOutWidget from '../components/dashboard/CheckInOutWidget.vue'
 
 const store = useReservationsStore()
 const router = useRouter()
