@@ -65,15 +65,24 @@ serve(async (req) => {
       return Response.json({ message: 'No autorizado para esta reserva.' }, { status: 403, headers: corsHeaders })
     }
 
-    if (reservation.preregistro_completado) {
-      return Response.json({ message: 'El pre-registro ya fue completado.' }, { status: 409, headers: corsHeaders })
-    }
+    // Calcular expiración: check_out + 1 día
+    const expiryDate = new Date(reservation.check_out)
+    expiryDate.setUTCDate(expiryDate.getUTCDate() + 1)
+    const tokenExpiry = expiryDate.toISOString()
 
-    // Idempotente: si ya existe un raw token, reusar sin regenerar
+    // Idempotente: si ya existe un raw token, reusar pero actualizar expiración
+    // Si se llama intencionalmente para regenerar, se genera uno nuevo
+    const forceRegenerate = Boolean(body?.regenerate)
     let rawToken: string
 
-    if (reservation.preregistro_token_raw) {
+    if (reservation.preregistro_token_raw && !forceRegenerate) {
       rawToken = reservation.preregistro_token_raw
+      // Actualizar solo la expiración (puede haber cambiado el check_out)
+      await adminClient
+        .from('reservations')
+        .update({ preregistro_token_expiry: tokenExpiry })
+        .eq('account_id', reservation.account_id)
+        .eq('id', reservation.id)
     } else {
       rawToken = randomBytes(32).toString('hex')
       const hashedToken = createHash('sha256').update(rawToken).digest('hex')
@@ -83,7 +92,7 @@ serve(async (req) => {
         .update({
           preregistro_token: hashedToken,
           preregistro_token_raw: rawToken,
-          preregistro_token_expiry: null,
+          preregistro_token_expiry: tokenExpiry,
         })
         .eq('account_id', reservation.account_id)
         .eq('id', reservation.id)
@@ -93,25 +102,8 @@ serve(async (req) => {
       }
     }
 
-    const { data: profile } = await adminClient
-      .from('account_profile')
-      .select('commercial_name, legal_name, phone')
-      .eq('account_id', reservation.account_id)
-      .maybeSingle()
-
-    const guestsCount = Number(reservation.adults || 0) + Number(reservation.children || 0)
-    const params = new URLSearchParams({
-      check_in: String(reservation.check_in || ''),
-      check_out: String(reservation.check_out || ''),
-      guests_count: String(guestsCount > 0 ? guestsCount : 1),
-      accommodation: String(profile?.commercial_name || profile?.legal_name || 'Alojamiento'),
-      contact_phone: String(profile?.phone || ''),
-    })
-
     return Response.json(
-      {
-        checkin_url: `/prerregistro/${rawToken}?${params.toString()}`,
-      },
+      { checkin_url: `/prerregistro/${rawToken}` },
       { headers: corsHeaders }
     )
   } catch (error) {

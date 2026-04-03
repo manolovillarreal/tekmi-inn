@@ -199,6 +199,9 @@
               <button v-if="can('reservations', 'edit')" class="touch-target w-full rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200" @click="copyPreregistroLink">
                 Copiar link
               </button>
+              <button v-if="role === 'admin' || role === 'manager'" class="touch-target w-full rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100" :disabled="regeneratingLink" @click="regeneratePreregistroLink">
+                {{ regeneratingLink ? 'Regenerando...' : 'Regenerar link' }}
+              </button>
             </div>
 
             <div class="rounded-md border border-gray-200 bg-gray-50">
@@ -236,6 +239,9 @@
             </button>
             <button v-if="can('reservations', 'edit')" class="touch-target w-full rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200" @click="copyPreregistroLink">
               Copiar link
+            </button>
+            <button v-if="role === 'admin' || role === 'manager'" class="touch-target w-full rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100" :disabled="regeneratingLink" @click="regeneratePreregistroLink">
+              {{ regeneratingLink ? 'Regenerando...' : 'Regenerar link' }}
             </button>
           </div>
 
@@ -521,7 +527,7 @@ const route = useRoute()
 const router = useRouter()
 const reservationsStore = useReservationsStore()
 const accountStore = useAccountStore()
-const { can } = usePermissions()
+const { can, role } = usePermissions()
 const { isMobile } = useBreakpoint()
 const toast = useToast()
 const loading = ref(true)
@@ -552,6 +558,7 @@ const occupancyRowCount = ref(0)
 const syncingOccupancy = ref(false)
 const showMessagesPanel = ref(false)
 const showRegisteredGuests = ref(false)
+const regeneratingLink = ref(false)
 const profile = ref({})
 const accountSettings = ref({})
 const predefinedMessages = ref([])
@@ -1058,6 +1065,28 @@ watch(
     await validateEditUnitsSelection()
   }
 )
+
+const regeneratePreregistroLink = async () => {
+  regeneratingLink.value = true
+  try {
+    const { data, error } = await supabase.functions.invoke('generate-preregistro-token', {
+      body: { reservation_id: res.value.id, regenerate: true },
+    })
+    if (error) {
+      toast.error(await parseFunctionError(error))
+      return
+    }
+    const rawPath = String(data?.checkin_url || '')
+    const appOrigin = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '')
+    const fullUrl = rawPath.startsWith('http') ? rawPath : `${appOrigin}${rawPath}`
+    await navigator.clipboard.writeText(fullUrl)
+    toast.success('Link regenerado correctamente y copiado al portapapeles')
+  } catch {
+    toast.error('No se pudo regenerar el link.')
+  } finally {
+    regeneratingLink.value = false
+  }
+}
 
 const copyWhatsappPreregistroMessage = async () => {
   const { data, error } = await supabase.functions.invoke('generate-preregistro-token', {
