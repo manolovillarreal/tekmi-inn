@@ -4,7 +4,7 @@
       <button type="button" class="text-sm font-medium text-gray-500 hover:text-gray-900" @click="goBack">← Volver a Consultas</button>
       <div class="flex items-center gap-2">
         <button
-          v-if="inquiry && inquiry.guest_name"
+          v-if="inquiry && (inquiry.guest_first_name || inquiry.guest_last_name)"
           class="btn-secondary text-sm"
           @click="copyInquiryAsWhatsApp"
           :disabled="!inquiry"
@@ -52,7 +52,7 @@
             <div>
               <p class="mb-0.5 font-mono text-xs text-gray-400">{{ inquiry.inquiry_number || '' }}</p>
               <p class="mb-0.5 font-mono text-xs text-gray-500">{{ inquiryReferenceDisplay }}</p>
-              <h1 class="text-2xl font-semibold text-gray-900">{{ inquiry.guest_name || 'Sin nombre' }}</h1>
+              <h1 class="text-2xl font-semibold text-gray-900">{{ `${inquiry.guest_first_name || ''} ${inquiry.guest_last_name || ''}`.trim() || 'Sin nombre' }}</h1>
             </div>
             <span
               class="rounded-full border px-3 py-1 text-xs font-medium"
@@ -124,11 +124,13 @@
         <AppFormSection title="Solicitante" :divider="true">
           <AppFormGrid :columns="2">
             <AppInput
-              v-model="editForm.guest_name"
-              label="Nombre"
+              v-model="editForm.guest_first_name"
+              label="Nombres"
               required
-              :error="editFieldError('guest_name')"
-              @blur="touchEditField('guest_name')"
+              :error="editFieldError('guest_first_name')"
+              @blur="touchEditField('guest_first_name')"
+            />
+            <AppInput v-model="editForm.guest_last_name" label="Apellidos" hint="Opcional" />
             />
             <AppInput v-model="editForm.guest_phone" label="Teléfono" hint="Opcional" />
           </AppFormGrid>
@@ -277,7 +279,7 @@
     <ConfirmActionModal
       :isOpen="showDeleteModal"
       title="Eliminar consulta"
-      :message="`¿Deseas eliminar la consulta de ${inquiry?.guest_name || 'este registro'}?`"
+      :message="`¿Deseas eliminar la consulta de ${`${inquiry?.guest_first_name || ''} ${inquiry?.guest_last_name || ''}`.trim() || 'este registro'}?`"
       confirmLabel="Eliminar"
       :loading="deleting"
       :errorMessage="deleteError"
@@ -383,8 +385,9 @@ const systemMessageSettings = ref({})
 const accountSettings = ref({})
 
 const availableTransitions = computed(() => getAvailableInquiryTransitions(inquiry.value?.status))
-const inquiryReferenceDisplay = computed(() => formatReferenceDisplay(inquiry.value?.reference_code, inquiry.value?.guest_name))
-const canViewQuotation = computed(() => !!String(inquiry.value?.guest_name || '').trim())
+const inquiryGuestFullName = computed(() => `${inquiry.value?.guest_first_name || ''} ${inquiry.value?.guest_last_name || ''}`.trim())
+const inquiryReferenceDisplay = computed(() => formatReferenceDisplay(inquiry.value?.reference_code, inquiryGuestFullName.value))
+const canViewQuotation = computed(() => !!inquiryGuestFullName.value)
 const quotationWarningTooltip = computed(() => {
   if (!inquiry.value) return ''
   if (inquiry.value?.price_per_night == null || Number(inquiry.value?.price_per_night || 0) <= 0) {
@@ -622,7 +625,8 @@ const handleQuoteLink = async () => {
 
 const openEditModal = () => {
   editForm.value = {
-    guest_name: inquiry.value?.guest_name || '',
+    guest_first_name: inquiry.value?.guest_first_name || '',
+    guest_last_name: inquiry.value?.guest_last_name || '',
     guest_phone: inquiry.value?.guest_phone || '',
     check_in: inquiry.value?.check_in || '',
     check_out: inquiry.value?.check_out || '',
@@ -679,7 +683,7 @@ const submitEdit = async () => {
   if (!inquiry.value) return
 
   editSubmitAttempted.value = true
-  if (editFieldError('guest_name')) return
+  if (editFieldError('guest_first_name')) return
 
   saving.value = true
   editError.value = ''
@@ -803,7 +807,7 @@ const touchEditField = (field) => {
 const editFieldError = (field) => {
   if (!editTouched.value[field] && !editSubmitAttempted.value) return ''
 
-  if (field === 'guest_name' && !String(editForm.value.guest_name || '').trim()) {
+  if (field === 'guest_first_name' && !String(editForm.value.guest_first_name || '').trim()) {
     return 'El nombre es obligatorio.'
   }
 

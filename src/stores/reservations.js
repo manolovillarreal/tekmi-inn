@@ -89,7 +89,7 @@ export const useReservationsStore = defineStore('reservations', () => {
         .from('reservations')
         .select(`
           *,
-          guests!reservations_guest_id_fkey(name, phone, email, nationality, document_type, document_number),
+          guests!reservations_guest_id_fkey(first_name, last_name, phone, email, nationality, document_type, document_number),
           source_type_info:source_types!reservations_source_type_id_fkey(id, name, label_es, is_active),
           source_detail_info:source_details!reservations_source_detail_id_fkey(id, source_type_id, name, label_es, suggested_commission_percentage, suggested_discount_percentage, is_active),
           venues(name),
@@ -343,12 +343,13 @@ export const useReservationsStore = defineStore('reservations', () => {
         inquiryId: reservationData.inquiry_id || null,
         providedCode: reservationData.reference_code || null
       })
-      const guestName = String(reservationData.guest_name || '').trim() || null
+      const guestFirstName = String(reservationData.guest_first_name || '').trim() || null
+      const guestLastName = String(reservationData.guest_last_name || '').trim() || null
       const guestPhone = String(reservationData.guest_phone || '').trim() || null
       const guestEmail = String(reservationData.guest_email || '').trim() || null
       let resolvedGuestId = reservationData.guest_id || null
 
-      if (!resolvedGuestId && (guestName || guestPhone || guestEmail)) {
+      if (!resolvedGuestId && (guestFirstName || guestPhone || guestEmail)) {
         const normalizedGuestPhone = normalizePhone(guestPhone)
 
         if (normalizedGuestPhone) {
@@ -369,7 +370,8 @@ export const useReservationsStore = defineStore('reservations', () => {
         if (!resolvedGuestId) {
           const guestPayload = {
             account_id: accountId,
-            name: guestName || guestPhone || guestEmail,
+            first_name: guestFirstName || guestPhone || guestEmail,
+            last_name: guestLastName || null,
             phone: guestPhone,
             phone_country_code: String(reservationData.guest_phone_country_code || '+57'),
             email: guestEmail,
@@ -459,7 +461,7 @@ export const useReservationsStore = defineStore('reservations', () => {
 
       await fetchReservations(lastFetchParams.value)
 
-      try { await notifyNuevaReserva(accountId, { ...data, guest_name: guestName }) } catch (e) { /* silencioso */ }
+      try { await notifyNuevaReserva(accountId, { ...data, guest_name: `${guestFirstName || ''} ${guestLastName || ''}`.trim() }) } catch (e) { /* silencioso */ }
 
       return {
         ...data,

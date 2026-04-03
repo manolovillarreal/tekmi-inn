@@ -121,7 +121,7 @@ const formatDate = (dateStr) => {
 
 export async function notifyNuevaConsulta(accountId, inquiry) {
   try {
-    const guestName = inquiry?.guest_name || 'Huésped desconocido'
+    const guestName = `${inquiry?.guest_first_name || ''} ${inquiry?.guest_last_name || ''}`.trim() || 'Huésped desconocido'
     const checkIn = formatDate(inquiry?.check_in)
     await createNotification(accountId, {
       type: 'nueva_consulta',
@@ -237,16 +237,17 @@ async function _runCheckinDelDia(accountId) {
   const todayIso = new Date().toISOString().slice(0, 10)
   const { data: reservations } = await supabase
     .from('reservations')
-    .select('id, guests(name), check_in')
+    .select('id, guests!reservations_guest_id_fkey(first_name, last_name), check_in')
     .eq('account_id', accountId)
     .eq('check_in', todayIso)
     .eq('status', 'confirmed')
 
   for (const res of reservations || []) {
     if (await isDuplicateNotification(accountId, 'checkin_del_dia', res.id)) continue
+    const guestName = `${res.guests?.first_name || ''} ${res.guests?.last_name || ''}`.trim() || 'Huésped'
     await createNotification(accountId, {
       type: 'checkin_del_dia',
-      title: `Check-in hoy: ${res.guests?.name || 'Huésped'}`,
+      title: `Check-in hoy: ${guestName}`,
       message: 'Llegada programada para hoy',
       related_type: 'reservation',
       related_id: res.id,
@@ -264,16 +265,17 @@ async function _runCheckoutDelDia(accountId) {
   const todayIso = new Date().toISOString().slice(0, 10)
   const { data: reservations } = await supabase
     .from('reservations')
-    .select('id, guests(name), check_out')
+    .select('id, guests!reservations_guest_id_fkey(first_name, last_name), check_out')
     .eq('account_id', accountId)
     .eq('check_out', todayIso)
     .in('status', ['confirmed', 'in_stay'])
 
   for (const res of reservations || []) {
     if (await isDuplicateNotification(accountId, 'checkout_del_dia', res.id)) continue
+    const guestName = `${res.guests?.first_name || ''} ${res.guests?.last_name || ''}`.trim() || 'Huésped'
     await createNotification(accountId, {
       type: 'checkout_del_dia',
-      title: `Check-out hoy: ${res.guests?.name || 'Huésped'}`,
+      title: `Check-out hoy: ${guestName}`,
       message: 'Salida programada para hoy',
       related_type: 'reservation',
       related_id: res.id,
@@ -291,16 +293,17 @@ async function _runCheckoutVencido(accountId) {
   const todayIso = new Date().toISOString().slice(0, 10)
   const { data: reservations } = await supabase
     .from('reservations')
-    .select('id, guests(name), check_out')
+    .select('id, guests!reservations_guest_id_fkey(first_name, last_name), check_out')
     .eq('account_id', accountId)
     .eq('status', 'in_stay')
     .lt('check_out', todayIso)
 
   for (const res of reservations || []) {
     if (await isDuplicateNotification(accountId, 'checkout_vencido', res.id)) continue
+    const guestName = `${res.guests?.first_name || ''} ${res.guests?.last_name || ''}`.trim() || 'Huésped'
     await createNotification(accountId, {
       type: 'checkout_vencido',
-      title: `Check-out vencido: ${res.guest_name || 'Huésped'}`,
+      title: `Check-out vencido: ${guestName}`,
       message: `Salida era el ${formatDate(res.check_out)}`,
       related_type: 'reservation',
       related_id: res.id,
@@ -323,7 +326,7 @@ async function _runPreregistroPending(accountId) {
 
   const { data: reservations } = await supabase
     .from('reservations')
-    .select('id, guests(name), check_in')
+    .select('id, guests!reservations_guest_id_fkey(first_name, last_name), check_in')
     .eq('account_id', accountId)
     .eq('status', 'confirmed')
     .eq('preregistro_completado', false)
@@ -332,9 +335,10 @@ async function _runPreregistroPending(accountId) {
 
   for (const res of reservations || []) {
     if (await isDuplicateNotification(accountId, 'preregistro_pending', res.id)) continue
+    const guestName = `${res.guests?.first_name || ''} ${res.guests?.last_name || ''}`.trim() || 'Huésped'
     await createNotification(accountId, {
       type: 'preregistro_pending',
-      title: `Pre-registro pendiente: ${res.guests?.name || 'Huésped'}`,
+      title: `Pre-registro pendiente: ${guestName}`,
       message: `Check-in: ${formatDate(res.check_in)} (faltan ${days} días o menos)`,
       related_type: 'reservation',
       related_id: res.id,
@@ -356,7 +360,7 @@ async function _runInquiryExpiringSoon(accountId) {
 
   const { data: inquiries } = await supabase
     .from('inquiries')
-    .select('id, guest_name, quote_expires_at')
+    .select('id, guest_first_name, guest_last_name, quote_expires_at')
     .eq('account_id', accountId)
     .in('status', ['nueva', 'contactada', 'cotizada'])
     .gte('quote_expires_at', now.toISOString())
@@ -364,9 +368,10 @@ async function _runInquiryExpiringSoon(accountId) {
 
   for (const inq of inquiries || []) {
     if (await isDuplicateNotification(accountId, 'inquiry_expiring_soon', inq.id)) continue
+    const guestName = `${inq.guest_first_name || ''} ${inq.guest_last_name || ''}`.trim() || 'Sin nombre'
     await createNotification(accountId, {
       type: 'inquiry_expiring_soon',
-      title: `Cotización próxima a vencer: ${inq.guest_name || 'Sin nombre'}`,
+      title: `Cotización próxima a vencer: ${guestName}`,
       message: `Vence: ${formatDate(inq.quote_expires_at)}`,
       related_type: 'inquiry',
       related_id: inq.id,
@@ -386,16 +391,17 @@ async function _runInquiryNoActivity(accountId) {
 
   const { data: inquiries } = await supabase
     .from('inquiries')
-    .select('id, guest_name, updated_at')
+    .select('id, guest_first_name, guest_last_name, updated_at')
     .eq('account_id', accountId)
     .in('status', ['nueva', 'contactada', 'cotizada'])
     .lte('updated_at', cutoffDate.toISOString())
 
   for (const inq of inquiries || []) {
     if (await isDuplicateNotification(accountId, 'inquiry_no_activity', inq.id)) continue
+    const guestName = `${inq.guest_first_name || ''} ${inq.guest_last_name || ''}`.trim() || 'Sin nombre'
     await createNotification(accountId, {
       type: 'inquiry_no_activity',
-      title: `Consulta sin actividad: ${inq.guest_name || 'Sin nombre'}`,
+      title: `Consulta sin actividad: ${guestName}`,
       message: `Sin cambios desde hace ${days}+ días`,
       related_type: 'inquiry',
       related_id: inq.id,
@@ -414,7 +420,7 @@ async function _runBalancePendingPostCheckin(accountId) {
 
   const { data: reservations } = await supabase
     .from('reservations')
-    .select('id, guest_name, check_in, total_amount, paid_amount')
+    .select('id, check_in, total_amount, paid_amount, guests!reservations_guest_id_fkey(first_name, last_name)')
     .eq('account_id', accountId)
     .eq('status', 'in_stay')
     .lte('check_in', cutoffIso)
@@ -423,9 +429,10 @@ async function _runBalancePendingPostCheckin(accountId) {
     const balance = Number(res.total_amount || 0) - Number(res.paid_amount || 0)
     if (balance <= 0) continue
     if (await isDuplicateNotification(accountId, 'balance_pending_post_checkin', res.id)) continue
+    const guestName = `${res.guests?.first_name || ''} ${res.guests?.last_name || ''}`.trim() || 'Huésped'
     await createNotification(accountId, {
       type: 'balance_pending_post_checkin',
-      title: `Saldo pendiente: ${res.guest_name || 'Huésped'}`,
+      title: `Saldo pendiente: ${guestName}`,
       message: `Saldo: $${balance.toLocaleString('es-CO')} · Lleva más de ${hours}h en el alojamiento`,
       related_type: 'reservation',
       related_id: res.id,

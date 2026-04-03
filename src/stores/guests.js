@@ -23,7 +23,7 @@ export const useGuestsStore = defineStore('guests', () => {
         .from('guests')
         .select('*')
         .eq('account_id', accountId)
-        .order('name', { ascending: true })
+        .order('first_name', { ascending: true })
 
       if (supaError) throw supaError
       guests.value = data || []
@@ -69,7 +69,8 @@ export const useGuestsStore = defineStore('guests', () => {
 
     try {
       const accountId = accountStore.getRequiredAccountId()
-      const name = String(guestData.name || '').trim()
+      const firstName = String(guestData.first_name || guestData.name || '').trim()
+      const lastName = String(guestData.last_name || '').trim()
       const phone = String(guestData.phone || '').trim() || null
       const email = String(guestData.email || '').trim() || null
       const normalizedPhone = normalizePhone(phone)
@@ -77,7 +78,7 @@ export const useGuestsStore = defineStore('guests', () => {
       if (normalizedPhone) {
         const { data: existingGuests, error: existingError } = await supabase
           .from('guests')
-          .select('id, name, phone, phone_country_code, email')
+          .select('id, first_name, last_name, phone, phone_country_code, email')
           .eq('account_id', accountId)
           .not('phone', 'is', null)
 
@@ -89,14 +90,15 @@ export const useGuestsStore = defineStore('guests', () => {
         }
       }
 
-      const fallbackName = name || phone || email
-      if (!fallbackName) {
+      const fallbackFirstName = firstName || phone || email
+      if (!fallbackFirstName) {
         return null
       }
 
       const created = await createGuest({
         ...guestData,
-        name: fallbackName,
+        first_name: fallbackFirstName,
+        last_name: lastName || null,
         phone,
         email,
       })
@@ -172,5 +174,10 @@ export const useGuestsStore = defineStore('guests', () => {
     }
   }
 
-  return { guests, loading, error, fetchGuests, createGuest, getOrCreateGuestByPhone, updateGuest, deleteGuest }
+  return { guests, loading, error, fetchGuests, createGuest, getOrCreateGuestByPhone, updateGuest, deleteGuest, guestFullName }
 })
+
+export const guestFullName = (guest) => {
+  if (!guest) return ''
+  return `${guest.first_name || ''} ${guest.last_name || ''}`.trim()
+}

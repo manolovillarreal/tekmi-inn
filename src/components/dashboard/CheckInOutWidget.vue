@@ -119,7 +119,7 @@ onMounted(async () => {
 
     const { data, error } = await supabase
       .from('occupancies')
-      .select('reservation_id, units(name), reservations!inner(id, guest_name, status, check_in, check_out)')
+      .select('reservation_id, units(name), reservations!inner(id, status, check_in, check_out, guests!reservations_guest_id_fkey(first_name, last_name))')
       .eq('account_id', accountId)
       .eq('occupancy_type', 'reservation')
       .or(orFilter)
@@ -134,7 +134,7 @@ onMounted(async () => {
       if (!resMap.has(key)) {
         resMap.set(key, {
           reservationId: key,
-          guestName: res.guest_name || 'Huesped',
+          guestName: `${res.guests?.first_name || ''} ${res.guests?.last_name || ''}`.trim() || 'Huesped',
           status: res.status || '',
           checkIn: res.check_in ? String(res.check_in).slice(0, 10) : '',
           checkOut: res.check_out ? String(res.check_out).slice(0, 10) : '',

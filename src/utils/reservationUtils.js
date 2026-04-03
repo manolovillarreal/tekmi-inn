@@ -36,7 +36,9 @@ export const getStatusLabel = (status) => {
 }
 
 export const getReservationGuestName = (reservation) => {
-  return reservation?.guests?.name || 'Sin nombre'
+  const g = reservation?.guests
+  if (!g) return 'Sin nombre'
+  return `${g.first_name || ''} ${g.last_name || ''}`.trim() || 'Sin nombre'
 }
 
 export const getReservationGuestPhone = (reservation) => {

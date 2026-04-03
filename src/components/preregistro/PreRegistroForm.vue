@@ -14,7 +14,8 @@
 
     <form class="space-y-6" @submit.prevent="submitForm">
       <AppFormSection title="Huésped principal" :divider="true">
-        <AppInput v-model="primaryGuest.name" label="Nombre" required />
+        <AppInput v-model="primaryGuest.first_name" label="Nombres" required />
+        <AppInput v-model="primaryGuest.last_name" label="Apellidos" />
 
         <AppFormGrid :columns="2">
           <AppSelect
@@ -72,7 +73,8 @@
             <button type="button" class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-sm font-semibold text-red-600 hover:bg-red-50 hover:text-red-800" @click="removeCompanion(index)">× Eliminar</button>
           </template>
 
-          <AppInput v-model="guest.name" label="Nombre" required />
+          <AppInput v-model="guest.first_name" label="Nombres" required />
+          <AppInput v-model="guest.last_name" label="Apellidos" />
 
           <AppFormGrid :columns="2">
             <AppSelect
@@ -97,7 +99,7 @@
           submit-label="Guardar"
           cancel-label="Cancelar"
           :loading="submitting"
-          :submit-disabled="submitting || !primaryGuest.name.trim() || !primaryGuest.document_type || !primaryGuest.document_number.trim() || !primaryGuest.phone.trim() || !primaryGuest.email.trim() || !primaryGuest.nationality || !primaryGuest.birth_date || additionalGuests.some(g => !g.name.trim() || !g.document_type || !g.document_number.trim() || !g.nationality || !g.birth_date)"
+          :submit-disabled="submitting || !primaryGuest.first_name.trim() || !primaryGuest.document_type || !primaryGuest.document_number.trim() || !primaryGuest.phone.trim() || !primaryGuest.email.trim() || !primaryGuest.nationality || !primaryGuest.birth_date || additionalGuests.some(g => !g.first_name.trim() || !g.document_type || !g.document_number.trim() || !g.nationality || !g.birth_date)"
           @submit="submitForm"
           @cancel="emit('cancel')"
         />
@@ -139,7 +141,8 @@ const documentTypeOptions = [
 ]
 
 const buildGuest = () => ({
-  name: '',
+  first_name: '',
+  last_name: '',
   nationality: '',
   document_type: '',
   document_number: '',

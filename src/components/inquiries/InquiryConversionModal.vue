@@ -11,15 +11,15 @@
       <AppFormSection title="Huésped" :divider="true">
         <AppFormGrid :columns="2">
           <AppInput
-            v-model="form.guest_name"
-            label="Nombre"
+            v-model="form.guest_first_name"
+            label="Nombres"
             required
-            :error="fieldError('guest_name')"
-            @blur="touchField('guest_name')"
+            :error="fieldError('guest_first_name')"
+            @blur="touchField('guest_first_name')"
           />
           <AppInput
-            v-model="form.guest_phone"
-            label="Teléfono"
+            v-model="form.guest_last_name"
+            label="Apellidos"
             hint="Opcional"
           />
         </AppFormGrid>
@@ -274,12 +274,13 @@ const accountPricing = ref({
 })
 
 const form = ref(buildEmptyForm())
-const touched = reactive({ guest_name: false, check_in: false, check_out: false, unit_ids: false })
+const touched = reactive({ guest_first_name: false, check_in: false, check_out: false, unit_ids: false })
 const submitAttempted = ref(false)
 
 function buildEmptyForm() {
   return {
-    guest_name: '',
+    guest_first_name: '',
+    guest_last_name: '',
     guest_phone: '',
     check_in: '',
     check_out: '',
@@ -389,7 +390,7 @@ const touchField = (field) => {
 const fieldError = (field) => {
   if (!touched[field] && !submitAttempted.value) return ''
 
-  if (field === 'guest_name' && !form.value.guest_name?.trim()) {
+  if (field === 'guest_first_name' && !form.value.guest_first_name?.trim()) {
     return 'El nombre del huésped es obligatorio.'
   }
 
@@ -447,7 +448,8 @@ const loadAccountPricing = async () => {
 const hydrateForm = () => {
   const inquiry = props.inquiry || {}
   form.value = {
-    guest_name: inquiry.guest_name || '',
+    guest_first_name: inquiry.guest_first_name || '',
+    guest_last_name: inquiry.guest_last_name || '',
     guest_phone: inquiry.guest_phone || '',
     check_in: inquiry.check_in || '',
     check_out: inquiry.check_out || '',
@@ -463,7 +465,7 @@ const hydrateForm = () => {
     source_detail_id: inquiry.source_detail_id || '',
     notes: ''
   }
-  touched.guest_name = false
+  touched.guest_first_name = false
   touched.check_in = false
   touched.check_out = false
   touched.unit_ids = false
@@ -512,7 +514,7 @@ const submitConversion = async () => {
   syncIssue.value = null
 
   try {
-    if (fieldError('guest_name')) throw new Error(fieldError('guest_name'))
+    if (fieldError('guest_first_name')) throw new Error(fieldError('guest_first_name'))
     if (fieldError('check_in')) throw new Error(fieldError('check_in'))
     if (fieldError('check_out')) throw new Error(fieldError('check_out'))
     if (fieldError('unit_ids')) throw new Error(fieldError('unit_ids'))
@@ -527,7 +529,8 @@ const submitConversion = async () => {
     }
 
     const guestRecord = await guestsStore.getOrCreateGuestByPhone({
-      name: form.value.guest_name?.trim() || null,
+      first_name: form.value.guest_first_name?.trim() || null,
+      last_name: form.value.guest_last_name?.trim() || null,
       phone: form.value.guest_phone?.trim() || null,
       email: null,
     })
@@ -536,7 +539,8 @@ const submitConversion = async () => {
       venue_id: resolveVenueId(),
       unit_ids: [...form.value.unit_ids],
       guest_id: guestRecord?.id || null,
-      guest_name: form.value.guest_name?.trim() || null,
+      guest_first_name: form.value.guest_first_name?.trim() || null,
+      guest_last_name: form.value.guest_last_name?.trim() || null,
       guest_phone: form.value.guest_phone?.trim() || null,
       check_in: form.value.check_in,
       check_out: form.value.check_out,

@@ -117,39 +117,46 @@
       <AppFormSection title="Datos del huésped" :divider="true">
         <!-- Guest selected chip -->
         <div v-if="form.guest_id" class="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
-          <span class="font-medium text-primary">{{ form.guest_name }}</span>
+          <span class="font-medium text-primary">{{ `${form.guest_first_name} ${form.guest_last_name}`.trim() }}</span>
           <span v-if="form.guest_phone" class="text-gray-400">· {{ form.guest_phone }}</span>
           <button type="button" class="ml-auto text-xs text-gray-400 underline hover:text-gray-700" @click="clearGuestSelection">Cambiar</button>
         </div>
 
         <!-- Nombre con búsqueda integrada (solo cuando no hay huésped seleccionado) -->
         <template v-else>
-          <div class="relative">
-            <AppInput
-              v-model="form.guest_name"
-              label="Nombre"
-              required
-              hint="Escribe para buscar huéspedes existentes"
-              :error="s3Touched.guest_name && !form.guest_name?.trim() ? 'El nombre es obligatorio.' : ''"
-              @focus="guestSearchOpen = true"
-              @blur="() => { s3Touched.guest_name = true; setTimeout(() => { guestSearchOpen = false }, 150) }"
-            />
-            <div
-              v-if="guestSearchOpen && guestSearchResults.length > 0"
-              class="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg"
-            >
-              <button
-                v-for="g in guestSearchResults"
-                :key="g.id"
-                type="button"
-                class="flex w-full flex-col px-3 py-2 text-left text-sm hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg"
-                @click="selectGuest(g)"
+          <AppFormGrid :columns="2">
+            <div class="relative">
+              <AppInput
+                v-model="form.guest_first_name"
+                label="Nombres"
+                required
+                hint="Escribe para buscar huéspedes existentes"
+                :error="s3Touched.guest_first_name && !form.guest_first_name?.trim() ? 'El nombre es obligatorio.' : ''"
+                @focus="guestSearchOpen = true"
+                @blur="() => { s3Touched.guest_first_name = true; setTimeout(() => { guestSearchOpen = false }, 150) }"
+              />
+              <div
+                v-if="guestSearchOpen && guestSearchResults.length > 0"
+                class="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg"
               >
-                <span class="font-medium text-gray-900">{{ g.name }}</span>
-                <span class="text-xs text-gray-400">{{ g.phone || 'Sin teléfono' }}<span v-if="g.email"> · {{ g.email }}</span></span>
-              </button>
+                <button
+                  v-for="g in guestSearchResults"
+                  :key="g.id"
+                  type="button"
+                  class="flex w-full flex-col px-3 py-2 text-left text-sm hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg"
+                  @click="selectGuest(g)"
+                >
+                  <span class="font-medium text-gray-900">{{ `${g.first_name || ''} ${g.last_name || ''}`.trim() }}</span>
+                  <span class="text-xs text-gray-400">{{ g.phone || 'Sin teléfono' }}<span v-if="g.email"> · {{ g.email }}</span></span>
+                </button>
+              </div>
             </div>
-          </div>
+            <AppInput
+              v-model="form.guest_last_name"
+              label="Apellidos"
+              hint="Opcional"
+            />
+          </AppFormGrid>
 
           <AppFormGrid :columns="2">
             <AppPhoneInput
@@ -208,7 +215,7 @@
     <template v-if="currentStep === 5">
       <!-- Mini resumen -->
       <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600 space-y-0.5">
-        <p><strong class="text-gray-900">{{ form.guest_name }}</strong><span v-if="form.guest_phone" class="ml-2 text-gray-500">{{ form.guest_phone }}</span></p>
+        <p><strong class="text-gray-900">{{ `${form.guest_first_name} ${form.guest_last_name}`.trim() }}</strong><span v-if="form.guest_phone" class="ml-2 text-gray-500">{{ form.guest_phone }}</span></p>
         <p>{{ form.check_in }} → {{ form.check_out }}<span v-if="nights > 0" class="ml-2 text-gray-400">({{ nights }} noches)</span> · {{ totalPersonas }} personas</p>
         <p v-if="venueName" class="text-gray-500">{{ venueName }}</p>
         <p v-if="form.commission_name || form.source_type_id" class="text-gray-500">Canal: {{ form.commission_name || form.source_type_id }}</p>
@@ -440,7 +447,7 @@ const usePeakPricing = ref(false)
 
 // ── Touched trackers ───────────────────────────────────
 const s1Touched = ref({ check_in: false, check_out: false })
-const s3Touched = ref({ guest_name: false, guest_phone: false })
+const s3Touched = ref({ guest_first_name: false, guest_phone: false })
 const s4Touched = ref({ source_type_id: false })
 
 // ── Form data ──────────────────────────────────────────
@@ -451,7 +458,8 @@ const form = ref({
   children: 0,
   venue_id: '',
   guest_id: null,
-  guest_name: '',
+  guest_first_name: '',
+  guest_last_name: '',
   guest_phone: '',
   guest_phone_country_code: '+57',
   guest_email: '',
@@ -505,7 +513,7 @@ const checkOutError = computed(() => {
 const canProceedStep1 = computed(() => !!form.value.check_in && !checkOutError.value)
 
 const canProceedStep3 = computed(() =>
-  !!form.value.guest_name?.trim() && !!form.value.guest_phone?.trim()
+  !!form.value.guest_first_name?.trim() && !!form.value.guest_phone?.trim()
 )
 
 const sourceRequired = computed(() => !form.value.source_type_id)
@@ -660,10 +668,10 @@ const venueName = computed(() =>
 
 // Búsqueda local de huéspedes
 const guestSearchResults = computed(() => {
-  if ((form.value.guest_name?.length ?? 0) < 2 || form.value.guest_id) return []
-  const q = form.value.guest_name.toLowerCase()
+  if ((form.value.guest_first_name?.length ?? 0) < 2 || form.value.guest_id) return []
+  const q = `${form.value.guest_first_name || ''} ${form.value.guest_last_name || ''}`.trim().toLowerCase()
   return guestsStore.guests
-    .filter(g => g.name?.toLowerCase().includes(q) || g.phone?.toLowerCase().includes(q))
+    .filter(g => `${g.first_name || ''} ${g.last_name || ''}`.trim().toLowerCase().includes(q) || g.phone?.toLowerCase().includes(q))
     .slice(0, 6)
 })
 
@@ -710,7 +718,7 @@ const advanceStep1 = async () => {
 }
 
 const advanceToStep4 = () => {
-  s3Touched.value = { guest_name: true, guest_phone: true }
+  s3Touched.value = { guest_first_name: true, guest_phone: true }
   if (!canProceedStep3.value) return
   if (!form.value.quote_expires_at) {
     const d = new Date()
@@ -743,7 +751,8 @@ const onDatesChange = () => {
 // ── Guest search ───────────────────────────────────────
 const selectGuest = (guest) => {
   form.value.guest_id = guest.id
-  form.value.guest_name = guest.name || ''
+  form.value.guest_first_name = guest.first_name || ''
+  form.value.guest_last_name = guest.last_name || ''
   form.value.guest_phone = guest.phone || ''
   form.value.guest_phone_country_code = guest.phone_country_code || '+57'
   form.value.guest_email = guest.email || ''
@@ -752,7 +761,8 @@ const selectGuest = (guest) => {
 
 const clearGuestSelection = () => {
   form.value.guest_id = null
-  form.value.guest_name = ''
+  form.value.guest_first_name = ''
+  form.value.guest_last_name = ''
   form.value.guest_phone = ''
   form.value.guest_phone_country_code = '+57'
   form.value.guest_email = ''
@@ -813,10 +823,8 @@ const save = async () => {
       const guestRecord = form.value.guest_id
         ? { id: form.value.guest_id }
         : await guestsStore.getOrCreateGuestByPhone({
-            name: form.value.guest_name,
-            phone: form.value.guest_phone || null,
-            phone_country_code: form.value.guest_phone_country_code || '+57',
-            email: form.value.guest_email || null
+              first_name: form.value.guest_first_name,
+              last_name: form.value.guest_last_name,
           })
 
       const result = await reservationsStore.createReservationWithPayment(
@@ -827,7 +835,8 @@ const save = async () => {
           children: form.value.children,
           venue_id: form.value.venue_id || null,
           guest_id: guestRecord.id,
-          guest_name: form.value.guest_name,
+          guest_first_name: form.value.guest_first_name,
+          guest_last_name: form.value.guest_last_name,
           guest_phone_country_code: form.value.guest_phone_country_code,
           unit_ids: form.value.unit_ids,
           price_per_night: form.value.price_per_night !== '' ? Number(form.value.price_per_night) : null,
@@ -868,7 +877,8 @@ const save = async () => {
         check_out: form.value.check_out,
         adults: form.value.adults,
         children: form.value.children,
-        guest_name: form.value.guest_name,
+        guest_first_name: form.value.guest_first_name,
+        guest_last_name: form.value.guest_last_name,
         guest_phone: form.value.guest_phone,
         phone_country_code: form.value.guest_phone_country_code,
         price_per_night: form.value.price_per_night !== '' ? Number(form.value.price_per_night) : null,
@@ -891,7 +901,7 @@ const save = async () => {
             start_date: form.value.check_in,
             end_date: form.value.check_out,
             occupancy_type: 'inquiry_hold',
-            reason: `Hold: ${form.value.guest_name || 'Consulta'}`,
+          reason: `Hold: ${`${form.value.guest_first_name} ${form.value.guest_last_name}`.trim() || 'Consulta'}`,
             expires_at: expiresAt.toISOString(),
           })
         }

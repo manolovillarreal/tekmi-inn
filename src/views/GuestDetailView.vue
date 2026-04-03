@@ -15,7 +15,7 @@
     <template v-else>
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div class="card lg:col-span-1">
-          <h1 class="text-2xl font-semibold text-gray-900">{{ guest.name }}</h1>
+          <h1 class="text-2xl font-semibold text-gray-900">{{ `${guest.first_name || ''} ${guest.last_name || ''}`.trim() || 'Sin nombre' }}</h1>
           <p class="mt-1 text-sm text-gray-600">{{ formatDocument(guest) }}</p>
 
           <dl class="mt-4 space-y-2 text-sm">
@@ -70,7 +70,10 @@
     >
       <form class="space-y-5" @submit.prevent="saveGuest">
         <AppFormSection title="Identidad" :divider="true">
-          <AppInput v-model="editForm.name" label="Nombre" required />
+          <AppFormGrid :columns="2">
+            <AppInput v-model="editForm.first_name" label="Nombres" required />
+            <AppInput v-model="editForm.last_name" label="Apellidos" />
+          </AppFormGrid>
           <AppFormGrid :columns="2">
             <AppSelect
               v-model="editForm.document_type"
@@ -146,7 +149,8 @@ const loading = ref(true)
 const showEditModal = ref(false)
 const saving = ref(false)
 const editForm = ref({
-  name: '',
+  first_name: '',
+  last_name: '',
   email: '',
   phone: '',
   phone_country_code: '+57',
@@ -188,7 +192,8 @@ const loadData = async () => {
 const openEditModal = () => {
   if (!guest.value) return
   editForm.value = {
-    name: guest.value.name || '',
+    first_name: guest.value.first_name || '',
+    last_name: guest.value.last_name || '',
     email: guest.value.email || '',
     phone: guest.value.phone || '',
     phone_country_code: guest.value.phone_country_code || '+57',

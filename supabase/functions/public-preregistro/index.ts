@@ -3,7 +3,8 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { createHash } from 'node:crypto'
 
 type GuestInput = {
-  name?: string
+  first_name?: string
+  last_name?: string
   nationality?: string
   document_type?: 'passport' | 'cedula' | 'dni' | 'foreign_id' | ''
   document_number?: string
@@ -30,7 +31,8 @@ const sanitizeGuest = (guest: GuestInput) => {
   const birthDate = normalizeValue(guest.birth_date)
 
   return {
-    name: normalizeValue(guest.name),
+    first_name: normalizeValue(guest.first_name),
+    last_name: normalizeValue(guest.last_name),
     nationality: normalizeValue(guest.nationality),
     document_type: documentType,
     document_number: documentNumber,
@@ -76,12 +78,12 @@ const resolveGuest = async (
   accountId: string,
   payload: ReturnType<typeof sanitizeGuest>
 ) => {
-  if (!payload.name) return null
+  if (!payload.first_name) return null
 
   if (payload.document_type && payload.document_number) {
     const { data: existing, error: existingError } = await client
       .from('guests')
-      .select('id, name, nationality, document_type, document_number, phone, email, document, birth_date')
+      .select('id, first_name, last_name, nationality, document_type, document_number, phone, email, document, birth_date')
       .eq('account_id', accountId)
       .eq('document_type', payload.document_type)
       .eq('document_number', payload.document_number)
@@ -91,7 +93,8 @@ const resolveGuest = async (
 
     if (existing) {
       const updatePayload = {
-        name: payload.name || existing.name,
+        first_name: payload.first_name || existing.first_name,
+        last_name: payload.last_name || existing.last_name,
         nationality: payload.nationality || existing.nationality,
         document_type: payload.document_type || existing.document_type,
         document_number: payload.document_number || existing.document_number,
@@ -121,7 +124,7 @@ const resolveGuest = async (
 const isGuestComplete = (guest: Record<string, unknown> | null): boolean => {
   if (!guest) return false
   return Boolean(
-    guest.name &&
+    guest.first_name &&
     guest.document_type &&
     guest.document_number &&
     guest.email &&
@@ -251,7 +254,7 @@ serve(async (req) => {
       const accountId = reservation.account_id as string
       const guestPayload = sanitizeGuest(guestInput)
 
-      if (!guestPayload.name) {
+      if (!guestPayload.first_name) {
         return Response.json({ message: 'El huésped principal debe tener nombre.' }, { status: 400, headers: corsHeaders })
       }
 
@@ -261,7 +264,8 @@ serve(async (req) => {
       if (reservation.guest_id) {
         // Direct UPDATE on existing guest_id — no document lookup
         const updatePayload: Record<string, unknown> = {}
-        if (guestPayload.name) updatePayload.name = guestPayload.name
+        if (guestPayload.first_name) updatePayload.first_name = guestPayload.first_name
+        if (guestPayload.last_name) updatePayload.last_name = guestPayload.last_name
         if (guestPayload.nationality) updatePayload.nationality = guestPayload.nationality
         if (guestPayload.document_type) updatePayload.document_type = guestPayload.document_type
         if (guestPayload.document_number) {

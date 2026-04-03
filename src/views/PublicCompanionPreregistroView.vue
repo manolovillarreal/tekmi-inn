@@ -54,9 +54,19 @@
             <div>
               <label class="block text-sm font-medium text-gray-700">Nombre completo <span class="text-red-500">*</span></label>
               <input
-                v-model="guest.name"
+                v-model="guest.first_name"
                 type="text"
+                placeholder="Nombres"
                 required
+                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Apellidos</label>
+              <input
+                v-model="guest.last_name"
+                type="text"
+                placeholder="Apellidos"
                 class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
             </div>
@@ -127,7 +137,7 @@
 
           <button
             type="submit"
-            :disabled="submitting || !guest.name.trim() || !guest.document_type || !guest.document_number.trim() || !guest.nationality || !guest.birth_date"
+            :disabled="submitting || !guest.first_name.trim() || !guest.document_type || !guest.document_number.trim() || !guest.nationality || !guest.birth_date"
             class="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
           >
             {{ submitting ? 'Enviando...' : 'Completar pre-registro' }}
@@ -169,7 +179,8 @@ const documentTypeOptions = [
 ]
 
 const buildGuest = () => ({
-  name: '',
+  first_name: '',
+  last_name: '',
   nationality: '',
   document_type: '',
   document_number: '',

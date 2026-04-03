@@ -112,13 +112,21 @@ export const buildGlobalVariables = ({ profile = {}, accountSettings = {}, conte
   const descripcionAlojamiento = profile.short_description || '-'
   const porcentajeAnticipo = accountSettings.anticipo_pct != null ? Number(accountSettings.anticipo_pct) : 50
 
+  const nombreCompleto = context.nombre_completo ||
+    (context.guest_first_name || context.guest_last_name
+      ? `${context.guest_first_name || ''} ${context.guest_last_name || ''}`.trim()
+      : context.nombre_huesped || context.guest_name || '')
+
   return {
     nombre_alojamiento: nombreAlojamiento,
     telefono,
     ubicacion,
     descripcion_alojamiento: descripcionAlojamiento,
     porcentaje_anticipo: porcentajeAnticipo,
-    nombre_huesped: context.nombre_huesped || context.guest_name || '-',
+    nombre_completo: nombreCompleto || '-',
+    nombres: context.nombres || context.guest_first_name || '-',
+    apellidos: context.apellidos || context.guest_last_name || '-',
+    nombre_huesped: nombreCompleto || '-',
     check_in: context.check_in ? formatDate(context.check_in) : '-',
     check_out: context.check_out ? formatDate(context.check_out) : '-',
     noches: context.nights ?? '-',
@@ -155,7 +163,8 @@ export const buildQuotationMessage = ({
   const subtotal = pricePerNight * Math.max(nights, 0)
   const discountAmount = subtotal * (discountPct / 100)
   const total = Math.max(subtotal - discountAmount, 0)
-  const reference = formatReferenceDisplay(inquiry?.reference_code || inquiry?.quotation_number, inquiry?.guest_name)
+  const inquiryGuestName = `${inquiry?.guest_first_name || ''} ${inquiry?.guest_last_name || ''}`.trim() || '-'
+  const reference = formatReferenceDisplay(inquiry?.reference_code || inquiry?.quotation_number, inquiryGuestName)
 
   const selectedIds = new Set((inquiry?.unit_ids || []).filter(Boolean))
   const selected = selectedUnits.filter((unit) => selectedIds.has(unit.id))
@@ -168,7 +177,10 @@ export const buildQuotationMessage = ({
 
   const vars = {
     ...globalVariables,
-    nombre_huesped: inquiry?.guest_name || '-',
+    nombre_completo: inquiryGuestName,
+    nombres: inquiry?.guest_first_name || '-',
+    apellidos: inquiry?.guest_last_name || '-',
+    nombre_huesped: inquiryGuestName,
     check_in: formatDate(inquiry?.check_in),
     check_out: formatDate(inquiry?.check_out),
     noches: nights,
@@ -239,11 +251,18 @@ export const buildVoucherMessage = ({
   const total = Number(reservation?.total_amount || 0)
   const paid = Number(reservation?.paid_amount || 0)
   const balance = Math.max(0, total - paid)
-  const reference = formatReferenceDisplay(reservation?.reference_code, reservation?.guest_name)
+  const voucherGuest = reservation?.guests
+  const voucherGuestName = voucherGuest
+    ? `${voucherGuest.first_name || ''} ${voucherGuest.last_name || ''}`.trim()
+    : globalVariables.nombre_huesped || '-'
+  const reference = formatReferenceDisplay(reservation?.reference_code, voucherGuestName)
 
   const vars = {
     ...globalVariables,
-    nombre_huesped: reservation?.guest_name || globalVariables.nombre_huesped || '-',
+    nombre_completo: voucherGuestName,
+    nombres: voucherGuest?.first_name || '-',
+    apellidos: voucherGuest?.last_name || '-',
+    nombre_huesped: voucherGuestName,
     check_in: formatDate(reservation?.check_in),
     check_out: formatDate(reservation?.check_out),
     noches: nights,
@@ -308,7 +327,10 @@ export const buildVoucherMessage = ({
 export const VARIABLE_CATALOG = {
   simples: {
     huesped: [
-      { key: 'nombre_huesped', label: 'Nombre huésped', ejemplo: 'Santiago Montero' },
+      { key: 'nombre_completo', label: 'Nombre completo', ejemplo: 'Santiago Montero' },
+      { key: 'nombres', label: 'Nombres', ejemplo: 'Santiago' },
+      { key: 'apellidos', label: 'Apellidos', ejemplo: 'Montero' },
+      { key: 'nombre_huesped', label: 'Nombre huésped (alias)', ejemplo: 'Santiago Montero' },
       { key: 'personas', label: 'Personas', ejemplo: '4' },
     ],
     fechas: [

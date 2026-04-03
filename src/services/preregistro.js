@@ -18,7 +18,8 @@ const buildGuestPayload = (guest) => {
   const documentNumber = normalizeValue(guest.document_number)
 
   return {
-    name: normalizeValue(guest.name),
+    first_name: normalizeValue(guest.first_name),
+    last_name: normalizeValue(guest.last_name),
     phone: normalizeValue(guest.phone),
     phone_country_code: normalizeValue(guest.phone_country_code) || '+57',
     email: normalizeValue(guest.email),
@@ -52,7 +53,8 @@ const upsertGuest = async (guestPayload, accountId) => {
 
   if (existingGuest) {
     const updatePayload = {
-      name: guestPayload.name || existingGuest.name,
+      first_name: guestPayload.first_name || existingGuest.first_name,
+      last_name: guestPayload.last_name || existingGuest.last_name,
       phone: guestPayload.phone || existingGuest.phone,      phone_country_code: guestPayload.phone_country_code || existingGuest.phone_country_code || '+57',      email: guestPayload.email || existingGuest.email,
       nationality: guestPayload.nationality || existingGuest.nationality,
       document_type: guestPayload.document_type || existingGuest.document_type,
@@ -93,7 +95,7 @@ export const completeReservationPreregistro = async ({ reservationId, guests }) 
   }
 
   const primaryGuestInput = guests[0]
-  if (!normalizeValue(primaryGuestInput?.name)) {
+  if (!normalizeValue(primaryGuestInput?.first_name)) {
     throw new Error('El huésped principal debe tener nombre.')
   }
 
@@ -112,7 +114,7 @@ export const completeReservationPreregistro = async ({ reservationId, guests }) 
   for (const guest of guests) {
     const guestPayload = buildGuestPayload(guest)
 
-    if (!guestPayload.name) {
+    if (!guestPayload.first_name) {
       continue
     }
 
@@ -175,7 +177,7 @@ export const completeReservationPreregistro = async ({ reservationId, guests }) 
   try {
     await notifyPreregistroCompletado(accountId, {
       id: reservationId,
-      guest_name: primaryGuest.name,
+      guest_name: `${primaryGuest.first_name || ''} ${primaryGuest.last_name || ''}`.trim(),
       check_in: reservation.check_in,
     })
   } catch (e) { /* silencioso */ }
