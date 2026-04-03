@@ -25,6 +25,7 @@ const buildGuestPayload = (guest) => {
     document_type: documentType,
     document_number: documentNumber,
     document: documentNumber,
+    birth_date: normalizeValue(guest.birth_date),
   }
 }
 
@@ -57,6 +58,7 @@ const upsertGuest = async (guestPayload, accountId) => {
       document_type: guestPayload.document_type || existingGuest.document_type,
       document_number: guestPayload.document_number || existingGuest.document_number,
       document: guestPayload.document || existingGuest.document,
+      birth_date: guestPayload.birth_date || existingGuest.birth_date,
     }
 
     const { data, error } = await supabase

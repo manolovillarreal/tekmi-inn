@@ -75,6 +75,20 @@ Te compartimos el resumen de tu reserva en {{nombre_alojamiento}}.
 Cualquier duda estamos a tu disposición.
 {{nombre_alojamiento}} · {{telefono}}`
 
+export const DEFAULT_PREREGISTRO_TEMPLATE = `Hola {{nombre_huesped}}! 👋
+
+Para completar tu reserva en {{nombre_alojamiento}}, te pedimos diligenciar el pre-registro antes de tu llegada.
+
+🗓 Check-in: {{fecha_checkin_larga}}
+
+📋 Completa tu información aquí:
+{{link_preregistro}}
+
+⚠️ Este link es personal. Contiene información de tu reserva — no lo compartas con personas que no sean de tu grupo.
+
+Cualquier duda estamos a tu disposición.
+{{nombre_alojamiento}} · {{telefono}}`
+
 const currencyFormatter = new Intl.NumberFormat('es-CO', {
   style: 'currency',
   currency: 'COP',

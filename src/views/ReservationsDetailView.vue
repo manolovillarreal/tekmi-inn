@@ -179,7 +179,14 @@
           <h2 class="text-sm font-semibold text-gray-900 mb-3 uppercase tracking-wider">Pre-registro de huéspedes</h2>
 
           <div v-if="res.preregistro_completado" class="space-y-3 text-sm text-gray-700">
-            <p class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">Completado âœ“</p>
+            <div class="flex flex-wrap gap-2">
+              <p class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">Completado âœ“</p>
+              <p v-if="preregistroEval.isComplete" class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">Completo &#x2713;</p>
+              <p v-else class="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">Incompleto &#x2717;</p>
+            </div>
+            <p v-if="!preregistroEval.isComplete && preregistroEval.companionsExpected > 0" class="text-xs text-amber-700">
+              Faltan {{ preregistroEval.companionsExpected - preregistroEval.companionsRegistered }} acompa&ntilde;ante(s) por registrar
+            </p>
             <p>
               Completado el
               <span class="font-medium text-gray-900">{{ formatDateTime(res.preregistro_completado_at) }}</span>
@@ -206,10 +213,12 @@
             <button v-if="can('reservations', 'edit')" class="touch-target w-full rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200" @click="showPreregistroModal = true">
               Completar pre-registro
             </button>
-            <button v-if="can('reservations', 'edit')" class="touch-target w-full rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/15" @click="copyPreregistroLink">
-              Copiar link de pre-registro
+            <button v-if="can('reservations', 'edit')" class="touch-target w-full rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/15" @click="copyWhatsappPreregistroMessage">
+              Copiar mensaje WhatsApp
             </button>
-            <p class="text-xs text-gray-500">El link es válido 48 horas después del check-in declarado.</p>
+            <button v-if="can('reservations', 'edit')" class="touch-target w-full rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200" @click="copyPreregistroLink">
+              Copiar link
+            </button>
           </div>
 
           <div v-else class="text-sm text-gray-500">
@@ -487,6 +496,8 @@ import { useToast } from '../composables/useToast'
 import { useBreakpoint } from '../composables/useBreakpoint'
 import { notifyCheckinRealizado } from '../services/notificationService'
 import { getMessageSettings, getPredefinedMessages } from '../services/messageSettingsService'
+import { resolveTemplate } from '../utils/messageUtils'
+import { DEFAULT_PREREGISTRO_TEMPLATE, formatDateLongEs } from '../utils/voucherUtils'
 
 const route = useRoute()
 const router = useRouter()
@@ -726,9 +737,28 @@ const registeredGuests = computed(() => {
       is_primary: Boolean(row.is_primary),
       name: row.guests?.name || '-',
       nationality: row.guests?.nationality || '',
+      email: row.guests?.email || '',
+      document_type: row.guests?.document_type || '',
+      document_number: row.guests?.document_number || '',
+      birth_date: row.guests?.birth_date || '',
       documentLabel: [row.guests?.document_type, row.guests?.document_number].filter(Boolean).join(' ') || 'Sin documento',
     }))
     .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
+})
+
+const preregistroEval = computed(() => {
+  const guestsCount = (Number(res.value?.adults || 0) + Number(res.value?.children || 0)) || 1
+  const companionsExpected = Math.max(0, guestsCount - 1)
+  const guests = registeredGuests.value
+  const primary = guests.find((g) => g.is_primary)
+  const companions = guests.filter((g) => !g.is_primary)
+  const primaryComplete = Boolean(
+    primary?.name && primary?.document_type && primary?.document_number &&
+    primary?.email && primary?.nationality && primary?.birth_date,
+  )
+  const companionsRegistered = companions.length
+  const isComplete = primaryComplete && companionsRegistered >= companionsExpected
+  return { isComplete, primaryComplete, companionsExpected, companionsRegistered }
 })
 
 const preregistroReservation = computed(() => ({
@@ -1009,6 +1039,35 @@ watch(
     await validateEditUnitsSelection()
   }
 )
+
+const copyWhatsappPreregistroMessage = async () => {
+  const { data, error } = await supabase.functions.invoke('generate-preregistro-token', {
+    body: { reservation_id: res.value.id },
+  })
+
+  if (error) {
+    toast.error(await parseFunctionError(error))
+    return
+  }
+
+  const rawPath = String(data?.checkin_url || '')
+  const appOrigin = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '')
+  const link_preregistro = rawPath.startsWith('http') ? rawPath : `${appOrigin}${rawPath}`
+
+  const preregistroBody = predefinedMessages.value.find((m) => m.key === 'preregistro')?.body || DEFAULT_PREREGISTRO_TEMPLATE
+
+  const vars = {
+    nombre_huesped: res.value?.guests?.name || res.value?.guest_name || '-',
+    nombre_alojamiento: profile.value?.commercial_name || profile.value?.legal_name || 'Alojamiento',
+    fecha_checkin_larga: formatDateLongEs(res.value?.check_in),
+    link_preregistro,
+    telefono: profile.value?.phone || '-',
+  }
+
+  const { text } = resolveTemplate(preregistroBody, vars)
+  await navigator.clipboard.writeText(text)
+  toast.success('Mensaje copiado al portapapeles')
+}
 
 const copyPreregistroLink = async () => {
   const { data, error } = await supabase.functions.invoke('generate-preregistro-token', {

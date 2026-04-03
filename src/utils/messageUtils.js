@@ -338,6 +338,9 @@ export const VARIABLE_CATALOG = {
       { key: 'hora_checkout', label: 'Hora check-out', ejemplo: '12:00 PM' },
       { key: 'condiciones', label: 'Condiciones', ejemplo: 'No mascotas. No fiestas.' },
     ],
+    preregistro: [
+      { key: 'link_preregistro', label: 'Link de pre-registro', ejemplo: 'https://app.tekmiinn.com/prerregistro/abc123...' },
+    ],
   },
   bloques: [
     {

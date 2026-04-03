@@ -17,9 +17,33 @@
         Cargando información del alojamiento...
       </section>
 
-      <section v-else-if="viewState === 'success'" class="rounded-xl border border-emerald-200 bg-white p-8 text-center shadow-sm">
-        <h2 class="text-2xl font-semibold text-emerald-700">¡Pre-registro completado!</h2>
-        <p class="mt-3 text-sm text-gray-600">Te esperamos el {{ formatDate(checkInDate) }}.</p>
+      <section v-else-if="viewState === 'success'" class="rounded-xl border border-emerald-200 bg-white p-8 shadow-sm">
+        <div class="text-center">
+          <h2 class="text-2xl font-semibold text-emerald-700">¡Pre-registro completado!</h2>
+          <p class="mt-3 text-sm text-gray-600">Te esperamos el {{ formatDate(checkInDate) }}.</p>
+        </div>
+
+        <div class="mt-6 rounded-md border border-gray-200 bg-gray-50 p-4">
+          <p class="text-sm font-medium text-gray-900">¿Viajan acompañantes que quieran registrarse por su cuenta?</p>
+          <template v-if="!companionLink">
+            <button
+              :disabled="companionLinkLoading"
+              class="mt-3 w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              @click="generateCompanionLink"
+            >
+              {{ companionLinkLoading ? 'Generando...' : 'Generar link para acompañantes' }}
+            </button>
+          </template>
+          <template v-else>
+            <p class="mt-2 text-xs text-amber-700">⚠️ Este link es exclusivo para los acompañantes de esta reserva. Al compartirlo, cualquier persona con el link podrá registrar datos como acompañante.</p>
+            <button
+              class="mt-3 w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+              @click="copyCompanionLink"
+            >
+              {{ companionLinkCopied ? 'Copiado ✓' : 'Copiar link' }}
+            </button>
+          </template>
+        </div>
       </section>
 
       <section v-else-if="viewState === 'error'" class="rounded-xl border border-red-200 bg-white p-8 text-center shadow-sm">
@@ -30,6 +54,10 @@
       </section>
 
       <section v-else class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          ⚠️ Este link es personal. Contiene información de tu reserva — no lo compartas con personas que no sean de tu grupo.
+        </div>
+
         <div class="mb-5 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3">
           <p class="text-sm font-semibold text-indigo-900">Tu reserva en {{ accommodationName }}</p>
           <p class="mt-1 text-sm text-indigo-800">Check-in: {{ formatDate(checkInDate) }} → Check-out: {{ formatDate(checkOutDate) }}</p>
@@ -67,6 +95,10 @@ const contactPhone = ref('')
 const accommodationLogo = ref('')
 
 const token = computed(() => String(route.params.token || ''))
+
+const companionLink = ref('')
+const companionLinkLoading = ref(false)
+const companionLinkCopied = ref(false)
 
 const reservationInfo = computed(() => ({
   accommodationName: accommodationName.value,
@@ -154,6 +186,32 @@ const handleSubmit = async ({ primary_guest, additional_guests }) => {
 
   viewState.value = 'success'
   submitting.value = false
+}
+
+const generateCompanionLink = async () => {
+  companionLinkLoading.value = true
+  try {
+    const { data, error } = await supabase.functions.invoke('public-companion-preregistro', {
+      body: { action: 'generate', primary_token: token.value },
+    })
+    if (error || !data?.companion_url) throw new Error('No se pudo generar el link.')
+    const appOrigin = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '')
+    companionLink.value = appOrigin + data.companion_url
+  } catch {
+    // silently fail; button remains visible
+  } finally {
+    companionLinkLoading.value = false
+  }
+}
+
+const copyCompanionLink = async () => {
+  try {
+    await navigator.clipboard.writeText(companionLink.value)
+    companionLinkCopied.value = true
+    setTimeout(() => { companionLinkCopied.value = false }, 2000)
+  } catch {
+    // ignore
+  }
 }
 
 onMounted(loadContextFromQuery)

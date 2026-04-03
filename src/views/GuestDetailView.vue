@@ -31,6 +31,10 @@
               <dt class="text-gray-500">País</dt>
               <dd class="text-gray-900">{{ guest.nationality || '-' }}</dd>
             </div>
+            <div class="flex items-center justify-between gap-3">
+              <dt class="text-gray-500">Fecha de nacimiento</dt>
+              <dd class="text-gray-900">{{ guest.birth_date ? formatDate(guest.birth_date) : '-' }}</dd>
+            </div>
           </dl>
         </div>
 
@@ -87,6 +91,7 @@
 
         <AppFormSection title="Información adicional" :divider="false">
           <AppInput v-model="editForm.nationality" label="Nacionalidad" />
+          <AppInput v-model="editForm.birth_date" type="date" label="Fecha de nacimiento" />
           <AppTextarea v-model="editForm.notes" label="Notas" :rows="2" :autoResize="true" />
         </AppFormSection>
 
@@ -136,6 +141,7 @@ const editForm = ref({
   email: '',
   phone: '',
   nationality: '',
+  birth_date: '',
   document_type: '',
   document_number: '',
   notes: ''
@@ -176,6 +182,7 @@ const openEditModal = () => {
     email: guest.value.email || '',
     phone: guest.value.phone || '',
     nationality: guest.value.nationality || '',
+    birth_date: guest.value.birth_date || '',
     document_type: guest.value.document_type || '',
     document_number: guest.value.document_number || '',
     notes: guest.value.notes || ''

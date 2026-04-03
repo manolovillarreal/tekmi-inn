@@ -9,6 +9,7 @@ type GuestInput = {
   document_number?: string
   phone?: string
   email?: string
+  birth_date?: string
 }
 
 const corsHeaders = {
@@ -25,6 +26,7 @@ const normalizeValue = (value: unknown) => {
 const sanitizeGuest = (guest: GuestInput) => {
   const documentType = normalizeValue(guest.document_type)
   const documentNumber = normalizeValue(guest.document_number)
+  const birthDate = normalizeValue(guest.birth_date)
 
   return {
     name: normalizeValue(guest.name),
@@ -34,6 +36,7 @@ const sanitizeGuest = (guest: GuestInput) => {
     phone: normalizeValue(guest.phone),
     email: normalizeValue(guest.email),
     document: documentNumber,
+    birth_date: birthDate,
   }
 }
 
@@ -42,7 +45,7 @@ const getReservationByToken = async (client: ReturnType<typeof createClient>, to
 
   const { data, error } = await client
     .from('reservations')
-    .select('id, account_id, status, check_in, guest_id, guest_name, guest_phone, preregistro_completado, preregistro_token_expiry')
+    .select('id, account_id, status, check_in, guest_id, guest_name, guest_phone, preregistro_completado')
     .eq('preregistro_token', tokenHash)
     .maybeSingle()
 
@@ -60,7 +63,7 @@ const resolveGuest = async (
   if (payload.document_type && payload.document_number) {
     const { data: existing, error: existingError } = await client
       .from('guests')
-      .select('id, name, nationality, document_type, document_number, phone, email, document')
+      .select('id, name, nationality, document_type, document_number, phone, email, document, birth_date')
       .eq('account_id', accountId)
       .eq('document_type', payload.document_type)
       .eq('document_number', payload.document_number)
@@ -77,6 +80,7 @@ const resolveGuest = async (
         phone: payload.phone || existing.phone,
         email: payload.email || existing.email,
         document: payload.document || existing.document,
+        birth_date: payload.birth_date || existing.birth_date,
       }
 
       const { data: updated, error: updateError } = await client
@@ -141,13 +145,6 @@ serve(async (req) => {
       return Response.json(
         { message: 'Pre-registro ya completado', contact_phone: profile?.phone || null },
         { status: 409, headers: corsHeaders }
-      )
-    }
-
-    if (reservation.preregistro_token_expiry && new Date(reservation.preregistro_token_expiry).getTime() < Date.now()) {
-      return Response.json(
-        { message: 'Link expirado', contact_phone: profile?.phone || null },
-        { status: 410, headers: corsHeaders }
       )
     }
 

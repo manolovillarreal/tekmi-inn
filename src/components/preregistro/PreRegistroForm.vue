@@ -32,6 +32,7 @@
         </AppFormGrid>
 
         <AppInput v-model="primaryGuest.nationality" label="Nacionalidad" />
+        <AppInput v-model="primaryGuest.birth_date" type="date" label="Fecha de nacimiento" required />
       </AppFormSection>
 
       <AppFieldGroup :border="true" :compact="true" title="Acompañantes" subtitle="Opcional">
@@ -66,6 +67,7 @@
           </AppFormGrid>
 
           <AppInput v-model="guest.nationality" label="Nacionalidad" />
+          <AppInput v-model="guest.birth_date" type="date" label="Fecha de nacimiento" />
         </AppFormSection>
       </AppFieldGroup>
 
@@ -120,6 +122,7 @@ const buildGuest = () => ({
   document_number: '',
   phone: '',
   email: '',
+  birth_date: '',
 })
 
 const primaryGuest = reactive(buildGuest())

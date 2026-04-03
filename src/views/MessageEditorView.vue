@@ -294,6 +294,7 @@ import {
   buildQuotationWhatsAppMessage,
   DEFAULT_QUOTATION_TEMPLATE,
   DEFAULT_VOUCHER_TEMPLATE,
+  DEFAULT_PREREGISTRO_TEMPLATE,
 } from '../utils/voucherUtils'
 
 const route = useRoute()
@@ -325,6 +326,7 @@ const CATEGORY_LABELS = {
   precio: 'Precio',
   alojamiento: 'Alojamiento',
   checkin: 'Check-in / Check-out',
+  preregistro: 'Pre-registro',
 }
 
 const variableGroups = Object.entries(VARIABLE_CATALOG.simples).map(([key, vars]) => ({
@@ -520,6 +522,8 @@ const reservationContext = computed(() => {
 })
 
 const buildSystemTemplateFromSettings = (key, settings) => {
+  if (key === 'preregistro') return DEFAULT_PREREGISTRO_TEMPLATE
+
   if (!settings || (key !== 'quotation' && key !== 'voucher')) return ''
 
   if (key === 'quotation') {
@@ -574,6 +578,7 @@ const previewVariables = computed(() => {
     hora_checkin: systemForm.value?.checkin_time || '3:00 PM',
     hora_checkout: systemForm.value?.checkout_time || '12:00 PM',
     condiciones: conditionsText,
+    link_preregistro: '[Link de pre-registro]',
     unidades: reservationUnits.map((unit) => ({
       nombre_unidad: unit?.name || 'Unidad',
       descripcion_unidad: unit?.description || '',
@@ -634,6 +639,11 @@ const restoreDefaultMessage = () => {
 
   if (message.value?.key === 'voucher') {
     body.value = DEFAULT_VOUCHER_TEMPLATE
+    return
+  }
+
+  if (message.value?.key === 'preregistro') {
+    body.value = DEFAULT_PREREGISTRO_TEMPLATE
     return
   }
 

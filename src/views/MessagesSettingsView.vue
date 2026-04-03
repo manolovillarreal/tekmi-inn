@@ -44,6 +44,22 @@
             Faltan variables: {{ voucherPreview.missing.join(', ') }}
           </p>
         </div>
+
+        <div class="rounded-md border border-gray-200 p-4">
+          <div class="flex items-center justify-between gap-3">
+            <p class="font-semibold text-gray-900">Pre-registro</p>
+            <div class="flex items-center gap-2">
+              <button type="button" class="btn-secondary text-xs" @click="toggleSystemPreview('preregistro')">
+                {{ showPreregistroPreview ? 'Ocultar mensaje' : 'Ver mensaje' }}
+              </button>
+              <button type="button" class="btn-secondary text-xs" :disabled="!systemMessageByKey.preregistro" @click="openMessageEditor(systemMessageByKey.preregistro)">Editar</button>
+            </div>
+          </div>
+          <pre v-if="showPreregistroPreview" class="mt-3 whitespace-pre-wrap rounded bg-gray-50 p-3 text-sm text-gray-800">{{ preregistroPreview.text }}</pre>
+          <p v-if="showPreregistroPreview && preregistroPreview.missing.length" class="mt-2 text-xs text-amber-700">
+            Faltan variables: {{ preregistroPreview.missing.join(', ') }}
+          </p>
+        </div>
       </div>
     </div>
 
@@ -144,7 +160,7 @@ import {
   buildVoucherMessage,
   resolveTemplate,
 } from '../utils/messageUtils'
-import { buildQuotationWhatsAppMessage } from '../utils/voucherUtils'
+import { buildQuotationWhatsAppMessage, DEFAULT_PREREGISTRO_TEMPLATE } from '../utils/voucherUtils'
 
 const { can } = usePermissions()
 const accountStore = useAccountStore()
@@ -153,6 +169,7 @@ const router = useRouter()
 
 const showQuotationPreview = ref(false)
 const showVoucherPreview = ref(false)
+const showPreregistroPreview = ref(false)
 const openCustomPreviewIds = ref(new Set())
 const savingCustom = ref(false)
 const showCustomModal = ref(false)
@@ -185,6 +202,7 @@ const systemMessageByKey = computed(() => {
   return {
     quotation: systemMessages.find((msg) => msg.key === 'quotation')?.id || '',
     voucher: systemMessages.find((msg) => msg.key === 'voucher')?.id || '',
+    preregistro: systemMessages.find((msg) => msg.key === 'preregistro')?.id || '',
   }
 })
 
@@ -266,6 +284,19 @@ const voucherPreview = computed(() => buildVoucherMessage({
   voucherConditions: String(accountSettings.value.voucher_conditions || ''),
 }))
 
+const preregistroPreview = computed(() => {
+  const template = String(
+    messages.value.find((msg) => msg.type === 'system' && msg.key === 'preregistro')?.body || DEFAULT_PREREGISTRO_TEMPLATE
+  ).trim()
+  return resolveTemplate(template, {
+    nombre_huesped: 'Carlos Pérez',
+    nombre_alojamiento: profile.value?.commercial_name || profile.value?.legal_name || 'Marmanu House',
+    fecha_checkin_larga: 'viernes, 10 de abril de 2026',
+    link_preregistro: 'https://app.tekmiinn.com/prerregistro/abc123...',
+    telefono: profile.value?.phone || '3102040245',
+  })
+})
+
 const loadProfileAndSettings = async (accountId) => {
   const [{ data: profileData }, { data: settingsData }] = await Promise.all([
     supabase.from('account_profile').select('*').eq('account_id', accountId).maybeSingle(),
@@ -310,6 +341,11 @@ const toggleSystemPreview = (key) => {
 
   if (key === 'voucher') {
     showVoucherPreview.value = !showVoucherPreview.value
+    return
+  }
+
+  if (key === 'preregistro') {
+    showPreregistroPreview.value = !showPreregistroPreview.value
   }
 }
 

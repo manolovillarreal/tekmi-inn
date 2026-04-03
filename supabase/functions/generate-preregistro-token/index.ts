@@ -7,14 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const toIsoDate = (value: string) => {
-  const base = new Date(`${value}T00:00:00.000Z`)
-  if (Number.isNaN(base.getTime())) {
-    throw new Error('La reserva no tiene una fecha de check-in valida.')
-  }
-  return base
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -54,7 +46,7 @@ serve(async (req) => {
 
     const { data: reservation, error: reservationError } = await adminClient
       .from('reservations')
-      .select('id, account_id, check_in, check_out, adults, children, preregistro_completado')
+      .select('id, account_id, check_in, check_out, adults, children, preregistro_completado, preregistro_token_raw')
       .eq('id', reservationId)
       .maybeSingle()
 
@@ -77,23 +69,28 @@ serve(async (req) => {
       return Response.json({ message: 'El pre-registro ya fue completado.' }, { status: 409, headers: corsHeaders })
     }
 
-    const rawToken = randomBytes(32).toString('hex')
-    const hashedToken = createHash('sha256').update(rawToken).digest('hex')
+    // Idempotente: si ya existe un raw token, reusar sin regenerar
+    let rawToken: string
 
-    const checkIn = toIsoDate(reservation.check_in)
-    checkIn.setUTCHours(checkIn.getUTCHours() + 48)
+    if (reservation.preregistro_token_raw) {
+      rawToken = reservation.preregistro_token_raw
+    } else {
+      rawToken = randomBytes(32).toString('hex')
+      const hashedToken = createHash('sha256').update(rawToken).digest('hex')
 
-    const { error: updateError } = await adminClient
-      .from('reservations')
-      .update({
-        preregistro_token: hashedToken,
-        preregistro_token_expiry: checkIn.toISOString(),
-      })
-      .eq('account_id', reservation.account_id)
-      .eq('id', reservation.id)
+      const { error: updateError } = await adminClient
+        .from('reservations')
+        .update({
+          preregistro_token: hashedToken,
+          preregistro_token_raw: rawToken,
+          preregistro_token_expiry: null,
+        })
+        .eq('account_id', reservation.account_id)
+        .eq('id', reservation.id)
 
-    if (updateError) {
-      return Response.json({ message: updateError.message }, { status: 400, headers: corsHeaders })
+      if (updateError) {
+        return Response.json({ message: updateError.message }, { status: 400, headers: corsHeaders })
+      }
     }
 
     const { data: profile } = await adminClient

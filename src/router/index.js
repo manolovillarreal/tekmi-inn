@@ -26,6 +26,12 @@ const router = createRouter({
       meta: { plainLayout: true }
     },
     {
+      path: '/prerregistro-acompanante/:token',
+      name: 'companion-preregistro',
+      component: () => import('../views/PublicCompanionPreregistroView.vue'),
+      meta: { plainLayout: true }
+    },
+    {
       path: '/',
       name: 'dashboard',
       component: DashboardView,
