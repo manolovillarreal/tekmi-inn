@@ -68,6 +68,18 @@ const getReservationByCompanionTokenHash = async (
   return data
 }
 
+const getAccountProfile = async (
+  client: ReturnType<typeof createClient>,
+  accountId: string
+) => {
+  const { data } = await client
+    .from('account_profile')
+    .select('commercial_name, legal_name, phone')
+    .eq('account_id', accountId)
+    .maybeSingle()
+  return data
+}
+
 const countRegisteredCompanions = async (
   client: ReturnType<typeof createClient>,
   reservationId: string,
@@ -143,14 +155,52 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+    const adminClient = createClient(supabaseUrl, serviceRoleKey)
+
+    // ---------------------------------------------------------------
+    // GET: Obtener datos de la reserva por companion token
+    // ---------------------------------------------------------------
+    if (req.method === 'GET') {
+      const url = new URL(req.url)
+      const companionToken = normalizeValue(url.searchParams.get('token'))
+
+      if (!companionToken) {
+        return Response.json({ message: 'token es requerido.' }, { status: 400, headers: corsHeaders })
+      }
+
+      const companionTokenHash = createHash('sha256').update(companionToken).digest('hex')
+      const reservation = await getReservationByCompanionTokenHash(adminClient, companionTokenHash)
+
+      if (!reservation) {
+        return Response.json({ message: 'Link inválido.' }, { status: 404, headers: corsHeaders })
+      }
+
+      const BLOCKED_STATUSES = ['completed', 'finalized', 'cancelled']
+      if (BLOCKED_STATUSES.includes(reservation.status)) {
+        return Response.json({ message: 'Este link ya no está disponible.' }, { status: 410, headers: corsHeaders })
+      }
+
+      const profile = await getAccountProfile(adminClient, reservation.account_id)
+      const guestsCount = Number(reservation.adults || 0) + Number(reservation.children || 0)
+
+      return Response.json({
+        reservation: {
+          check_in: reservation.check_in,
+          check_out: reservation.check_out,
+          guests_count: guestsCount > 0 ? guestsCount : 1,
+        },
+        account: {
+          name: profile?.commercial_name || profile?.legal_name || 'Alojamiento',
+          phone: profile?.phone || '',
+        },
+      }, { headers: corsHeaders })
+    }
+
     if (req.method !== 'POST') {
       return Response.json({ message: 'Metodo no permitido.' }, { status: 405, headers: corsHeaders })
     }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-    const appUrl = Deno.env.get('APP_URL') || ''
-    const adminClient = createClient(supabaseUrl, serviceRoleKey)
 
     const body = await req.json()
     const action = normalizeValue(body?.action)
@@ -172,12 +222,6 @@ serve(async (req) => {
       if (!reservation) {
         return Response.json({ message: 'Link inválido.' }, { status: 404, headers: corsHeaders })
       }
-
-      const { data: profile } = await adminClient
-        .from('account_profile')
-        .select('commercial_name, legal_name, phone')
-        .eq('account_id', reservation.account_id)
-        .maybeSingle()
 
       // Idempotente: reusar token existente si ya fue generado
       let companionRawToken: string
@@ -201,16 +245,7 @@ serve(async (req) => {
         }
       }
 
-      const guestsCount = Number(reservation.adults || 0) + Number(reservation.children || 0)
-      const params = new URLSearchParams({
-        check_in: String(reservation.check_in || ''),
-        check_out: String(reservation.check_out || ''),
-        guests_count: String(guestsCount > 0 ? guestsCount : 1),
-        accommodation: String(profile?.commercial_name || profile?.legal_name || 'Alojamiento'),
-        contact_phone: String(profile?.phone || ''),
-      })
-
-      const companionPath = `/prerregistro-acompanante/${companionRawToken}?${params.toString()}`
+      const companionPath = `/prerregistro-acompanante/${companionRawToken}`
 
       return Response.json(
         { companion_url: companionPath },

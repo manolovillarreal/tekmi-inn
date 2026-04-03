@@ -674,7 +674,7 @@ const nightsCount = computed(() => {
 const isCheckoutDay = computed(() => {
   if (!res.value?.check_out) return false
   const today = new Date().toISOString().slice(0, 10)
-  return res.value.check_out.slice(0, 10) === today
+  return res.value.check_out.slice(0, 10) <= today
 })
 
 const totalPaid = computed(() => {

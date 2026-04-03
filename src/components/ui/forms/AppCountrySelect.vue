@@ -89,7 +89,31 @@ const isOpen = ref(false)
 const isFocused = ref(false)
 
 // Priority countries shown first
-const PRIORITY_CODES = ['CO', 'VE', 'EC', 'PA', 'CR']
+const PRIORITY_CODES =  [
+  'CO', // Colombia
+  'AR', // Argentina
+  'BO', // Bolivia
+  'BR', // Brasil
+  'CA', // Canadá
+  'CL', // Chile
+  'CR', // Costa Rica
+  'CU', // Cuba
+  'DO', // República Dominicana
+  'EC', // Ecuador
+  'ES', // España
+  'GT', // Guatemala
+  'HN', // Honduras
+  'IT', // Italia
+  'MX', // México
+  'NI', // Nicaragua
+  'PA', // Panamá
+  'PE', // Perú
+  'PY', // Paraguay
+  'SV', // El Salvador
+  'US', // Estados Unidos
+  'UY', // Uruguay
+  'VE', // Venezuela
+]
 
 const allCountries = (() => {
   const list = Object.entries(countries).map(([code, data]) => ({
@@ -123,7 +147,7 @@ const selectedFlag = computed(() =>
 
 const filteredCountries = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return allCountries.slice(0, 8)
+  if (!q) return allCountries.slice(0, PRIORITY_CODES.length)
   return allCountries
     .filter((c) => c.name.toLowerCase().includes(q))
     .slice(0, 8)

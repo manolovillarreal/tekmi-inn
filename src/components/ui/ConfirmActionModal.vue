@@ -14,7 +14,7 @@
           :value="modelValue"
           type="text"
           class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          placeholder="Escribe el texto de confirmaciÃ³n"
+          placeholder="Escribe el texto de confirmación"
           @input="$emit('update:modelValue', $event.target.value)"
         >
       </div>

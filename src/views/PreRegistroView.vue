@@ -72,6 +72,32 @@
           :initialPrimaryGuest="initialPrimaryGuest"
           @submitted="handleSubmit"
         />
+
+        <!-- Companion link — alternative to filling companion data manually -->
+        <div v-if="guestsCount > 1" class="rounded-md border border-gray-200 bg-gray-50 p-4">
+          <p class="text-sm font-medium text-gray-900">¿Prefieren que los acompañantes se registren por su cuenta?</p>
+          <p class="mt-1 text-xs text-gray-500">Genera un link exclusivo para que cada acompañante complete sus propios datos.</p>
+          <template v-if="!companionLink">
+            <button
+              type="button"
+              :disabled="companionLinkLoading"
+              class="mt-3 w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              @click="generateCompanionLink"
+            >
+              {{ companionLinkLoading ? 'Generando...' : 'Generar link para acompañantes' }}
+            </button>
+          </template>
+          <template v-else>
+            <p class="mt-2 text-xs text-amber-700">⚠️ Al compartirlo, cualquier persona con el link podrá registrarse como acompañante de esta reserva.</p>
+            <button
+              type="button"
+              class="mt-3 w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+              @click="copyCompanionLink"
+            >
+              {{ companionLinkCopied ? 'Copiado ✓' : 'Copiar link de acompañantes' }}
+            </button>
+          </template>
+        </div>
       </section>
     </div>
   </div>

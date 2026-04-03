@@ -72,13 +72,14 @@
               label="Tipo de documento"
               :options="documentTypeOptions"
               placeholder="Sin definir"
+              required
             />
-            <AppInput v-model="guest.document_number" label="Número de documento" inputmode="numeric" />
+            <AppInput v-model="guest.document_number" label="Número de documento" inputmode="numeric" required />
           </AppFormGrid>
 
           <AppFormGrid :columns="2">
-            <AppCountrySelect v-model="guest.nationality" label="Nacionalidad" />
-            <AppInput v-model="guest.birth_date" type="date" label="Fecha de nacimiento" />
+            <AppCountrySelect v-model="guest.nationality" label="Nacionalidad" required />
+            <AppInput v-model="guest.birth_date" type="date" label="Fecha de nacimiento" required />
           </AppFormGrid>
         </AppFormSection>
       </AppFieldGroup>
@@ -88,7 +89,7 @@
           submit-label="Guardar"
           cancel-label="Cancelar"
           :loading="submitting"
-          :submit-disabled="submitting || !primaryGuest.name.trim() || !primaryGuest.document_type || !primaryGuest.document_number.trim() || !primaryGuest.phone.trim() || !primaryGuest.email.trim() || !primaryGuest.nationality || !primaryGuest.birth_date"
+          :submit-disabled="submitting || !primaryGuest.name.trim() || !primaryGuest.document_type || !primaryGuest.document_number.trim() || !primaryGuest.phone.trim() || !primaryGuest.email.trim() || !primaryGuest.nationality || !primaryGuest.birth_date || additionalGuests.some(g => !g.name.trim() || !g.document_type || !g.document_number.trim() || !g.nationality || !g.birth_date)"
           @submit="submitForm"
           @cancel="emit('cancel')"
         />

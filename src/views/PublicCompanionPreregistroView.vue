@@ -63,9 +63,10 @@
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700">Tipo de documento</label>
+                <label class="block text-sm font-medium text-gray-700">Tipo de documento <span class="text-red-500">*</span></label>
                 <select
                   v-model="guest.document_type"
+                  required
                   class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
                   <option value="">Sin definir</option>
@@ -73,11 +74,12 @@
                 </select>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700">Número de documento</label>
+                <label class="block text-sm font-medium text-gray-700">Número de documento <span class="text-red-500">*</span></label>
                 <input
                   v-model="guest.document_number"
                   type="text"
                   inputmode="numeric"
+                  required
                   class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
               </div>
@@ -103,18 +105,20 @@
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700">Nacionalidad</label>
+              <label class="block text-sm font-medium text-gray-700">Nacionalidad <span class="text-red-500">*</span></label>
               <AppCountrySelect
                 v-model="guest.nationality"
                 class="mt-1"
+                required
               />
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700">Fecha de nacimiento</label>
+              <label class="block text-sm font-medium text-gray-700">Fecha de nacimiento <span class="text-red-500">*</span></label>
               <input
                 v-model="guest.birth_date"
                 type="date"
+                required
                 class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
             </div>
@@ -122,7 +126,7 @@
 
           <button
             type="submit"
-            :disabled="submitting"
+            :disabled="submitting || !guest.name.trim() || !guest.document_type || !guest.document_number.trim() || !guest.nationality || !guest.birth_date"
             class="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
           >
             {{ submitting ? 'Enviando...' : 'Completar pre-registro' }}
@@ -138,6 +142,9 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '../services/supabase'
 import AppCountrySelect from '../components/ui/forms/AppCountrySelect.vue'
+
+const FUNCTIONS_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '') + '/functions/v1'
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
 const route = useRoute()
 
@@ -243,14 +250,33 @@ const handleSubmit = async () => {
   submitting.value = false
 }
 
-onMounted(() => {
-  const query = route.query
-  checkInDate.value = String(query.check_in || '')
-  checkOutDate.value = String(query.check_out || '')
-  guestsCount.value = Math.max(1, Number(query.guests_count || 1))
-  accommodationName.value = String(query.accommodation || 'Alojamiento')
-  accommodationLogo.value = String(query.logo_url || '')
-  contactPhone.value = String(query.contact_phone || '')
-  viewState.value = 'form'
+onMounted(async () => {
+  const token = String(route.params.token || '')
+
+  try {
+    const res = await fetch(
+      `${FUNCTIONS_URL}/public-companion-preregistro?token=${encodeURIComponent(token)}`,
+      { headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` } }
+    )
+    const data = await res.json()
+
+    if (!res.ok) {
+      const status = res.status
+      errorMessage.value = parseErrorMessage(status, data?.message)
+      if (data?.contact_phone) contactPhone.value = String(data.contact_phone)
+      viewState.value = 'error'
+      return
+    }
+
+    checkInDate.value = String(data.reservation?.check_in || '')
+    checkOutDate.value = String(data.reservation?.check_out || '')
+    guestsCount.value = Math.max(1, Number(data.reservation?.guests_count || 1))
+    accommodationName.value = String(data.account?.name || 'Alojamiento')
+    contactPhone.value = String(data.account?.phone || '')
+    viewState.value = 'form'
+  } catch {
+    errorMessage.value = 'No se pudo cargar la información del pre-registro.'
+    viewState.value = 'error'
+  }
 })
 </script>
