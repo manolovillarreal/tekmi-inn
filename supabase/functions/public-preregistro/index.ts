@@ -99,7 +99,14 @@ const resolveGuest = async (
         document_type: payload.document_type || existing.document_type,
         document_number: payload.document_number || existing.document_number,
         phone: payload.phone || existing.phone,
-            phone_country_code: payload.phone_country_code || existing.phone_country_code || '+57',
+        phone_country_code: payload.phone_country_code || existing.phone_country_code || '+57',
+        email: payload.email || existing.email,
+        document: payload.document || existing.document,
+        birth_date: payload.birth_date || existing.birth_date,
+      }
+
+      const { data: updated, error: updateError } = await client
+        .from('guests')
         .update(updatePayload)
         .eq('account_id', accountId)
         .eq('id', existing.id)

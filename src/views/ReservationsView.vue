@@ -238,30 +238,12 @@ const { can } = usePermissions()
 const { isMobile } = useBreakpoint()
 const { viewMode, isTable, isCards } = useViewMode('reservas')
 
-const getLast30DaysRange = () => {
-  const today = new Date()
-  const from = new Date(today)
-  from.setDate(today.getDate() - 29)
-
-  const toIso = (date) => {
-    const adjusted = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-    return adjusted.toISOString().slice(0, 10)
-  }
-
-  return {
-    from: toIso(from),
-    to: toIso(today)
-  }
-}
-
-const defaultRange = getLast30DaysRange()
-
 const filters = ref({
   searchData: '',
   status: '',
   sourceDetailId: '',
-  checkInFrom: defaultRange.from,
-  checkInTo: defaultRange.to,
+  checkInFrom: '',
+  checkInTo: '',
   sortBy: '',
   sortDir: ''
 })
@@ -299,7 +281,7 @@ onMounted(async () => {
 })
 
 const hasActiveFilters = computed(() => {
-  return filters.value.searchData !== '' || filters.value.status !== '' || filters.value.sourceDetailId !== '' || filters.value.checkInFrom !== defaultRange.from || filters.value.checkInTo !== defaultRange.to || filters.value.sortBy !== '' || filters.value.sortDir !== ''
+  return filters.value.searchData !== '' || filters.value.status !== '' || filters.value.sourceDetailId !== '' || filters.value.checkInFrom !== '' || filters.value.checkInTo !== '' || filters.value.sortBy !== '' || filters.value.sortDir !== ''
 })
 
 const clearFilters = () => {
@@ -307,8 +289,8 @@ const clearFilters = () => {
     searchData: '',
     status: '',
     sourceDetailId: '',
-    checkInFrom: defaultRange.from,
-    checkInTo: defaultRange.to,
+    checkInFrom: '',
+    checkInTo: '',
     sortBy: '',
     sortDir: ''
   }

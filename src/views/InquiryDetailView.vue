@@ -4,36 +4,11 @@
       <button type="button" class="text-sm font-medium text-gray-500 hover:text-gray-900" @click="goBack">← Volver a Consultas</button>
       <div class="flex items-center gap-2">
         <button
-          v-if="inquiry && (inquiry.guest_first_name || inquiry.guest_last_name)"
-          class="btn-secondary text-sm"
-          @click="copyInquiryAsWhatsApp"
-          :disabled="!inquiry"
-        >Copiar para WhatsApp</button>
-        <button
           v-if="inquiry"
           class="btn-secondary text-sm"
           @click="showMessagesPanel = true"
           :disabled="!inquiry"
         >Mensajes</button>
-        <button
-          v-if="inquiry"
-          class="btn-secondary text-sm"
-          :disabled="generatingToken"
-          @click="handleQuoteLink"
-        >{{ generatingToken ? 'Generando...' : (inquiry.quote_token ? 'Copiar link de cotización' : 'Generar link de cotización') }}</button>
-        <button
-          v-if="canViewQuotation"
-          class="btn-secondary text-sm"
-          :title="quotationWarningTooltip"
-          @click="goToQuotation"
-          :disabled="!inquiry"
-        >Ver cotización</button>
-        <button
-          v-if="can('inquiries', 'convert') && inquiry && inquiry.status !== 'convertida' && inquiry.status !== 'perdida'"
-          class="btn-primary text-sm"
-          @click="openConversionModal"
-          :disabled="!inquiry"
-        >Convertir en reserva</button>
         <button v-if="can('inquiries', 'edit')" class="btn-secondary text-sm" @click="openEditModal" :disabled="!inquiry">Editar</button>
       </div>
     </div>
@@ -48,21 +23,35 @@
     <div v-else class="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <div class="space-y-6 lg:col-span-2">
         <div class="card">
-          <div class="mb-4 flex items-center justify-between">
-            <div>
+          <div class="mb-4 flex items-start justify-between gap-3">
+            <div class="min-w-0">
               <p class="mb-0.5 font-mono text-xs text-gray-400">{{ inquiry.inquiry_number || '' }}</p>
               <p class="mb-0.5 font-mono text-xs text-gray-500">{{ inquiryReferenceDisplay }}</p>
               <h1 class="text-2xl font-semibold text-gray-900">{{ `${inquiry.guest_first_name || ''} ${inquiry.guest_last_name || ''}`.trim() || 'Sin nombre' }}</h1>
             </div>
-            <span
-              class="rounded-full border px-3 py-1 text-xs font-medium"
-              :style="getInquiryStatusStyle(inquiry.status)"
-            >{{ getInquiryStatusLabel(inquiry.status) }}</span>
+            <div class="flex flex-shrink-0 items-center gap-2">
+              <a
+                v-if="whatsappGuestUrl"
+                :href="whatsappGuestUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="lg:hidden touch-target flex h-10 w-10 items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors"
+                aria-label="Ir a WhatsApp"
+              >
+                <svg viewBox="0 0 24 24" class="h-5 w-5" fill="currentColor" aria-hidden="true">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+                </svg>
+              </a>
+              <span
+                class="rounded-full border px-3 py-1 text-xs font-medium"
+                :style="getInquiryStatusStyle(inquiry.status)"
+              >{{ getInquiryStatusLabel(inquiry.status) }}</span>
+            </div>
           </div>
 
           <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
             <p><span class="font-medium text-gray-700">Teléfono:</span> {{ inquiry.guest_phone || '-' }}</p>
-            <p><span class="font-medium text-gray-700">Origen:</span> {{ inquiry.source_display_label || inquiry.source || '-' }}</p>
+            <p><span class="font-medium text-gray-700">Origen:</span> {{ inquiry.source_display_label || '-' }}</p>
             <p><span class="font-medium text-gray-700">Check-in:</span> {{ formatDate(inquiry.check_in) }}</p>
             <p><span class="font-medium text-gray-700">Check-out:</span> {{ formatDate(inquiry.check_out) }}</p>
             <p><span class="font-medium text-gray-700">Adultos:</span> {{ inquiry.adults || '-' }}</p>
@@ -89,6 +78,43 @@
       </div>
 
       <div class="space-y-6">
+        <div v-if="inquiry" class="card">
+          <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-900">Acciones</h2>
+          <div class="space-y-2">
+            <a
+              v-if="whatsappGuestUrl"
+              :href="whatsappGuestUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex w-full items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
+            >
+              <svg class="h-4 w-4 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884"/></svg>
+              Ir a WhatsApp
+            </a>
+            <button
+              v-if="inquiry.guest_first_name || inquiry.guest_last_name"
+              class="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+              @click="copyInquiryAsWhatsApp"
+            >Copiar cotización (WhatsApp)</button>
+            <button
+              class="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+              :disabled="generatingToken"
+              @click="handleQuoteLink"
+            >{{ generatingToken ? 'Generando...' : (inquiry.quote_token ? 'Copiar link cotización' : 'Generar link cotización') }}</button>
+            <button
+              v-if="canViewQuotation"
+              class="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+              :title="quotationWarningTooltip"
+              @click="goToQuotation"
+            >Ver cotización</button>
+            <button
+              v-if="can('inquiries', 'convert') && inquiry.status !== 'convertida' && inquiry.status !== 'perdida'"
+              class="w-full rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-left text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+              @click="openConversionModal"
+            >Convertir en reserva</button>
+          </div>
+        </div>
+
         <div class="card">
           <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-900">Gestión de estado</h2>
             <div v-if="can('inquiries', 'edit')">
@@ -121,7 +147,7 @@
 
     <BaseModal :isOpen="showEditModal" title="Editar consulta" size="lg" @close="closeEditModal">
       <form class="space-y-5" @submit.prevent="submitEdit">
-        <AppFormSection title="Solicitante" :divider="true">
+        <AppFormSection title="Solicitante" :divider="true" :collapsible="true" :defaultOpen="true">
           <AppFormGrid :columns="2">
             <AppInput
               v-model="editForm.guest_first_name"
@@ -131,12 +157,18 @@
               @blur="touchEditField('guest_first_name')"
             />
             <AppInput v-model="editForm.guest_last_name" label="Apellidos" hint="Opcional" />
+            <AppPhoneInput
+              :countryCode="editPhoneCountryCode"
+              :phoneNumber="editForm.guest_phone"
+              label="Teléfono"
+              hint="Opcional"
+              @update:countryCode="editPhoneCountryCode = $event"
+              @update:phoneNumber="editForm.guest_phone = $event"
             />
-            <AppInput v-model="editForm.guest_phone" label="Teléfono" hint="Opcional" />
           </AppFormGrid>
         </AppFormSection>
 
-        <AppFormSection title="Fechas de interés" :divider="true">
+        <AppFormSection title="Fechas de interés" :divider="true" :collapsible="true" :defaultOpen="true">
           <AppFormGrid :columns="2">
             <AppDatePicker v-model="editForm.check_in" label="Check-in" hint="Opcional" />
             <AppDatePicker v-model="editForm.check_out" label="Check-out" hint="Opcional" />
@@ -154,7 +186,7 @@
           </AppFieldGroup>
         </AppFormSection>
 
-        <AppFormSection title="Personas" :divider="true">
+        <AppFormSection title="Personas" :divider="true" :collapsible="true" :defaultOpen="true">
           <AppFormGrid :columns="2">
             <AppCounter v-model="editForm.adults" label="Adultos" :min="1" :max="20" />
             <AppCounter v-model="editForm.children" label="Niños" :min="0" :max="20" />
@@ -162,7 +194,7 @@
           <p class="text-sm text-[#6B7280]">Total: <strong class="text-[#111827]">{{ Number(editForm.adults || 0) + Number(editForm.children || 0) }}</strong></p>
         </AppFormSection>
 
-        <AppFormSection title="Cotización" :divider="true">
+        <AppFormSection title="Cotización" :divider="true" :collapsible="true" :defaultOpen="true">
           <AppInput v-model="editForm.price_per_night" type="number" label="Precio por noche" prefix="$" hint="Opcional" />
           <AppFormGrid :columns="2">
             <AppInput v-model="editForm.discount_percentage" type="number" label="Descuento" suffix="%" hint="Opcional" />
@@ -181,7 +213,7 @@
           />
         </AppFormSection>
 
-        <AppFormSection title="Origen" :divider="true">
+        <AppFormSection title="Origen" :divider="true" :collapsible="true" :defaultOpen="false">
           <AppFieldGroup title="Canal de origen" :border="false" :compact="true">
             <SourceSelector
               :modelValue="{ sourceTypeId: editForm.source_type_id, sourceDetailId: editForm.source_detail_id }"
@@ -192,7 +224,7 @@
           <AppInput v-model="editForm.commission_name" label="Comisión" placeholder="Booking, agencia..." hint="Opcional" />
         </AppFormSection>
 
-        <AppFormSection title="Notas" :divider="false">
+        <AppFormSection title="Notas" :divider="false" :collapsible="true" :defaultOpen="false">
           <AppTextarea
             v-model="editForm.notes"
             label="Notas"
@@ -355,6 +387,7 @@ import {
 } from '../utils/inquiryUtils'
 import {
   AppInput,
+  AppPhoneInput,
   AppTextarea,
   AppDatePicker,
   AppCounter,
@@ -401,6 +434,12 @@ const isQuoteExpired = computed(() => {
   return new Date(inquiry.value.quote_expires_at) < new Date()
 })
 
+const whatsappGuestUrl = computed(() => {
+  const raw = String(inquiry.value?.guest_phone || '')
+  const digits = raw.replace(/\D/g, '')
+  return digits ? `https://wa.me/${digits}` : null
+})
+
 const showConversionModal = ref(false)
 const showLostSheet = ref(false)
 const lostMotivo = ref('')
@@ -411,6 +450,7 @@ const editError = ref('')
 const saving = ref(false)
 const editTouched = ref({})
 const editSubmitAttempted = ref(false)
+const editPhoneCountryCode = ref('+57')
 
 const showDeleteModal = ref(false)
 const deleting = ref(false)
@@ -624,6 +664,7 @@ const handleQuoteLink = async () => {
 }
 
 const openEditModal = () => {
+  editPhoneCountryCode.value = '+57'
   editForm.value = {
     guest_first_name: inquiry.value?.guest_first_name || '',
     guest_last_name: inquiry.value?.guest_last_name || '',
@@ -638,8 +679,7 @@ const openEditModal = () => {
     commission_name: inquiry.value?.commission_name || '',
     commission_percentage: inquiry.value?.commission_percentage ?? '',
     discount_percentage: inquiry.value?.discount_percentage ?? '',
-    source: inquiry.value?.source || '',
-    source_type_id: inquiry.value?.source_type_id || '',
+    source_type_id: inquiry.value?.source_detail_info?.source_type_id || '',
     source_detail_id: inquiry.value?.source_detail_id || '',
     notes: inquiry.value?.notes || ''
   }
@@ -657,15 +697,9 @@ const closeEditModal = () => {
 const updateEditSourceSelection = (value) => {
   editForm.value.source_type_id = value?.sourceTypeId || ''
   editForm.value.source_detail_id = value?.sourceDetailId || ''
-
-  if (!editForm.value.source_detail_id) {
-    editForm.value.source = null
-  }
 }
 
 const applyEditSourceSuggestions = (payload) => {
-  editForm.value.source = payload.sourceDetailName || payload.sourceDetailLabel || null
-
   if (!String(editForm.value.commission_name || '').trim()) {
     editForm.value.commission_name = payload.sourceDetailLabel || ''
   }

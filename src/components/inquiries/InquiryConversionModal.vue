@@ -8,7 +8,7 @@
         message="La reserva se creará en estado Confirmada."
       />
 
-      <AppFormSection title="Huésped" :divider="true">
+      <AppFormSection title="Huésped" :divider="true" :collapsible="true" :defaultOpen="true">
         <AppFormGrid :columns="2">
           <AppInput
             v-model="form.guest_first_name"
@@ -25,7 +25,7 @@
         </AppFormGrid>
       </AppFormSection>
 
-      <AppFormSection title="Fechas y unidad" :divider="true">
+      <AppFormSection title="Fechas y unidad" :divider="true" :collapsible="true" :defaultOpen="true">
         <AppFormGrid :columns="2">
           <AppDatePicker
             v-model="form.check_in"
@@ -76,7 +76,7 @@
         </AppFieldGroup>
       </AppFormSection>
 
-      <AppFormSection title="Personas" :divider="true">
+      <AppFormSection title="Personas" :divider="true" :collapsible="true" :defaultOpen="true">
         <AppFormGrid :columns="2">
           <AppCounter v-model="form.adults" label="Adultos" :min="1" :max="20" />
           <AppCounter v-model="form.children" label="Niños" :min="0" :max="20" />
@@ -86,7 +86,7 @@
         </p>
       </AppFormSection>
 
-      <AppFormSection title="Precio y comisión" :divider="true">
+      <AppFormSection title="Precio y comisión" :divider="true" :collapsible="true" :defaultOpen="true">
         <AppInput
           v-model="form.price_per_night"
           type="number"
@@ -146,7 +146,7 @@
         />
       </AppFormSection>
 
-      <AppFormSection title="Origen" :divider="true">
+      <AppFormSection title="Origen" :divider="true" :collapsible="true" :defaultOpen="false">
         <AppFieldGroup title="Canal de origen" :border="false" :compact="true">
           <SourceSelector
             :modelValue="{ sourceTypeId: form.source_type_id, sourceDetailId: form.source_detail_id }"
@@ -157,7 +157,7 @@
         <AppFieldHint message="Copiado desde la consulta" type="hint" />
       </AppFormSection>
 
-      <AppFormSection title="Notas" :divider="false">
+      <AppFormSection title="Notas" :divider="true" :collapsible="true" :defaultOpen="false">
         <AppTextarea
           v-model="form.notes"
           label="Notas"
@@ -165,6 +165,21 @@
           :rows="2"
           :autoResize="true"
         />
+      </AppFormSection>
+
+      <AppFormSection title="Registro de pago" :divider="false" :collapsible="true" :defaultOpen="true">
+        <AppFormGrid :columns="2">
+          <AppInput
+            v-model="payment.amount"
+            type="number"
+            label="Monto abonado"
+            prefix="$"
+            hint="Opcional"
+          />
+          <AppSelect v-model="payment.method" label="Método" :options="PAYMENT_METHOD_OPTIONS" />
+        </AppFormGrid>
+        <AppInput v-model="payment.reference" label="Referencia" hint="Opcional" />
+        <AppDatePicker v-model="payment.payment_date" label="Fecha de pago" />
       </AppFormSection>
 
       <AppInlineAlert
@@ -224,6 +239,7 @@ import BaseModal from '../ui/BaseModal.vue'
 import SourceSelector from '../sources/SourceSelector.vue'
 import {
   AppInput,
+  AppSelect,
   AppTextarea,
   AppDatePicker,
   AppCounter,
@@ -277,6 +293,23 @@ const form = ref(buildEmptyForm())
 const touched = reactive({ guest_first_name: false, check_in: false, check_out: false, unit_ids: false })
 const submitAttempted = ref(false)
 
+const PAYMENT_METHOD_OPTIONS = [
+  { value: 'efectivo', label: 'Efectivo' },
+  { value: 'transferencia', label: 'Transferencia' },
+  { value: 'tarjeta', label: 'Tarjeta' },
+  { value: 'nequi', label: 'Nequi' },
+  { value: 'plataforma', label: 'Plataforma' },
+]
+
+const todayIso = new Date().toISOString().slice(0, 10)
+
+const payment = ref({
+  amount: '',
+  method: 'transferencia',
+  reference: '',
+  payment_date: todayIso,
+})
+
 function buildEmptyForm() {
   return {
     guest_first_name: '',
@@ -291,7 +324,6 @@ function buildEmptyForm() {
     commission_name: '',
     commission_percentage: '',
     discount_percentage: '',
-    source: null,
     source_type_id: '',
     source_detail_id: '',
     notes: ''
@@ -460,8 +492,7 @@ const hydrateForm = () => {
     commission_name: inquiry.commission_name || '',
     commission_percentage: inquiry.commission_percentage ?? '',
     discount_percentage: inquiry.discount_percentage ?? '',
-    source: inquiry.source || null,
-    source_type_id: inquiry.source_type_id || '',
+    source_type_id: inquiry.source_detail_info?.source_type_id || '',
     source_detail_id: inquiry.source_detail_id || '',
     notes: ''
   }
@@ -474,16 +505,15 @@ const hydrateForm = () => {
   syncIssue.value = null
   useFullHousePricing.value = false
   usePeakPricing.value = false
+  payment.value = { amount: '', method: 'transferencia', reference: '', payment_date: todayIso }
 }
 
 const updateSourceSelection = (value) => {
   form.value.source_type_id = value?.sourceTypeId || ''
   form.value.source_detail_id = value?.sourceDetailId || ''
-  if (!form.value.source_detail_id) form.value.source = null
 }
 
 const applySourceSuggestions = (payload) => {
-  form.value.source = payload.sourceDetailName || payload.sourceDetailLabel || null
   if (!String(form.value.commission_name || '').trim()) form.value.commission_name = payload.sourceDetailLabel || ''
   if (form.value.commission_percentage === '' || form.value.commission_percentage == null) form.value.commission_percentage = Number(payload.commissionPercentage || 0)
   if (form.value.discount_percentage === '' || form.value.discount_percentage == null) form.value.discount_percentage = Number(payload.discountPercentage || 0)
@@ -535,35 +565,35 @@ const submitConversion = async () => {
       email: null,
     })
 
-    const payload = {
-      venue_id: resolveVenueId(),
-      unit_ids: [...form.value.unit_ids],
-      guest_id: guestRecord?.id || null,
-      guest_first_name: form.value.guest_first_name?.trim() || null,
-      guest_last_name: form.value.guest_last_name?.trim() || null,
-      guest_phone: form.value.guest_phone?.trim() || null,
-      check_in: form.value.check_in,
-      check_out: form.value.check_out,
-      adults: Number(form.value.adults || 1),
-      children: Number(form.value.children || 0),
-      price_per_night: Number(form.value.price_per_night || 0),
-      total_amount: Number(customerTotal.value || 0),
-      paid_amount: 0,
-      commission_name: form.value.commission_name || null,
-      commission_percentage: form.value.commission_percentage === '' ? null : Number(form.value.commission_percentage || 0),
-      discount_percentage: form.value.discount_percentage === '' ? 0 : Number(form.value.discount_percentage || 0),
-      source: form.value.source || null,
-      source_type_id: form.value.source_type_id || null,
-      source_detail_id: form.value.source_detail_id || null,
-      notes: form.value.notes || null,
-      status: 'confirmed',
-      inquiry_id: props.inquiry.id,
-      reference_code: referenceCode
-    }
+    const venueId = resolveVenueId()
+    if (!venueId) throw new Error('No se pudo determinar la sede a partir de las unidades seleccionadas.')
 
-    if (!payload.venue_id) throw new Error('No se pudo determinar la sede a partir de las unidades seleccionadas.')
-
-    const result = await reservationsStore.createReservation(payload)
+    const result = await reservationsStore.createReservationWithPayment(
+      {
+        venue_id: venueId,
+        unit_ids: [...form.value.unit_ids],
+        guest_id: guestRecord?.id || null,
+        guest_first_name: form.value.guest_first_name?.trim() || null,
+        guest_last_name: form.value.guest_last_name?.trim() || null,
+        guest_phone: form.value.guest_phone?.trim() || null,
+        check_in: form.value.check_in,
+        check_out: form.value.check_out,
+        adults: Number(form.value.adults || 1),
+        children: Number(form.value.children || 0),
+        price_per_night: Number(form.value.price_per_night || 0),
+        total_amount: Number(customerTotal.value || 0),
+        paid_amount: 0,
+        commission_name: form.value.commission_name || null,
+        commission_percentage: form.value.commission_percentage === '' ? null : Number(form.value.commission_percentage || 0),
+        discount_percentage: form.value.discount_percentage === '' ? 0 : Number(form.value.discount_percentage || 0),
+        source_detail_id: form.value.source_detail_id || null,
+        notes: form.value.notes || null,
+        status: 'confirmed',
+        inquiry_id: props.inquiry.id,
+        reference_code: referenceCode
+      },
+      payment.value
+    )
 
     await inquiriesStore.updateInquiry(props.inquiry.id, {
       status: 'convertida',

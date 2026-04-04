@@ -172,7 +172,7 @@
           v-model="body"
           rows="35"
           class="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-          placeholder="Escribe el mensaje con variables como {{nombre_huesped}}"
+          placeholder="Escribe el mensaje con variables como {{nombres}}"
           @click="syncCursor"
           @keyup="syncCursor"
           @select="syncCursor"
@@ -459,8 +459,12 @@ const contextInfo = computed(() => {
   }
   const record = activeRecord.value
   if (!record) return { guestName: '-', dates: '-', reference: '-', isMock: false }
+  const isInquiry = isQuotationMessage.value
+  const guestName = isInquiry
+    ? ([record.guest_first_name, record.guest_last_name].filter(Boolean).join(' ') || '-')
+    : ([record.guests?.first_name, record.guests?.last_name].filter(Boolean).join(' ') || '-')
   return {
-    guestName: record.guest_name || '-',
+    guestName,
     dates: formatDateRange(record.check_in, record.check_out),
     reference: record.reference_code || record.reservation_number || '-',
     isMock: false,
@@ -471,7 +475,9 @@ const quoteContext = computed(() => {
   const inquiry = activeRecord.value
   if (inquiry) {
     return {
-      nombre_huesped: inquiry.guest_name || '-',
+      guest_first_name: inquiry.guest_first_name || '',
+      guest_last_name: inquiry.guest_last_name || '',
+      nombre_huesped: [inquiry.guest_first_name, inquiry.guest_last_name].filter(Boolean).join(' ') || '-',
       telefono_huesped: inquiry.guest_phone || '-',
       fechas: formatDateRange(inquiry.check_in, inquiry.check_out),
       noches: diffNights(inquiry.check_in, inquiry.check_out),
@@ -483,6 +489,8 @@ const quoteContext = computed(() => {
   }
 
   return {
+    guest_first_name: 'Maria',
+    guest_last_name: 'Garcia',
     nombre_huesped: 'Maria Garcia',
     telefono_huesped: '-',
     fechas: '15 al 20 de abril',
@@ -498,8 +506,10 @@ const reservationContext = computed(() => {
   const reservation = activeRecord.value
   if (reservation) {
     return {
-      nombre_huesped: reservation.guest_name || '-',
-      telefono_huesped: reservation.guest_phone || '-',
+      guest_first_name: reservation.guests?.first_name || '',
+      guest_last_name: reservation.guests?.last_name || '',
+      nombre_huesped: [reservation.guests?.first_name, reservation.guests?.last_name].filter(Boolean).join(' ') || '-',
+      telefono_huesped: reservation.guests?.phone || '-',
       fechas: formatDateRange(reservation.check_in, reservation.check_out),
       noches: diffNights(reservation.check_in, reservation.check_out),
       personas: Number(reservation.adults || 0) + Number(reservation.children || 0),
@@ -510,6 +520,8 @@ const reservationContext = computed(() => {
   }
 
   return {
+    guest_first_name: 'Carlos',
+    guest_last_name: 'Suarez',
     nombre_huesped: 'Carlos Suarez',
     telefono_huesped: '-',
     fechas: '10 al 15 de mayo',
@@ -558,7 +570,8 @@ const previewVariables = computed(() => {
     profile: profile.value,
     accountSettings: accountSettings.value,
     context: {
-      guest_name: context.nombre_huesped,
+      guest_first_name: context.guest_first_name,
+      guest_last_name: context.guest_last_name,
       check_in: record?.check_in,
       check_out: record?.check_out,
       nights: context.noches,
@@ -598,8 +611,8 @@ const renderedPreview = computed(() => {
     const text = buildQuotationWhatsAppMessage(
       {
         ...record,
-        guest_name: record?.guest_name || quoteContext.value.nombre_huesped,
-        guest_phone: record?.guest_phone || quoteContext.value.telefono_huesped,
+        guest_name: [record?.guest_first_name, record?.guest_last_name].filter(Boolean).join(' ') || ([record?.guests?.first_name, record?.guests?.last_name].filter(Boolean).join(' ')) || quoteContext.value.nombre_huesped,
+        guest_phone: record?.guest_phone || record?.guests?.phone || quoteContext.value.telefono_huesped,
         check_in: record?.check_in,
         check_out: record?.check_out,
         adults: Number(record?.adults || 0),
@@ -767,13 +780,13 @@ const loadData = async () => {
         .maybeSingle(),
       supabase
         .from('inquiries')
-        .select('id, guest_name, guest_phone, check_in, check_out, adults, children, reference_code, inquiry_number, price_per_night, discount_percentage, quote_expires_at, quote_token, created_at, inquiry_units(unit_id, units(name, description))')
+        .select('id, guest_first_name, guest_last_name, guest_phone, check_in, check_out, adults, children, reference_code, inquiry_number, price_per_night, discount_percentage, quote_expires_at, quote_token, created_at, inquiry_units(unit_id, units(name, description))')
         .eq('account_id', accountId)
         .order('created_at', { ascending: false })
         .limit(10),
       supabase
         .from('reservations')
-        .select('id, guest_name, guest_phone, check_in, check_out, adults, children, reference_code, reservation_number, price_per_night, total_amount, paid_amount, created_at, reservation_units(unit_id, units(name, description))')
+        .select('id, guest_id, check_in, check_out, adults, children, reference_code, reservation_number, price_per_night, total_amount, paid_amount, created_at, guests!reservations_guest_id_fkey(first_name, last_name, phone), reservation_units(unit_id, units(name, description))')
         .eq('account_id', accountId)
         .order('created_at', { ascending: false })
         .limit(10),

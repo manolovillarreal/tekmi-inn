@@ -96,8 +96,6 @@ CREATE TABLE IF NOT EXISTS reservations (
   commission_percentage numeric(5,2),
   discount_percentage numeric(5,2) NOT NULL DEFAULT 0,
   status text NOT NULL DEFAULT 'confirmed',
-  source text,
-  source_type_id uuid REFERENCES source_types(id),
   source_detail_id uuid REFERENCES source_details(id),
   reference_code text,
   notes text,
@@ -147,8 +145,6 @@ CREATE TABLE IF NOT EXISTS inquiries (
   check_out date,
   adults integer NOT NULL DEFAULT 1,
   children integer NOT NULL DEFAULT 0,
-  source text,
-  source_type_id uuid REFERENCES source_types(id),
   source_detail_id uuid REFERENCES source_details(id),
   price_per_night numeric(10,2),
   commission_name text,
@@ -212,7 +208,6 @@ ALTER TABLE IF EXISTS guests
 
 ALTER TABLE IF EXISTS reservations
   ADD COLUMN IF NOT EXISTS account_id uuid REFERENCES accounts(id),
-  ADD COLUMN IF NOT EXISTS source_type_id uuid REFERENCES source_types(id),
   ADD COLUMN IF NOT EXISTS source_detail_id uuid REFERENCES source_details(id),
   ADD COLUMN IF NOT EXISTS discount_percentage numeric(5,2) NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS reference_code text,
@@ -230,7 +225,6 @@ ALTER TABLE IF EXISTS payments
 
 ALTER TABLE IF EXISTS inquiries
   ADD COLUMN IF NOT EXISTS account_id uuid REFERENCES accounts(id),
-  ADD COLUMN IF NOT EXISTS source_type_id uuid REFERENCES source_types(id),
   ADD COLUMN IF NOT EXISTS source_detail_id uuid REFERENCES source_details(id),
   ADD COLUMN IF NOT EXISTS inquiry_number text,
   ADD COLUMN IF NOT EXISTS quote_expires_at timestamptz,

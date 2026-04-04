@@ -221,7 +221,7 @@
         <p><strong class="text-gray-900">{{ `${form.guest_first_name} ${form.guest_last_name}`.trim() }}</strong><span v-if="form.guest_phone" class="ml-2 text-gray-500">{{ form.guest_phone }}</span></p>
         <p>{{ form.check_in }} → {{ form.check_out }}<span v-if="nights > 0" class="ml-2 text-gray-400">({{ nights }} noches)</span> · {{ totalPersonas }} personas</p>
         <p v-if="venueName" class="text-gray-500">{{ venueName }}</p>
-        <p v-if="form.commission_name || form.source_type_id" class="text-gray-500">Canal: {{ form.commission_name || form.source_type_id }}</p>
+        <p v-if="form.commission_name || form.source_detail_id" class="text-gray-500">Canal: {{ form.commission_name || form.source_detail_id }}</p>
         <button type="button" class="mt-1 text-xs text-primary underline" @click="goToStep(1)">Editar</button>
       </div>
 
@@ -505,7 +505,6 @@ const form = ref({
   commission_percentage: '',
   commission_name: '',
   quote_expires_at: '',
-  source: null,
   source_type_id: '',
   source_detail_id: '',
   unit_ids: []
@@ -560,7 +559,7 @@ const canProceedStep3 = computed(() =>
   !!form.value.guest_first_name?.trim() && !!form.value.guest_phone?.trim()
 )
 
-const sourceRequired = computed(() => !form.value.source_type_id)
+const sourceRequired = computed(() => !form.value.source_detail_id)
 
 const hasPayment = computed(() => Number(payment.value.amount || 0) > 0)
 
@@ -868,11 +867,9 @@ const saveEditGuest = async () => {
 const onSourceChange = (value) => {
   form.value.source_type_id = value?.sourceTypeId || ''
   form.value.source_detail_id = value?.sourceDetailId || ''
-  if (!form.value.source_detail_id) form.value.source = null
 }
 
 const onSourceSuggestions = (payload) => {
-  form.value.source = payload.sourceDetailName || payload.sourceDetailLabel || null
   if (!String(form.value.commission_name || '').trim()) {
     form.value.commission_name = payload.sourceDetailLabel || ''
   }
@@ -939,8 +936,6 @@ const save = async () => {
           discount_percentage: Number(form.value.discount_percentage || 0),
           commission_percentage: Number(form.value.commission_percentage || 0),
           commission_name: form.value.commission_name || null,
-          source: form.value.source,
-          source_type_id: form.value.source_type_id || null,
           source_detail_id: form.value.source_detail_id || null,
           status: 'confirmed',
           notes: form.value.notes || null
@@ -982,8 +977,6 @@ const save = async () => {
         commission_percentage: form.value.commission_percentage !== '' ? Number(form.value.commission_percentage) : 0,
         commission_name: form.value.commission_name || null,
         quote_expires_at: form.value.quote_expires_at || null,
-        source: form.value.source,
-        source_type_id: form.value.source_type_id || null,
         source_detail_id: form.value.source_detail_id || null,
         notes: form.value.notes || null
       })

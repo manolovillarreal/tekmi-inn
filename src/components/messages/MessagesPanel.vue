@@ -119,7 +119,8 @@ const currentContext = computed(() => {
     const paid = Number(reservation.paid_amount || 0)
     const balance = Math.max(0, total - paid)
     return {
-      guest_name: reservation.guest_name || reservation.guests?.name || '',
+      guest_first_name: reservation.guests?.first_name || '',
+      guest_last_name: reservation.guests?.last_name || '',
       check_in: reservation.check_in,
       check_out: reservation.check_out,
       nights,
@@ -140,7 +141,8 @@ const currentContext = computed(() => {
   const total = Math.max(0, subtotal - discountAmount)
 
   return {
-    guest_name: inquiry.guest_name || '',
+    guest_first_name: inquiry.guest_first_name || '',
+    guest_last_name: inquiry.guest_last_name || '',
     check_in: inquiry.check_in,
     check_out: inquiry.check_out,
     nights,

@@ -330,7 +330,6 @@ export const VARIABLE_CATALOG = {
       { key: 'nombre_completo', label: 'Nombre completo', ejemplo: 'Santiago Montero' },
       { key: 'nombres', label: 'Nombres', ejemplo: 'Santiago' },
       { key: 'apellidos', label: 'Apellidos', ejemplo: 'Montero' },
-      { key: 'nombre_huesped', label: 'Nombre huésped (alias)', ejemplo: 'Santiago Montero' },
       { key: 'personas', label: 'Personas', ejemplo: '4' },
     ],
     fechas: [

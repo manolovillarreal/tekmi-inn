@@ -90,7 +90,6 @@ export const useReservationsStore = defineStore('reservations', () => {
         .select(`
           *,
           guests!reservations_guest_id_fkey(first_name, last_name, phone, email, nationality, document_type, document_number),
-          source_type_info:source_types!reservations_source_type_id_fkey(id, name, label_es, is_active),
           source_detail_info:source_details!reservations_source_detail_id_fkey(id, source_type_id, name, label_es, suggested_commission_percentage, suggested_discount_percentage, is_active),
           venues(name),
           reservation_units(unit_id, units(name, venue_id)),
@@ -109,8 +108,6 @@ export const useReservationsStore = defineStore('reservations', () => {
 
       if (sourceDetailId) {
         query = query.eq('source_detail_id', sourceDetailId)
-      } else if (source) {
-        query = query.eq('source', source)
       }
 
       const normalizedFrom = normalizeDate(checkInFrom)
@@ -410,8 +407,6 @@ export const useReservationsStore = defineStore('reservations', () => {
         commission_percentage: reservationData.commission_percentage || null,
         discount_percentage: Number(reservationData.discount_percentage || 0),
         status: reservationData.status || 'confirmed',
-        source: reservationData.source || null,
-        source_type_id: reservationData.source_type_id || null,
         source_detail_id: reservationData.source_detail_id || null,
         reference_code: referenceCode,
         notes: reservationData.notes || null

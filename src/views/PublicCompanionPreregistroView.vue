@@ -43,6 +43,7 @@
       <section v-else class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <div class="mb-5 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3">
           <p class="text-sm font-semibold text-indigo-900">Tu reserva en {{ accommodationName }}</p>
+          <p v-if="primaryGuestName" class="mt-1 text-sm text-indigo-800">Titular: {{ primaryGuestName }}</p>
           <p class="mt-1 text-sm text-indigo-800">Check-in: {{ formatDate(checkInDate) }} → Check-out: {{ formatDate(checkOutDate) }}</p>
           <p class="mt-1 text-sm text-indigo-800">{{ guestsCount }} personas</p>
         </div>
@@ -167,6 +168,7 @@ const checkInDate = ref('')
 const checkOutDate = ref('')
 const guestsCount = ref(1)
 const accommodationName = ref('Alojamiento')
+const primaryGuestName = ref('')
 const contactPhone = ref('')
 const accommodationLogo = ref('')
 const companionsRemaining = ref(0)
@@ -286,6 +288,7 @@ onMounted(async () => {
     checkOutDate.value = String(data.reservation?.check_out || '')
     guestsCount.value = Math.max(1, Number(data.reservation?.guests_count || 1))
     accommodationName.value = String(data.account?.name || 'Alojamiento')
+    primaryGuestName.value = String(data.primary_guest_name || '')
     contactPhone.value = String(data.account?.phone || '')
     viewState.value = 'form'
   } catch {

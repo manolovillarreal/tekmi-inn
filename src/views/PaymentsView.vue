@@ -368,7 +368,8 @@ const goToReservation = (payment) => {
 }
 
 const mapPaymentRow = (row) => {
-  const guestName = row.reservations?.guests?.name || row.reservations?.guest_name || 'Sin huésped'
+  const g = row.reservations?.guests
+  const guestName = (g ? [g.first_name, g.last_name].filter(Boolean).join(' ') : '') || row.reservations?.guest_name || 'Sin huésped'
 
   return {
     id: row.id,
@@ -391,7 +392,7 @@ const fetchPayments = async () => {
 
     let query = supabase
       .from('payments')
-      .select('id, reservation_id, payment_date, amount, method, reference, reservations!inner(id, reservation_number, guest_name, guests!reservations_guest_id_fkey(name))')
+      .select('id, reservation_id, payment_date, amount, method, reference, reservations!inner(id, reservation_number, guest_name, guests!reservations_guest_id_fkey(first_name, last_name))')
       .eq('account_id', accountId)
 
     if (filters.value.from) {

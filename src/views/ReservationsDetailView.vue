@@ -85,7 +85,7 @@
             </div>
             <div>
               <p class="text-gray-500 mb-1">Origen</p>
-              <p class="font-medium text-gray-900">{{ res.source_detail_info?.label_es || res.source || '-' }}</p>
+              <p class="font-medium text-gray-900">{{ res.source_detail_info?.label_es || '-' }}</p>
             </div>
             <div>
               <p class="text-gray-500 mb-1">Registro</p>
@@ -615,7 +615,7 @@ const fetchReservation = async () => {
     ] = await Promise.all([
       supabase
         .from('reservations')
-        .select('*, source_type_info:source_types!reservations_source_type_id_fkey(id, name, label_es, is_active), source_detail_info:source_details!reservations_source_detail_id_fkey(id, source_type_id, name, label_es, suggested_commission_percentage, suggested_discount_percentage, is_active), guests!reservations_guest_id_fkey(*), venues(name), reservation_units(unit_id, units(*)), reservation_guests(is_primary, guest_id, guests!reservation_guests_guest_id_fkey(*))')
+        .select('*, source_detail_info:source_details!reservations_source_detail_id_fkey(id, source_type_id, name, label_es, suggested_commission_percentage, suggested_discount_percentage, is_active), guests!reservations_guest_id_fkey(*), venues(name), reservation_units(unit_id, units(*)), reservation_guests(is_primary, guest_id, guests!reservation_guests_guest_id_fkey(*))')
         .eq('account_id', accountId)
         .eq('id', route.params.id)
         .single(),
@@ -1136,7 +1136,9 @@ const copyWhatsappPreregistroMessage = async () => {
   const preregistroBody = predefinedMessages.value.find((m) => m.key === 'preregistro')?.body || DEFAULT_PREREGISTRO_TEMPLATE
 
   const vars = {
-    nombre_huesped: res.value?.guests?.name || '-',
+    nombres: res.value?.guests?.first_name || '-',
+    apellidos: res.value?.guests?.last_name || '-',
+    nombre_huesped: [res.value?.guests?.first_name, res.value?.guests?.last_name].filter(Boolean).join(' ') || '-',
     nombre_alojamiento: profile.value?.commercial_name || profile.value?.legal_name || 'Alojamiento',
     fecha_checkin_larga: formatDateLongEs(res.value?.check_in),
     link_preregistro,

@@ -67,7 +67,7 @@
                 <span class="font-mono text-xs text-gray-700">{{ inquiry.reference_code || '-' }}</span>
               </td>
               <td class="px-4 py-4">
-                <p class="font-medium text-gray-900">{{ inquiry.guest_name || 'Sin nombre' }}</p>
+                <p class="font-medium text-gray-900">{{ `${inquiry.guest_first_name || ''} ${inquiry.guest_last_name || ''}`.trim() || 'Sin nombre' }}</p>
                 <p class="text-xs text-gray-500">{{ inquiry.guest_phone || 'Sin teléfono' }}</p>
               </td>
               <td class="px-4 py-4 text-gray-700">{{ formatDate(inquiry.check_in) }}</td>
@@ -87,7 +87,7 @@
                   >⚠ Venc.</span>
                 </div>
               </td>
-              <td class="px-4 py-4 text-gray-700">{{ inquiry.source_display_label || inquiry.source || '-' }}</td>
+              <td class="px-4 py-4 text-gray-700">{{ inquiry.source_display_label || '-' }}</td>
               <td class="px-4 py-4 text-right">
                 <router-link :to="`/consultas/${inquiry.id}`" class="text-sm font-medium text-primary hover:text-primary-dark">Ver detalle</router-link>
               </td>
@@ -101,7 +101,7 @@
       <DataCard
         v-for="inquiry in filteredInquiries"
         :key="inquiry.id"
-        :title="inquiry.guest_name || 'Sin nombre'"
+        :title="`${inquiry.guest_first_name || ''} ${inquiry.guest_last_name || ''}`.trim() || 'Sin nombre'"
         :subtitle="`${inquiry.inquiry_number || '-'} · ${inquiry.reference_code || '-'}`"
         :badge="{
           label: `${INQUIRY_STATUS_LABELS[inquiry.status] || getInquiryStatusLabel(inquiry.status)}${isQuoteExpired(inquiry) ? ' ⚠' : ''}`,
@@ -133,7 +133,7 @@
         v-for="inquiry in filteredInquiries"
         v-else
         :key="inquiry.id"
-        :title="inquiry.guest_name || 'Sin nombre'"
+        :title="`${inquiry.guest_first_name || ''} ${inquiry.guest_last_name || ''}`.trim() || 'Sin nombre'"
         :subtitle="`${inquiry.inquiry_number || '-'} · ${inquiry.reference_code || '-'}`"
         :badge="{ label: getInquiryStatusLabel(inquiry.status), type: inquiryCardBadgeType(inquiry.status) }"
         :meta="buildInquiryCardMeta(inquiry)"
@@ -243,7 +243,7 @@ const filteredInquiries = computed(() => {
 
     if (filters.value.search) {
       const q = filters.value.search.toLowerCase()
-      const haystack = `${inquiry.guest_name || ''} ${inquiry.guest_phone || ''} ${inquiry.inquiry_number || ''} ${inquiry.reference_code || ''}`.toLowerCase()
+      const haystack = `${inquiry.guest_first_name || ''} ${inquiry.guest_last_name || ''} ${inquiry.guest_phone || ''} ${inquiry.inquiry_number || ''} ${inquiry.reference_code || ''}`.toLowerCase()
       if (!haystack.includes(q)) return false
     }
 
@@ -281,7 +281,7 @@ const inquiryCardBadgeType = (status) => {
 
 const buildInquiryCardMeta = (inquiry) => {
   const pricePerNight = inquiry.price_per_night ?? inquiry.pricePerNight
-  const originLabel = inquiry.source_detail?.label_es || inquiry.source_display_label || inquiry.source || null
+  const originLabel = inquiry.source_detail?.label_es || inquiry.source_display_label || null
   const adults = Number(inquiry.adults || 0)
   const children = Number(inquiry.children || 0)
   const people = adults + children

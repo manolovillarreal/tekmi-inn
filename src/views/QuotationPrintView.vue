@@ -27,7 +27,7 @@
       <section class="doc-content-section border-b py-4">
         <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Datos del solicitante</h2>
         <div class="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-700 md:grid-cols-2">
-          <p><span class="font-semibold">Nombre:</span> {{ inquiry?.guest_name || '-' }}</p>
+          <p><span class="font-semibold">Nombre:</span> {{ [inquiry?.guest_first_name, inquiry?.guest_last_name].filter(Boolean).join(' ') || '-' }}</p>
           <p><span class="font-semibold">Telefono:</span> {{ inquiry?.guest_phone || '-' }}</p>
         </div>
       </section>
@@ -114,7 +114,7 @@ const fetchData = async () => {
     ] = await Promise.all([
       supabase
         .from('inquiries')
-        .select('id, account_id, inquiry_number, reference_code, quote_token, guest_name, guest_phone, check_in, check_out, adults, children, price_per_night, discount_percentage, quote_expires_at, source_detail_info:source_details!inquiries_source_detail_id_fkey(id, name, label_es), inquiry_units(unit_id, units(name, description))')
+        .select('id, account_id, inquiry_number, reference_code, quote_token, guest_first_name, guest_last_name, guest_phone, check_in, check_out, adults, children, price_per_night, discount_percentage, quote_expires_at, source_detail_info:source_details!inquiries_source_detail_id_fkey(id, name, label_es), inquiry_units(unit_id, units(name, description))') 
         .eq('account_id', accountId)
         .eq('id', route.params.id)
         .single(),

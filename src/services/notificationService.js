@@ -133,9 +133,15 @@ export async function notifyNuevaConsulta(accountId, inquiry) {
   } catch (e) { /* silencioso */ }
 }
 
+const getGuestName = (reservation) => {
+  const g = reservation?.guests
+  if (g) return `${g.first_name || ''} ${g.last_name || ''}`.trim() || 'Huésped desconocido'
+  return reservation?.guest_name || 'Huésped desconocido'
+}
+
 export async function notifyNuevaReserva(accountId, reservation) {
   try {
-    const guestName = reservation?.guest_name || 'Huésped desconocido'
+    const guestName = getGuestName(reservation)
     const checkIn = formatDate(reservation?.check_in)
     await createNotification(accountId, {
       type: 'nueva_reserva',
@@ -149,7 +155,7 @@ export async function notifyNuevaReserva(accountId, reservation) {
 
 export async function notifyReservaCancelada(accountId, reservation) {
   try {
-    const guestName = reservation?.guest_name || 'Huésped desconocido'
+    const guestName = getGuestName(reservation)
     const checkIn = formatDate(reservation?.check_in)
     await createNotification(accountId, {
       type: 'reserva_cancelada',
@@ -163,7 +169,7 @@ export async function notifyReservaCancelada(accountId, reservation) {
 
 export async function notifyPreregistroCompletado(accountId, reservation) {
   try {
-    const guestName = reservation?.guest_name || 'Huésped desconocido'
+    const guestName = getGuestName(reservation)
     const checkIn = formatDate(reservation?.check_in)
     await createNotification(accountId, {
       type: 'preregistro_completado',
@@ -177,7 +183,7 @@ export async function notifyPreregistroCompletado(accountId, reservation) {
 
 export async function notifyCheckinRealizado(accountId, reservation) {
   try {
-    const guestName = reservation?.guest_name || 'Huésped desconocido'
+    const guestName = getGuestName(reservation)
     await createNotification(accountId, {
       type: 'checkin_realizado',
       title: `Check-in registrado: ${guestName}`,
@@ -190,7 +196,7 @@ export async function notifyCheckinRealizado(accountId, reservation) {
 
 export async function notifyAnticipoRegistrado(accountId, payment, reservation) {
   try {
-    const guestName = reservation?.guest_name || 'Huésped desconocido'
+    const guestName = getGuestName(reservation)
     const amount = Number(payment?.amount || 0).toLocaleString('es-CO')
     await createNotification(accountId, {
       type: 'anticipo_registrado',

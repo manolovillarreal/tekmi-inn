@@ -185,6 +185,18 @@ serve(async (req) => {
       const profile = await getAccountProfile(adminClient, reservation.account_id)
       const guestsCount = Number(reservation.adults || 0) + Number(reservation.children || 0)
 
+      const { data: primaryGuestRow } = await adminClient
+        .from('reservation_guests')
+        .select('guests!reservation_guests_guest_id_fkey(first_name, last_name)')
+        .eq('reservation_id', reservation.id)
+        .eq('is_primary', true)
+        .maybeSingle()
+
+      const pg = primaryGuestRow?.guests as { first_name?: string; last_name?: string } | null
+      const primaryGuestName = pg
+        ? [pg.first_name, pg.last_name].filter(Boolean).join(' ')
+        : null
+
       return Response.json({
         reservation: {
           check_in: reservation.check_in,
@@ -195,6 +207,7 @@ serve(async (req) => {
           name: profile?.commercial_name || profile?.legal_name || 'Alojamiento',
           phone: profile?.phone || '',
         },
+        primary_guest_name: primaryGuestName,
       }, { headers: corsHeaders })
     }
 

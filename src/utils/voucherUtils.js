@@ -75,7 +75,7 @@ Te compartimos el resumen de tu reserva en {{nombre_alojamiento}}.
 Cualquier duda estamos a tu disposición.
 {{nombre_alojamiento}} · {{telefono}}`
 
-export const DEFAULT_PREREGISTRO_TEMPLATE = `Hola {{nombre_huesped}}! 👋
+export const DEFAULT_PREREGISTRO_TEMPLATE = `Hola {{nombres}}! 👋
 
 Para completar tu reserva en {{nombre_alojamiento}}, te pedimos diligenciar el pre-registro antes de tu llegada.
 
@@ -180,7 +180,7 @@ export const buildQuotationWhatsAppMessage = (inquiry, profile, quoteUrl = '', o
   const systemTemplate = String(options?.systemTemplate || '').trim()
   const accountSettings = options?.accountSettings || {}
 
-  const guestName = inquiry?.guest_name || 'huesped'
+  const guestName = [inquiry?.guest_first_name, inquiry?.guest_last_name].filter(Boolean).join(' ') || 'huesped'
   const businessName = profile?.commercial_name || profile?.legal_name || 'nuestro alojamiento'
   const contactPhone = profile?.phone || '-'
   const checkIn = inquiry?.check_in
@@ -191,7 +191,7 @@ export const buildQuotationWhatsAppMessage = (inquiry, profile, quoteUrl = '', o
   const totalGuests = adults + children
   const units = Array.isArray(options?.units) ? options.units : []
   const referenceCode = inquiry?.reference_code || inquiry?.quotation_number || '-'
-  const referenceDisplay = formatReferenceDisplay(referenceCode, inquiry?.guest_name)
+  const referenceDisplay = formatReferenceDisplay(referenceCode, [inquiry?.guest_first_name, inquiry?.guest_last_name].filter(Boolean).join(' ') || '')
   const pricePerNight = Number(inquiry?.price_per_night || 0)
   const discountPercentage = Number(inquiry?.discount_percentage || 0)
   const subtotal = pricePerNight * Math.max(nights, 0)

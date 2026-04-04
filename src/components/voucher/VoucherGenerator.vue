@@ -54,7 +54,7 @@ import { useToast } from '../../composables/useToast'
 const props = defineProps({ res: { type: Object, required: true } })
 const toast = useToast()
 
-const guestName = props.res.guests?.name || props.res.guest_name || 'Sin nombre'
+const guestName = [props.res.guests?.first_name, props.res.guests?.last_name].filter(Boolean).join(' ') || 'Sin nombre'
 
 const copyForWhatsApp = async () => {
   const text = `🏨 *RESERVA MARMANU HOUSE*

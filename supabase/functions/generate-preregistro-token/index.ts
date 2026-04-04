@@ -65,9 +65,10 @@ serve(async (req) => {
       return Response.json({ message: 'No autorizado para esta reserva.' }, { status: 403, headers: corsHeaders })
     }
 
-    // Calcular expiración: check_out + 1 día
+    // Calcular expiración: fin del día después del check_out
     const expiryDate = new Date(reservation.check_out)
     expiryDate.setUTCDate(expiryDate.getUTCDate() + 1)
+    expiryDate.setUTCHours(23, 59, 59, 999)
     const tokenExpiry = expiryDate.toISOString()
 
     // Idempotente: si ya existe un raw token, reusar pero actualizar expiración

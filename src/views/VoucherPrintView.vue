@@ -137,7 +137,7 @@ const fetchData = async () => {
     ] = await Promise.all([
       supabase
         .from('reservations')
-        .select('id, account_id, reservation_number, reference_code, check_in, check_out, adults, children, source, source_type_info:source_types!reservations_source_type_id_fkey(id, name, label_es), source_detail_info:source_details!reservations_source_detail_id_fkey(id, name, label_es), guest_id, guest_name, guest_phone, total_amount, paid_amount, guests!reservations_guest_id_fkey(name, phone, email, document_type, document_number), reservation_units(unit_id, units(name))')
+.select('id, account_id, reservation_number, reference_code, check_in, check_out, adults, children, source_detail_info:source_details!reservations_source_detail_id_fkey(id, name, label_es), guest_id, total_amount, paid_amount, guests!reservations_guest_id_fkey(first_name, last_name, phone, email, document_type, document_number), reservation_units(unit_id, units(name))') 
         .eq('account_id', accountId)
         .eq('id', route.params.id)
         .single(),
@@ -211,20 +211,18 @@ const unitLabel = computed(() => {
 
 const guestData = computed(() => {
   const guest = reservation.value?.guests
-  const fallbackPhone = reservation.value?.guest_phone || '-'
-  const fallbackName = reservation.value?.guest_name || 'Sin nombre'
-
+  const fullName = guest ? [guest.first_name, guest.last_name].filter(Boolean).join(' ') : ''
   return {
-    name: guest?.name || fallbackName,
+    name: fullName || 'Sin nombre',
     document: guest?.document_number
       ? [guest.document_type, guest.document_number].filter(Boolean).join(' ')
       : '-',
-    phone: guest?.phone || fallbackPhone,
-    email: guest?.email || reservation.value?.guest_email || '-',
+    phone: guest?.phone || '-',
+    email: guest?.email || '-',
   }
 })
 
-const sourceLabel = computed(() => reservation.value?.source_detail_info?.label_es || reservation.value?.source || '-')
+const sourceLabel = computed(() => reservation.value?.source_detail_info?.label_es || '-')
 const formattedReferenceDisplay = computed(() => formatReferenceDisplay(reservation.value?.reference_code, guestData.value?.name))
 
 const formatDateShort = (value) => {

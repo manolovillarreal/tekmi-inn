@@ -9,7 +9,6 @@ import { notifyNuevaConsulta } from '../services/notificationService'
 
 const INQUIRY_SELECT = `
   *,
-  source_type_info:source_types!inquiries_source_type_id_fkey(id, name, label_es, is_active),
   source_detail_info:source_details!inquiries_source_detail_id_fkey(id, source_type_id, name, label_es, suggested_commission_percentage, suggested_discount_percentage, is_active),
   reservation_info:reservations!inquiries_reservation_id_fkey(id, reservation_number),
   inquiry_units(unit_id)
@@ -122,8 +121,6 @@ export const useInquiriesStore = defineStore('inquiries', () => {
       commission_percentage: payload.commission_percentage === '' || payload.commission_percentage == null ? 0 : Number(payload.commission_percentage),
       discount_percentage: payload.discount_percentage === '' || payload.discount_percentage == null ? 0 : Number(payload.discount_percentage),
       quote_expires_at: payload.quote_expires_at ? new Date(payload.quote_expires_at).toISOString() : null,
-      source: payload.source || null,
-      source_type_id: payload.source_type_id || null,
       source_detail_id: payload.source_detail_id || null,
       status,
       notes: payload.notes || null,
@@ -222,8 +219,6 @@ export const useInquiriesStore = defineStore('inquiries', () => {
       ...(payload.quote_expires_at !== undefined && {
         quote_expires_at: payload.quote_expires_at ? new Date(payload.quote_expires_at).toISOString() : null
       }),
-      ...(payload.source !== undefined && { source: payload.source || null }),
-      ...(payload.source_type_id !== undefined && { source_type_id: payload.source_type_id || null }),
       ...(payload.source_detail_id !== undefined && { source_detail_id: payload.source_detail_id || null }),
       ...(payload.reference_code !== undefined && { reference_code: payload.reference_code || null }),
       ...(payload.notes !== undefined && { notes: payload.notes || null }),

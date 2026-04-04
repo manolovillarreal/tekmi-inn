@@ -118,7 +118,7 @@
           label="Cuerpo del mensaje"
           :rows="7"
           :autoResize="true"
-          placeholder="Hola {{nombre_huesped}}, te compartimos la información..."
+          placeholder="Hola {{nombres}}, te compartimos la información..."
         />
 
         <div class="flex justify-end gap-2">
@@ -289,6 +289,8 @@ const preregistroPreview = computed(() => {
     messages.value.find((msg) => msg.type === 'system' && msg.key === 'preregistro')?.body || DEFAULT_PREREGISTRO_TEMPLATE
   ).trim()
   return resolveTemplate(template, {
+    nombres: 'Carlos',
+    apellidos: 'Pérez',
     nombre_huesped: 'Carlos Pérez',
     nombre_alojamiento: profile.value?.commercial_name || profile.value?.legal_name || 'Marmanu House',
     fecha_checkin_larga: 'viernes, 10 de abril de 2026',

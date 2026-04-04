@@ -946,7 +946,7 @@ const todayAgendaEvents = computed(() => {
           unitNames: new Set(),
           eventType: isEntry ? 'Entrada' : isExit ? 'Salida' : 'Estadia',
           pax: Number(occ.reservations?.adults || 0) + Number(occ.reservations?.children || 0),
-          sourceDetail: occ.reservations?.source_detail_info?.label_es || occ.reservations?.source || '',
+          sourceDetail: occ.reservations?.source_detail_info?.label_es || '',
           balance: Math.max(0, Number(occ.reservations?.total_amount || 0) - Number(occ.reservations?.paid_amount || 0))
         })
       }
@@ -990,7 +990,7 @@ async function fetchOccupancies() {
     const accountId = accountStore.getRequiredAccountId()
     const { data } = await supabase
       .from('occupancies')
-        .select('id, unit_id, start_date, end_date, occupancy_type, reservation_id, inquiry_id, notes, units(name, venue_id, venues(name)), reservations(id, guests!reservations_guest_id_fkey(first_name, last_name), adults, children, source, source_detail_info:source_details!reservations_source_detail_id_fkey(label_es), total_amount, paid_amount, check_in, check_out, status)')
+        .select('id, unit_id, start_date, end_date, occupancy_type, reservation_id, inquiry_id, notes, units(name, venue_id, venues(name)), reservations(id, guests!reservations_guest_id_fkey(first_name, last_name), adults, children, source_detail_info:source_details!reservations_source_detail_id_fkey(label_es), total_amount, paid_amount, check_in, check_out, status)')
       .eq('account_id', accountId)
       .lt('start_date', toExclusive)
       .gte('end_date', periodFrom.value)
@@ -1286,7 +1286,7 @@ const tooltipDetails = computed(() => {
     holderName: occ.occupancy_type === 'reservation' ? (`${occ.reservations?.guests?.first_name || ''} ${occ.reservations?.guests?.last_name || ''}`.trim() || '') : '',
     paxLabel: occ.occupancy_type === 'reservation' ? String(pax) : '',
     sourceLabel: occ.occupancy_type === 'reservation'
-      ? (occ.reservations?.source_detail_info?.label_es || occ.reservations?.source || '')
+      ? (occ.reservations?.source_detail_info?.label_es || '')
       : occ.occupancy_type === 'external' ? externalSource : '',
     balance,
     reason
