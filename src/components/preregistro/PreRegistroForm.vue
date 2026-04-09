@@ -52,6 +52,14 @@
           <AppCountrySelect v-model="primaryGuest.nationality" label="Nacionalidad" required />
           <AppInput v-model="primaryGuest.birth_date" type="date" label="Fecha de nacimiento" required />
         </AppFormGrid>
+
+        <AppSelect
+          v-model="primaryGuest.gender"
+          label="Género"
+          :options="[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Femenino' }, { value: 'unspecified', label: 'Prefiero no indicar' }]"
+          placeholder="Sin definir"
+          hint="Opcional"
+        />
       </AppFormSection>
 
       <AppFieldGroup :border="true" :compact="true" title="Acompañantes" subtitle="Opcional">
@@ -91,6 +99,14 @@
             <AppCountrySelect v-model="guest.nationality" label="Nacionalidad" required />
             <AppInput v-model="guest.birth_date" type="date" label="Fecha de nacimiento" required />
           </AppFormGrid>
+
+          <AppSelect
+            v-model="guest.gender"
+            label="Género"
+            :options="[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Femenino' }, { value: 'unspecified', label: 'Prefiero no indicar' }]"
+            placeholder="Sin definir"
+            hint="Opcional"
+          />
         </AppFormSection>
       </AppFieldGroup>
 
@@ -150,6 +166,7 @@ const buildGuest = () => ({
   phone_country_code: '+57',
   email: '',
   birth_date: '',
+  gender: '',
 })
 
 const primaryGuest = reactive(buildGuest())

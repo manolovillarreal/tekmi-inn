@@ -35,6 +35,10 @@
               <dt class="text-gray-500">Fecha de nacimiento</dt>
               <dd class="text-gray-900">{{ guest.birth_date ? formatDate(guest.birth_date) : '-' }}</dd>
             </div>
+            <div class="flex items-center justify-between gap-3">
+              <dt class="text-gray-500">Género</dt>
+              <dd class="text-gray-900">{{ genderLabel(guest.gender) }}</dd>
+            </div>
           </dl>
         </div>
 
@@ -101,6 +105,13 @@
         <AppFormSection title="Información adicional" :divider="false">
           <AppCountrySelect v-model="editForm.nationality" label="Nacionalidad" />
           <AppInput v-model="editForm.birth_date" type="date" label="Fecha de nacimiento" />
+          <AppSelect
+            v-model="editForm.gender"
+            label="Género"
+            :options="[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Femenino' }, { value: 'unspecified', label: 'Prefiero no indicar' }]"
+            placeholder="Sin definir"
+            hint="Opcional"
+          />
           <AppTextarea v-model="editForm.notes" label="Notas" :rows="2" :autoResize="true" />
         </AppFormSection>
 
@@ -158,6 +169,7 @@ const editForm = ref({
   birth_date: '',
   document_type: '',
   document_number: '',
+  gender: '',
   notes: ''
 })
 
@@ -201,6 +213,7 @@ const openEditModal = () => {
     birth_date: guest.value.birth_date || '',
     document_type: guest.value.document_type || '',
     document_number: guest.value.document_number || '',
+    gender: guest.value.gender || '',
     notes: guest.value.notes || ''
   }
   showEditModal.value = true
@@ -246,6 +259,13 @@ const nationalityDisplay = (code) => {
   const country = countries[code]
   if (!country) return code
   return `${getEmojiFlag(code)} ${country.name}`
+}
+
+const genderLabel = (gender) => {
+  if (gender === 'male') return 'Masculino'
+  if (gender === 'female') return 'Femenino'
+  if (gender === 'unspecified') return 'Prefiero no indicar'
+  return '-'
 }
 
 const formatDocument = (item) => {

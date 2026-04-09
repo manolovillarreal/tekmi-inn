@@ -65,7 +65,10 @@ export const buildPricingSuggestion = ({
   checkIn,
   checkOut,
   adults = 1,
+  minors = 0,
   children = 0,
+  infants = 0,
+  ageSettings = null,
   usePeak = false,
   useFullHouse = false,
   allUnitsSelected = false,
@@ -86,7 +89,7 @@ export const buildPricingSuggestion = ({
       }
     }
 
-    const persons = Math.max(Number(adults || 0) + Number(children || 0), 1)
+    const persons = Math.max(Number(adults || 0) + Number(minors || 0) + Number(children || 0) + Number(infants || 0), 1)
   const extraPersons = Math.max(persons - 2, 0)
     const baseAmount = baseGeneral ?? 0
   const perPersonAmount = (perPersonBase ?? 0) * extraPersons
@@ -186,7 +189,9 @@ export const buildPricingSuggestion = ({
   }, 0)
 
   const adultCount = Math.max(Number(adults || 0), 0)
+  const minorsCount = Math.max(Number(minors || 0), 0)
   const childrenCount = Math.max(Number(children || 0), 0)
+  const infantsCount = Math.max(Number(infants || 0), 0)
   const extraAdults = Math.max(adultCount - capacityIncluded, 0)
 
   const extraRates = selectedUnits
@@ -197,11 +202,18 @@ export const buildPricingSuggestion = ({
     ? (extraRates.reduce((sum, rate) => sum + rate, 0) / extraRates.length)
     : null
 
-  const childPct = normalizedSettings.price_child_pct
-  const childRate = extraRate === null ? null : (extraRate * (childPct / 100))
+  const minorsPct = ageSettings?.minors_price_pct ?? normalizedSettings.price_child_pct
+  const childrenPct = ageSettings?.children_price_pct ?? normalizedSettings.price_child_pct
+  const infantsPct = ageSettings?.infants_price_pct ?? 0
+  const minorsRate = extraRate === null ? null : (extraRate * (minorsPct / 100))
+  const childRate = extraRate === null ? null : (extraRate * (childrenPct / 100))
+  const infantsRate = extraRate === null ? null : (extraRate * (infantsPct / 100))
   const extrasNightly = extraRate === null
     ? 0
-    : (extraAdults * extraRate) + (childrenCount * (childRate || 0))
+    : (extraAdults * extraRate) +
+      (minorsCount * (minorsRate || 0)) +
+      (childrenCount * (childRate || 0)) +
+      (infantsCount * (infantsRate || 0))
 
   const unitNightly = validNightly.reduce((sum, value) => sum + value, 0)
   const nightly = unitNightly + extrasNightly
@@ -211,10 +223,16 @@ export const buildPricingSuggestion = ({
     : {
         capacityIncluded,
         extraAdults,
+        minorsCount,
         childrenCount,
+        infantsCount,
         extraRate,
+        minorsRate: minorsRate || 0,
+        minorsPct,
         childRate: childRate || 0,
-        childPct,
+        childrenPct,
+        infantsRate: infantsRate || 0,
+        infantsPct,
         nightlyTotal: extrasNightly,
       }
 

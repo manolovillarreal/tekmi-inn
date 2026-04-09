@@ -114,7 +114,9 @@
       <AppFormSection title="Personas" :divider="true" :collapsible="true" :defaultOpen="true">
         <AppFormGrid :columns="2">
           <AppCounter v-model="form.adults" label="Adultos" :min="1" :max="20" />
-          <AppCounter v-model="form.children" label="Niños" :min="0" :max="20" />
+          <AppCounter v-if="activeCategories.includes('minors')" v-model="form.minors" :label="ageCategoryLabels.minors" :min="0" :max="20" />
+          <AppCounter v-if="activeCategories.includes('children')" v-model="form.children" :label="ageCategoryLabels.children" :min="0" :max="20" />
+          <AppCounter v-if="activeCategories.includes('infants')" v-model="form.infants" :label="ageCategoryLabels.infants" :min="0" :max="20" />
         </AppFormGrid>
         <p class="text-sm text-[#6B7280]">
           Total: <strong class="text-[#111827]">{{ guestsTotal }} persona{{ guestsTotal !== 1 ? 's' : '' }}</strong>
@@ -152,7 +154,9 @@
           <p class="font-semibold text-gray-900">Adicional personas</p>
           <p>{{ pricingSuggestion.extras.capacityIncluded }} adultos incluidos en tarifa base</p>
           <p>{{ pricingSuggestion.extras.extraAdults }} adulto(s) adicional(es) · ${{ Math.round(pricingSuggestion.extras.extraRate).toLocaleString('es-CO') }}/noche</p>
-          <p>{{ pricingSuggestion.extras.childrenCount }} nino(s) · ${{ Math.round(pricingSuggestion.extras.childRate).toLocaleString('es-CO') }}/noche ({{ pricingSuggestion.extras.childPct }}%)</p>
+          <p v-if="pricingSuggestion.extras.minorsCount > 0">{{ pricingSuggestion.extras.minorsCount }} menor(es) · ${{ Math.round(pricingSuggestion.extras.minorsRate).toLocaleString('es-CO') }}/noche ({{ pricingSuggestion.extras.minorsPct }}%)</p>
+          <p v-if="pricingSuggestion.extras.childrenCount > 0">{{ pricingSuggestion.extras.childrenCount }} niño(s) · ${{ Math.round(pricingSuggestion.extras.childRate).toLocaleString('es-CO') }}/noche ({{ pricingSuggestion.extras.childrenPct }}%)</p>
+          <p v-if="pricingSuggestion.extras.infantsCount > 0">{{ pricingSuggestion.extras.infantsCount }} bebé(s) · ${{ Math.round(pricingSuggestion.extras.infantsRate).toLocaleString('es-CO') }}/noche ({{ pricingSuggestion.extras.infantsPct }}%)</p>
           <p class="font-semibold text-gray-900">Adicional personas: ${{ Math.round(pricingSuggestion.extras.nightlyTotal).toLocaleString('es-CO') }}/noche</p>
         </div>
 
@@ -177,7 +181,9 @@
           :commissionPercentage="Number(form.commission_percentage || 0)"
           :units="form.unit_ids"
           :adults="Number(form.adults || 1)"
+          :minors="Number(form.minors || 0)"
           :children="Number(form.children || 0)"
+          :infants="Number(form.infants || 0)"
         />
       </AppFormSection>
 
@@ -290,6 +296,7 @@ import {
   PricingCalculatorPanel
 } from '@/components/ui/forms'
 import { buildPricingSuggestion } from '../../utils/pricingUtils'
+import { useAgeCategorySettings } from '../../composables/useAgeCategorySettings'
 
 const props = defineProps({
   isOpen: { type: Boolean, default: false },
@@ -312,6 +319,7 @@ const selectedUnavailableNames = ref([])
 const syncIssue = ref(null)
 const useFullHousePricing = ref(false)
 const usePeakPricing = ref(false)
+const { ageCategorySettings, loadAgeCategorySettings, activeCategories, ageCategoryLabels } = useAgeCategorySettings()
 
 const accountPricing = ref({
   price_general_base: null,
@@ -367,7 +375,9 @@ function buildEmptyForm() {
     check_in: '',
     check_out: '',
     adults: 1,
+    minors: 0,
     children: 0,
+    infants: 0,
     unit_ids: [],
     price_per_night: '',
     commission_name: '',
@@ -392,7 +402,12 @@ const nights = computed(() => {
 const subtotal = computed(() => Number(form.value.price_per_night || 0) * nights.value)
 const discountAmount = computed(() => subtotal.value * Number(form.value.discount_percentage || 0) / 100)
 const customerTotal = computed(() => Math.max(subtotal.value - discountAmount.value, 0))
-const guestsTotal = computed(() => Number(form.value.adults || 0) + Number(form.value.children || 0))
+const guestsTotal = computed(() =>
+  Number(form.value.adults || 0) +
+  Number(form.value.minors || 0) +
+  Number(form.value.children || 0) +
+  Number(form.value.infants || 0)
+)
 const hasAvailabilityConflict = computed(() => selectedUnavailableNames.value.length > 0)
 
 const selectedUnits = computed(() => {
@@ -421,7 +436,10 @@ const pricingSuggestion = computed(() => buildPricingSuggestion({
   checkIn: form.value.check_in,
   checkOut: form.value.check_out,
   adults: Number(form.value.adults || 0),
+  minors: Number(form.value.minors || 0),
   children: Number(form.value.children || 0),
+  infants: Number(form.value.infants || 0),
+  ageSettings: ageCategorySettings.value,
   usePeak: usePeakPricing.value,
   useFullHouse: useFullHousePricing.value,
   allUnitsSelected: allUnitsSelected.value,
@@ -431,8 +449,7 @@ const suggestionHint = computed(() => pricingSuggestion.value.originLabel || 'Op
 
 watch(() => props.isOpen, async (open) => {
   if (!open) return
-  await loadUnits()
-  await loadAccountPricing()
+  await Promise.all([loadUnits(), loadAccountPricing(), loadAgeCategorySettings()])
   hydrateForm()
   await evaluateAvailability()
 }, { immediate: true })
@@ -541,7 +558,9 @@ const hydrateForm = () => {
     check_in: inquiry.check_in || '',
     check_out: inquiry.check_out || '',
     adults: inquiry.adults ?? 1,
+    minors: inquiry.minors ?? 0,
     children: inquiry.children ?? 0,
+    infants: inquiry.infants ?? 0,
     unit_ids: [...(inquiry.unit_ids || [])],
     price_per_night: inquiry.price_per_night ?? '',
     commission_name: inquiry.commission_name || '',
@@ -640,7 +659,9 @@ const submitConversion = async () => {
         check_in: form.value.check_in,
         check_out: form.value.check_out,
         adults: Number(form.value.adults || 1),
+        minors: Number(form.value.minors || 0),
         children: Number(form.value.children || 0),
+        infants: Number(form.value.infants || 0),
         price_per_night: Number(form.value.price_per_night || 0),
         total_amount: Number(customerTotal.value || 0),
         paid_amount: 0,

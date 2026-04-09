@@ -90,6 +90,133 @@
         <p v-if="saveError" class="mt-3 text-xs text-red-600">{{ saveError }}</p>
         <p v-if="saveOk" class="mt-3 text-xs text-emerald-600">Guardado correctamente.</p>
       </div>
+
+      <!-- Categorías de edad -->
+      <div class="card">
+        <h2 class="mb-1 text-sm font-semibold uppercase tracking-wide text-gray-500">Categorías de edad</h2>
+        <p class="mb-4 text-xs text-gray-400">Define los rangos de edad para cada categoría de huéspedes. Los porcentajes de precio se configuran en Tarifas.</p>
+
+        <div class="space-y-4">
+          <!-- Menores -->
+          <div class="rounded-lg border border-gray-200 p-4">
+            <div class="mb-3 flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-gray-800">Menores</p>
+                <p class="text-xs text-gray-500">Rango superior fijo: hasta 17 años.</p>
+              </div>
+              <button
+                type="button"
+                :disabled="ageSaving"
+                class="relative ml-4 inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors disabled:opacity-50"
+                :class="ageForm.minors_active ? 'bg-indigo-600' : 'bg-gray-200'"
+                @click="ageForm.minors_active = !ageForm.minors_active; saveAgeSettings()"
+              >
+                <span
+                  class="pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform"
+                  :class="ageForm.minors_active ? 'translate-x-4' : 'translate-x-0'"
+                />
+              </button>
+            </div>
+            <div v-if="ageForm.minors_active" class="flex items-center gap-4">
+              <div class="flex flex-1 items-center gap-2">
+                <label class="text-xs text-gray-500 whitespace-nowrap">Edad mínima</label>
+                <input
+                  v-model.number="ageForm.minors_min_age"
+                  type="number"
+                  min="1"
+                  max="17"
+                  class="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  @change="saveAgeSettings"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Niños -->
+          <div class="rounded-lg border border-gray-200 p-4">
+            <div class="mb-3 flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-gray-800">Niños</p>
+                <p class="text-xs text-gray-500">Categoría intermedia entre bebés y menores.</p>
+              </div>
+              <button
+                type="button"
+                :disabled="ageSaving"
+                class="relative ml-4 inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors disabled:opacity-50"
+                :class="ageForm.children_active ? 'bg-indigo-600' : 'bg-gray-200'"
+                @click="ageForm.children_active = !ageForm.children_active; saveAgeSettings()"
+              >
+                <span
+                  class="pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform"
+                  :class="ageForm.children_active ? 'translate-x-4' : 'translate-x-0'"
+                />
+              </button>
+            </div>
+            <div v-if="ageForm.children_active" class="flex flex-wrap items-center gap-4">
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-gray-500 whitespace-nowrap">Edad mínima</label>
+                <input
+                  v-model.number="ageForm.children_min_age"
+                  type="number"
+                  min="0"
+                  max="17"
+                  class="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  @change="saveAgeSettings"
+                />
+              </div>
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-gray-500 whitespace-nowrap">Edad máxima</label>
+                <input
+                  v-model.number="ageForm.children_max_age"
+                  type="number"
+                  min="0"
+                  max="17"
+                  class="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  @change="saveAgeSettings"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Bebés -->
+          <div class="rounded-lg border border-gray-200 p-4">
+            <div class="mb-3 flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-gray-800">Bebés</p>
+                <p class="text-xs text-gray-500">Rango inferior fijo: desde 0 años.</p>
+              </div>
+              <button
+                type="button"
+                :disabled="ageSaving"
+                class="relative ml-4 inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors disabled:opacity-50"
+                :class="ageForm.infants_active ? 'bg-indigo-600' : 'bg-gray-200'"
+                @click="ageForm.infants_active = !ageForm.infants_active; saveAgeSettings()"
+              >
+                <span
+                  class="pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow ring-0 transition-transform"
+                  :class="ageForm.infants_active ? 'translate-x-4' : 'translate-x-0'"
+                />
+              </button>
+            </div>
+            <div v-if="ageForm.infants_active" class="flex items-center gap-4">
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-gray-500 whitespace-nowrap">Edad máxima</label>
+                <input
+                  v-model.number="ageForm.infants_max_age"
+                  type="number"
+                  min="0"
+                  max="10"
+                  class="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  @change="saveAgeSettings"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p v-if="ageSaveError" class="mt-3 text-xs text-red-600">{{ ageSaveError }}</p>
+        <p v-if="ageSaveOk" class="mt-3 text-xs text-emerald-600">Rangos guardados correctamente.</p>
+      </div>
     </template>
   </div>
 </template>
@@ -99,6 +226,7 @@ import { ref, onMounted } from 'vue'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
 import { usePermissions } from '../composables/usePermissions'
+import { getAgeCategorySettings, saveAgeCategorySettings } from '../services/ageRangeService'
 
 const accountStore = useAccountStore()
 const { can } = usePermissions()
@@ -162,5 +290,60 @@ const toggle = async (key) => {
   await save()
 }
 
-onMounted(load)
+// Age category settings
+const ageSaving = ref(false)
+const ageSaveError = ref('')
+const ageSaveOk = ref(false)
+
+const ageForm = ref({
+  minors_active: true,
+  minors_min_age: 10,
+  children_active: true,
+  children_min_age: 2,
+  children_max_age: 9,
+  infants_active: true,
+  infants_max_age: 2,
+})
+
+const loadAgeSettings = async () => {
+  try {
+    const accountId = accountStore.getRequiredAccountId()
+    const data = await getAgeCategorySettings(accountId)
+    ageForm.value.minors_active = data.minors_active ?? true
+    ageForm.value.minors_min_age = data.minors_min_age ?? 10
+    ageForm.value.children_active = data.children_active ?? true
+    ageForm.value.children_min_age = data.children_min_age ?? 2
+    ageForm.value.children_max_age = data.children_max_age ?? 9
+    ageForm.value.infants_active = data.infants_active ?? true
+    ageForm.value.infants_max_age = data.infants_max_age ?? 2
+  } catch (e) {
+    console.warn('[OperationalSettings] loadAgeSettings failed:', e?.message)
+  }
+}
+
+const saveAgeSettings = async () => {
+  ageSaving.value = true
+  ageSaveError.value = ''
+  ageSaveOk.value = false
+  try {
+    const accountId = accountStore.getRequiredAccountId()
+    await saveAgeCategorySettings(accountId, {
+      ...ageForm.value,
+      minors_price_pct: 80,
+      children_price_pct: 60,
+      infants_price_pct: 0,
+    })
+    ageSaveOk.value = true
+    setTimeout(() => { ageSaveOk.value = false }, 2500)
+  } catch (e) {
+    ageSaveError.value = e?.message || 'No se pudo guardar.'
+  } finally {
+    ageSaving.value = false
+  }
+}
+
+onMounted(() => {
+  load()
+  loadAgeSettings()
+})
 </script>

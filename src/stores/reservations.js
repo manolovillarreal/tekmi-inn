@@ -386,7 +386,9 @@ export const useReservationsStore = defineStore('reservations', () => {
       }
 
       const adults = Number(reservationData.adults || 1)
+      const minors = Number(reservationData.minors || 0)
       const children = Number(reservationData.children || 0)
+      const infants = Number(reservationData.infants || 0)
       const nights = getDaysDifference(normalizedCheckIn, normalizedCheckOut)
       const pricePerNight = Number(reservationData.price_per_night || 0)
       const totalAmount = Number(reservationData.total_amount || (pricePerNight * nights) || 0)
@@ -397,7 +399,9 @@ export const useReservationsStore = defineStore('reservations', () => {
         venue_id: reservationData.venue_id,
         guest_id: resolvedGuestId,
         adults,
+        minors,
         children,
+        infants,
         check_in: normalizedCheckIn,
         check_out: normalizedCheckOut,
         price_per_night: pricePerNight || null,

@@ -79,6 +79,8 @@
     { "id": 78, "t": "AppPhoneInput con indicativo, limpiar guest_name y phone de reservations", "c": "Feature", "s": "d" },
     { "id": 79, "t": "Nombres y apellidos separados en huéspedes e inquiries, variables en mensajes", "c": "Feature", "s": "d" },
     { "id": 80, "t": "Normalizar source_details — sistema vs custom, configuración por cuenta", "c": "Feature", "s": "d" },
-    { "id": 81, "t": "Canales custom por categoría — permitir crear en cualquier tipo", "c": "Feature", "s": "e" }
+    { "id": 81, "t": "Canales custom por categoría — permitir crear en cualquier tipo", "c": "Feature", "s": "e" },
+    { "id": 82, "t": "Rangos de edad configurables — menores, niños y bebés con precios independientes", "c": "Feature", "s": "d" },
+    { "id": 83, "t": "Género en perfil de huésped y pre-registro", "c": "Feature", "s": "d" }
   ]
 }

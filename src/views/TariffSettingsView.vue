@@ -47,12 +47,35 @@
               suffix="%"
               hint="Se aplica manualmente al activar precio pico en una reserva"
             />
+          </AppFormGrid>
+        </AppFormSection>
+
+        <AppFormSection title="Precios por categoría de edad" :divider="true" :collapsible="isMobile" :defaultOpen="true">
+          <p class="mb-4 text-xs text-gray-500">Porcentaje sobre el precio de persona adicional. Los rangos de edad se configuran en Operación. 0% = gratis · 100% = igual que adulto.</p>
+          <AppFormGrid :columns="3">
             <AppInput
-              v-model="form.price_child_pct"
+              v-model="ageForm.minors_price_pct"
               type="number"
-              label="Precio nino en % del precio de persona adicional"
+              :label="`Menores (${ageRangeLabels.minors})`"
               suffix="%"
-              hint="0% = ninos gratis · 100% = igual que adulto"
+              :disabled="!ageForm.minors_active"
+              hint="Ej: 80 = 80% del precio por persona"
+            />
+            <AppInput
+              v-model="ageForm.children_price_pct"
+              type="number"
+              :label="`Niños (${ageRangeLabels.children})`"
+              suffix="%"
+              :disabled="!ageForm.children_active"
+              hint="Ej: 60 = 60% del precio por persona"
+            />
+            <AppInput
+              v-model="ageForm.infants_price_pct"
+              type="number"
+              :label="`Bebés (${ageRangeLabels.infants})`"
+              suffix="%"
+              :disabled="!ageForm.infants_active"
+              hint="0% = bebés gratis"
             />
           </AppFormGrid>
         </AppFormSection>
@@ -92,12 +115,13 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
 import { usePermissions } from '../composables/usePermissions'
 import { useToast } from '../composables/useToast'
 import { useBreakpoint } from '../composables/useBreakpoint'
+import { getAgeCategorySettings, saveAgeCategorySettings, getAgeRangeLabels } from '../services/ageRangeService'
 import {
   AppInput,
   AppFormSection,
@@ -122,13 +146,27 @@ const buildEmpty = () => ({
   anticipo_pct: '50',
   price_weekend_pct: '',
   price_peak_pct: '',
-  price_child_pct: '50',
   price_full_house_min: '',
   price_full_house_base: '',
   price_full_house_peak: '',
 })
 
 const form = ref(buildEmpty())
+
+const ageForm = ref({
+  minors_active: true,
+  minors_min_age: 10,
+  minors_price_pct: 80,
+  children_active: true,
+  children_min_age: 2,
+  children_max_age: 9,
+  children_price_pct: 60,
+  infants_active: true,
+  infants_max_age: 2,
+  infants_price_pct: 0,
+})
+
+const ageRangeLabels = computed(() => getAgeRangeLabels(ageForm.value))
 
 const toNumberOrNull = (value) => {
   if (value === '' || value === null || value === undefined) return null
@@ -145,7 +183,7 @@ const loadSettings = async () => {
     const accountId = accountStore.getRequiredAccountId()
     const { data, error } = await supabase
       .from('settings')
-      .select('price_general_base, price_general_min, price_general_extra, price_per_person_base, anticipo_pct, price_weekend_pct, price_peak_pct, price_child_pct, price_full_house_min, price_full_house_base, price_full_house_peak')
+      .select('price_general_base, price_general_min, price_general_extra, price_per_person_base, anticipo_pct, price_weekend_pct, price_peak_pct, price_full_house_min, price_full_house_base, price_full_house_peak')
       .eq('account_id', accountId)
       .maybeSingle()
 
@@ -159,11 +197,13 @@ const loadSettings = async () => {
       anticipo_pct: data?.anticipo_pct ?? 50,
       price_weekend_pct: data?.price_weekend_pct ?? '',
       price_peak_pct: data?.price_peak_pct ?? '',
-      price_child_pct: data?.price_child_pct ?? 50,
       price_full_house_min: data?.price_full_house_min ?? '',
       price_full_house_base: data?.price_full_house_base ?? '',
       price_full_house_peak: data?.price_full_house_peak ?? '',
     }
+
+    const ageData = await getAgeCategorySettings(accountId)
+    Object.assign(ageForm.value, ageData)
   } catch (err) {
     toast.error(err.message || 'No se pudo cargar la configuracion de tarifas.')
   } finally {
@@ -186,7 +226,6 @@ const saveSettings = async () => {
       anticipo_pct: toNumberOrNull(form.value.anticipo_pct) ?? 50,
       price_weekend_pct: toNumberOrNull(form.value.price_weekend_pct),
       price_peak_pct: toNumberOrNull(form.value.price_peak_pct),
-      price_child_pct: toNumberOrNull(form.value.price_child_pct) ?? 50,
       price_full_house_min: toNumberOrNull(form.value.price_full_house_min),
       price_full_house_base: toNumberOrNull(form.value.price_full_house_base),
       price_full_house_peak: toNumberOrNull(form.value.price_full_house_peak),
@@ -197,6 +236,9 @@ const saveSettings = async () => {
       .upsert(payload, { onConflict: 'account_id' })
 
     if (error) throw error
+
+    await saveAgeCategorySettings(accountId, ageForm.value)
+
     toast.success('Tarifas guardadas correctamente.')
   } catch (err) {
     toast.error(err.message || 'No se pudo guardar la configuracion de tarifas.')

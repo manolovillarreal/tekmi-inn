@@ -47,7 +47,7 @@
                 <span class="text-gray-300">|</span> 
                 {{ nightsCount }} noches 
                 <span class="text-gray-300">|</span> 
-                {{ Number(res.adults || 0) + Number(res.children || 0) }} personas
+                {{ Number(res.adults || 0) + Number(res.minors || 0) + Number(res.children || 0) + Number(res.infants || 0) }} personas
               </p>
             </div>
             <a
@@ -768,7 +768,7 @@ const initialPreregistroGuests = computed(() => {
 })
 
 const preregistroGuestsCount = computed(() => {
-  const total = Number(res.value?.adults || 0) + Number(res.value?.children || 0)
+  const total = Number(res.value?.adults || 0) + Number(res.value?.minors || 0) + Number(res.value?.children || 0) + Number(res.value?.infants || 0)
   return total > 0 ? total : 1
 })
 
@@ -804,7 +804,7 @@ const registeredGuests = computed(() => {
 })
 
 const preregistroEval = computed(() => {
-  const guestsCount = (Number(res.value?.adults || 0) + Number(res.value?.children || 0)) || 1
+  const guestsCount = (Number(res.value?.adults || 0) + Number(res.value?.minors || 0) + Number(res.value?.children || 0) + Number(res.value?.infants || 0)) || 1
   const companionsExpected = Math.max(0, guestsCount - 1)
   const guests = registeredGuests.value
   const primary = guests.find((g) => g.is_primary)
@@ -822,7 +822,7 @@ const preregistroReservation = computed(() => ({
   venue_name: res.value?.venues?.name || 'Alojamiento',
   check_in: res.value?.check_in,
   check_out: res.value?.check_out,
-  guests_count: Number(res.value?.adults || 0) + Number(res.value?.children || 0) || 1,
+  guests_count: Number(res.value?.adults || 0) + Number(res.value?.minors || 0) + Number(res.value?.children || 0) + Number(res.value?.infants || 0) || 1,
 }))
 
 const canViewFinancial = computed(() => {

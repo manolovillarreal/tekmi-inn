@@ -55,7 +55,9 @@ const props = defineProps({
   commissionPercentage: { type: Number, default: 0 },
   units: { type: Array, default: () => [] },
   adults: { type: Number, default: 1 },
+  minors: { type: Number, default: 0 },
   children: { type: Number, default: 0 },
+  infants: { type: Number, default: 0 },
   currency: { type: String, default: 'COP' }
 })
 
@@ -78,7 +80,7 @@ const nights = computed(() => {
 const pricePerNightNumber = computed(() => Number(props.pricePerNight || 0))
 const discountPercentageNumber = computed(() => Number(props.discountPercentage || 0))
 const commissionPercentageNumber = computed(() => Number(props.commissionPercentage || 0))
-const totalPeople = computed(() => Math.max(Number(props.adults || 0) + Number(props.children || 0), 0))
+const totalPeople = computed(() => Math.max(Number(props.adults || 0) + Number(props.minors || 0) + Number(props.children || 0) + Number(props.infants || 0), 0))
 const unitsCount = computed(() => (Array.isArray(props.units) ? props.units.length : 0))
 
 const calculations = computed(() => {

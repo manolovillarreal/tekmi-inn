@@ -41,7 +41,9 @@
 
         <AppFormGrid :columns="2">
           <AppCounter v-model="form.adults" label="Adultos" :min="1" :max="20" />
-          <AppCounter v-model="form.children" label="Niños" :min="0" :max="20" />
+          <AppCounter v-if="activeCategories.includes('minors')" v-model="form.minors" :label="ageCategoryLabels.minors" :min="0" :max="20" />
+          <AppCounter v-if="activeCategories.includes('children')" v-model="form.children" :label="ageCategoryLabels.children" :min="0" :max="20" />
+          <AppCounter v-if="activeCategories.includes('infants')" v-model="form.infants" :label="ageCategoryLabels.infants" :min="0" :max="20" />
         </AppFormGrid>
 
         <p v-if="nights > 0" class="text-sm text-gray-500">
@@ -196,6 +198,15 @@
             />
           </AppFormGrid>
 
+          <AppSelect
+            v-model="form.guest_gender"
+            label="Género"
+            :options="[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Femenino' }, { value: 'unspecified', label: 'Prefiero no indicar' }]"
+            placeholder="Sin definir"
+            :disabled="!!form.guest_id"
+            hint="Opcional"
+          />
+
         <AppTextarea
           v-model="form.notes"
           label="Notas internas"
@@ -317,7 +328,9 @@
             <p class="font-semibold text-gray-900">Adicional personas</p>
             <p>{{ pricingSuggestion.extras.capacityIncluded }} adultos incluidos en tarifa base</p>
             <p>{{ pricingSuggestion.extras.extraAdults }} adulto(s) adicional(es) · ${{ Math.round(pricingSuggestion.extras.extraRate).toLocaleString('es-CO') }}/noche</p>
-            <p>{{ pricingSuggestion.extras.childrenCount }} nino(s) · ${{ Math.round(pricingSuggestion.extras.childRate).toLocaleString('es-CO') }}/noche ({{ pricingSuggestion.extras.childPct }}%)</p>
+            <p v-if="pricingSuggestion.extras.minorsCount > 0">{{ pricingSuggestion.extras.minorsCount }} menor(es) · ${{ Math.round(pricingSuggestion.extras.minorsRate).toLocaleString('es-CO') }}/noche ({{ pricingSuggestion.extras.minorsPct }}%)</p>
+            <p v-if="pricingSuggestion.extras.childrenCount > 0">{{ pricingSuggestion.extras.childrenCount }} niño(s) · ${{ Math.round(pricingSuggestion.extras.childRate).toLocaleString('es-CO') }}/noche ({{ pricingSuggestion.extras.childrenPct }}%)</p>
+            <p v-if="pricingSuggestion.extras.infantsCount > 0">{{ pricingSuggestion.extras.infantsCount }} bebé(s) · ${{ Math.round(pricingSuggestion.extras.infantsRate).toLocaleString('es-CO') }}/noche ({{ pricingSuggestion.extras.infantsPct }}%)</p>
             <p class="font-semibold text-gray-900">Adicional personas: ${{ Math.round(pricingSuggestion.extras.nightlyTotal).toLocaleString('es-CO') }}/noche</p>
           </div>
 
@@ -341,7 +354,9 @@
             :discountPercentage="Number(form.discount_percentage || 0)"
             :commissionPercentage="Number(form.commission_percentage || 0)"
             :adults="form.adults"
-            :children="form.children"
+            :minors="Number(form.minors || 0)"
+            :children="Number(form.children || 0)"
+            :infants="Number(form.infants || 0)"
           />
         </div>
       </div>
@@ -454,6 +469,7 @@ import { useGuestsStore } from '../../stores/guests'
 import { useRoomBlocksStore } from '../../stores/roomBlocks'
 import { useToast } from '../../composables/useToast'
 import { buildPricingSuggestion } from '../../utils/pricingUtils'
+import { useAgeCategorySettings } from '../../composables/useAgeCategorySettings'
 
 const props = defineProps({
   initialCheckIn: { type: String, default: '' },
@@ -472,6 +488,7 @@ const guestsStore = useGuestsStore()
 const toast = useToast()
 const roomBlocksStore = useRoomBlocksStore()
 const avail = useAvailability()
+const { ageCategorySettings, loadAgeCategorySettings, activeCategories, ageCategoryLabels } = useAgeCategorySettings()
 
 const PAYMENT_METHOD_OPTIONS = [
   { value: 'efectivo', label: 'Efectivo' },
@@ -514,7 +531,9 @@ const form = ref({
   check_in: props.initialCheckIn || '',
   check_out: props.initialCheckOut || '',
   adults: Number(props.initialPersonas) || 2,
+  minors: 0,
   children: 0,
+  infants: 0,
   venue_id: '',
   guest_id: null,
   guest_first_name: '',
@@ -525,6 +544,7 @@ const form = ref({
   guest_nationality: '',
   guest_document_type: '',
   guest_document_number: '',
+  guest_gender: '',
   notes: '',
   price_per_night: '',
   discount_percentage: '',
@@ -558,7 +578,12 @@ const accountPricing = ref({
 })
 
 // ── Computeds ──────────────────────────────────────────
-const totalPersonas = computed(() => Number(form.value.adults || 0) + Number(form.value.children || 0))
+const totalPersonas = computed(() =>
+  Number(form.value.adults || 0) +
+  Number(form.value.minors || 0) +
+  Number(form.value.children || 0) +
+  Number(form.value.infants || 0)
+)
 
 const nights = computed(() => {
   if (!form.value.check_in || !form.value.check_out) return 0
@@ -657,7 +682,10 @@ const pricingSuggestion = computed(() => buildPricingSuggestion({
   checkIn: form.value.check_in,
   checkOut: form.value.check_out,
   adults: Number(form.value.adults || 0),
+  minors: Number(form.value.minors || 0),
   children: Number(form.value.children || 0),
+  infants: Number(form.value.infants || 0),
+  ageSettings: ageCategorySettings.value,
   usePeak: usePeakPricing.value,
   useFullHouse: useFullHousePricing.value,
   allUnitsSelected: allUnitsSelected.value,
@@ -952,6 +980,7 @@ const save = async () => {
               last_name: form.value.guest_last_name,
               document_type: form.value.guest_document_type || null,
               document_number: form.value.guest_document_number?.trim() || null,
+              gender: form.value.guest_gender || null,
           })
 
       const result = await reservationsStore.createReservationWithPayment(
@@ -959,7 +988,9 @@ const save = async () => {
           check_in: form.value.check_in,
           check_out: form.value.check_out,
           adults: form.value.adults,
+          minors: form.value.minors,
           children: form.value.children,
+          infants: form.value.infants,
           venue_id: form.value.venue_id || null,
           guest_id: guestRecord.id,
           guest_first_name: form.value.guest_first_name,
@@ -1002,7 +1033,9 @@ const save = async () => {
         check_in: form.value.check_in,
         check_out: form.value.check_out,
         adults: form.value.adults,
+        minors: form.value.minors,
         children: form.value.children,
+        infants: form.value.infants,
         guest_first_name: form.value.guest_first_name,
         guest_last_name: form.value.guest_last_name,
         guest_phone: form.value.guest_phone,
@@ -1046,7 +1079,7 @@ const save = async () => {
 onMounted(async () => {
   const accountId = accountStore.getRequiredAccountId()
   await guestsStore.fetchGuests()
-  await loadAccountPricing()
+  await Promise.all([loadAccountPricing(), loadAgeCategorySettings()])
 
   if (props.initialCheckIn && props.initialCheckOut) {
     await avail.checkAvailability({

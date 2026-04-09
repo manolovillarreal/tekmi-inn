@@ -134,6 +134,19 @@
                 class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               >
             </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Género</label>
+              <select
+                v-model="guest.gender"
+                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              >
+                <option value="">Sin definir</option>
+                <option value="male">Masculino</option>
+                <option value="female">Femenino</option>
+                <option value="unspecified">Prefiero no indicar</option>
+              </select>
+            </div>
           </div>
 
           <button
@@ -190,6 +203,7 @@ const buildGuest = () => ({
   phone_country_code: '+57',
   email: '',
   birth_date: '',
+  gender: '',
 })
 
 const guest = reactive(buildGuest())

@@ -94,7 +94,9 @@ export const useInquiriesStore = defineStore('inquiries', () => {
     const inquiryNumber = generateInquiryNumber({ date: new Date(), previousInquiryNumber: prev?.[0]?.inquiry_number || null })
 
     const adults = payload.adults != null ? Number(payload.adults) : 1
+    const minors = payload.minors != null ? Number(payload.minors) : 0
     const children = payload.children != null ? Number(payload.children) : 0
+    const infants = payload.infants != null ? Number(payload.infants) : 0
 
     // Decide status: cotizada if quote_expires_at is set
     let status = payload.status || 'nueva'
@@ -114,8 +116,10 @@ export const useInquiriesStore = defineStore('inquiries', () => {
       check_in: normalizeDate(payload.check_in),
       check_out: normalizeDate(payload.check_out),
       adults,
+      minors,
       children,
-      guests_count: adults + children,
+      infants,
+      guests_count: adults + minors + children + infants,
       price_per_night: payload.price_per_night === '' || payload.price_per_night == null ? null : Number(payload.price_per_night),
       commission_name: payload.commission_name || null,
       commission_percentage: payload.commission_percentage === '' || payload.commission_percentage == null ? 0 : Number(payload.commission_percentage),
@@ -206,7 +210,9 @@ export const useInquiriesStore = defineStore('inquiries', () => {
       ...(payload.check_in !== undefined && { check_in: normalizeDate(payload.check_in) }),
       ...(payload.check_out !== undefined && { check_out: normalizeDate(payload.check_out) }),
       ...(payload.adults !== undefined && { adults: Number(payload.adults || 1) }),
+      ...(payload.minors !== undefined && { minors: Number(payload.minors || 0) }),
       ...(payload.children !== undefined && { children: Number(payload.children || 0) }),
+      ...(payload.infants !== undefined && { infants: Number(payload.infants || 0) }),
       ...(payload.price_per_night !== undefined && {
         price_per_night: payload.price_per_night === '' || payload.price_per_night == null ? null : Number(payload.price_per_night)
       }),

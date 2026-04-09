@@ -86,7 +86,12 @@ export const generateReservationNumber = ({ date = new Date(), previousReservati
 }
 
 export const getGuestsTotal = (reservation) => {
-  return Number(reservation?.adults || 0) + Number(reservation?.children || 0)
+  return (
+    Number(reservation?.adults || 0) +
+    Number(reservation?.minors || 0) +
+    Number(reservation?.children || 0) +
+    Number(reservation?.infants || 0)
+  )
 }
 
 export const getBalanceAmount = (reservation) => {

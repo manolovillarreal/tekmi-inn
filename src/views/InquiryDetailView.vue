@@ -55,7 +55,9 @@
             <p><span class="font-medium text-gray-700">Check-in:</span> {{ formatDate(inquiry.check_in) }}</p>
             <p><span class="font-medium text-gray-700">Check-out:</span> {{ formatDate(inquiry.check_out) }}</p>
             <p><span class="font-medium text-gray-700">Adultos:</span> {{ inquiry.adults || '-' }}</p>
+            <p><span class="font-medium text-gray-700">Menores:</span> {{ inquiry.minors ?? '-' }}</p>
             <p><span class="font-medium text-gray-700">Niños:</span> {{ inquiry.children ?? '-' }}</p>
+            <p v-if="(inquiry.infants ?? 0) > 0"><span class="font-medium text-gray-700">Bebés:</span> {{ inquiry.infants }}</p>
             <p><span class="font-medium text-gray-700">Creada:</span> {{ formatDateTime(inquiry.created_at) }}</p>
             <p v-if="inquiry.price_per_night != null"><span class="font-medium text-gray-700">Precio por noche:</span> ${{ formatCurrency(inquiry.price_per_night) }}</p>
             <p v-if="inquiry.price_per_night != null"><span class="font-medium text-gray-700">Total cliente:</span> ${{ formatCurrency(inquiryCustomerTotal) }}</p>
@@ -189,9 +191,11 @@
         <AppFormSection title="Personas" :divider="true" :collapsible="true" :defaultOpen="true">
           <AppFormGrid :columns="2">
             <AppCounter v-model="editForm.adults" label="Adultos" :min="1" :max="20" />
-            <AppCounter v-model="editForm.children" label="Niños" :min="0" :max="20" />
+            <AppCounter v-if="activeCategories.includes('minors')" v-model="editForm.minors" :label="ageCategoryLabels.minors" :min="0" :max="20" />
+            <AppCounter v-if="activeCategories.includes('children')" v-model="editForm.children" :label="ageCategoryLabels.children" :min="0" :max="20" />
+            <AppCounter v-if="activeCategories.includes('infants')" v-model="editForm.infants" :label="ageCategoryLabels.infants" :min="0" :max="20" />
           </AppFormGrid>
-          <p class="text-sm text-[#6B7280]">Total: <strong class="text-[#111827]">{{ Number(editForm.adults || 0) + Number(editForm.children || 0) }}</strong></p>
+          <p class="text-sm text-[#6B7280]">Total: <strong class="text-[#111827]">{{ Number(editForm.adults || 0) + Number(editForm.minors || 0) + Number(editForm.children || 0) + Number(editForm.infants || 0) }}</strong></p>
         </AppFormSection>
 
         <AppFormSection title="Cotización" :divider="true" :collapsible="true" :defaultOpen="true">
@@ -209,7 +213,9 @@
             :commissionPercentage="Number(editForm.commission_percentage || 0)"
             :units="editForm.unit_ids || []"
             :adults="Number(editForm.adults || 1)"
+            :minors="Number(editForm.minors || 0)"
             :children="Number(editForm.children || 0)"
+            :infants="Number(editForm.infants || 0)"
           />
         </AppFormSection>
 
@@ -377,6 +383,7 @@ import { useInquiriesStore } from '../stores/inquiries'
 import { usePermissions } from '../composables/usePermissions'
 import { useAccountStore } from '../stores/account'
 import { useToast } from '../composables/useToast'
+import { useAgeCategorySettings } from '../composables/useAgeCategorySettings'
 import { formatReferenceDisplay } from '../utils/referenceUtils'
 import { copyQuotationAsWhatsApp, buildQuotePublicUrl } from '../utils/voucherUtils'
 import { getMessageSettings, getPredefinedMessages } from '../services/messageSettingsService'
@@ -405,6 +412,7 @@ const store = useInquiriesStore()
 const { can } = usePermissions()
 const accountStore = useAccountStore()
 const toast = useToast()
+const { loadAgeCategorySettings, activeCategories, ageCategoryLabels } = useAgeCategorySettings()
 
 const loading = ref(true)
 const inquiry = ref(null)
@@ -542,7 +550,7 @@ const loadInquiry = async () => {
 }
 
 onMounted(async () => {
-  await Promise.all([loadInquiry(), fetchMasterData()])
+  await Promise.all([loadInquiry(), fetchMasterData(), loadAgeCategorySettings()])
 })
 
 const formatDate = (value) => {
@@ -672,7 +680,9 @@ const openEditModal = () => {
     check_in: inquiry.value?.check_in || '',
     check_out: inquiry.value?.check_out || '',
     adults: inquiry.value?.adults ?? 1,
+    minors: inquiry.value?.minors ?? 0,
     children: inquiry.value?.children ?? 0,
+    infants: inquiry.value?.infants ?? 0,
     unit_ids: [...(inquiry.value?.unit_ids || [])],
     price_per_night: inquiry.value?.price_per_night ?? '',
     quote_expires_at: inquiry.value?.quote_expires_at ? inquiry.value.quote_expires_at.slice(0, 10) : '',
