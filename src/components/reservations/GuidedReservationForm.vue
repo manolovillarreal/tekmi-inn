@@ -39,12 +39,53 @@
           @blur="onStep1DateBlur"
         />
 
-        <AppFormGrid :columns="2">
-          <AppCounter v-model="form.adults" label="Adultos" :min="1" :max="20" />
-          <AppCounter v-if="activeCategories.includes('minors')" v-model="form.minors" :label="ageCategoryLabels.minors" :min="0" :max="20" />
-          <AppCounter v-if="activeCategories.includes('children')" v-model="form.children" :label="ageCategoryLabels.children" :min="0" :max="20" />
-          <AppCounter v-if="activeCategories.includes('infants')" v-model="form.infants" :label="ageCategoryLabels.infants" :min="0" :max="20" />
-        </AppFormGrid>
+        <!-- Personas — responsive: fila horizontal en sm+, una por fila en mobile -->
+        <div class="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(130px,1fr))] sm:gap-3">
+          <!-- Adultos -->
+          <div class="flex min-h-[44px] items-center justify-between py-1.5 sm:flex-col sm:items-center sm:justify-center sm:gap-2 sm:py-2">
+            <div class="sm:text-center">
+              <p class="text-sm font-medium text-gray-700">Adultos</p>
+              <p class="text-xs text-gray-400">+18 años</p>
+            </div>
+            <AppCounter v-model="form.adults" :min="1" :max="20" size="sm" />
+          </div>
+
+          <!-- Menores -->
+          <div
+            v-if="activeCategories.includes('minors')"
+            class="flex min-h-[44px] items-center justify-between py-1.5 sm:flex-col sm:items-center sm:justify-center sm:gap-2 sm:py-2"
+          >
+            <div class="sm:text-center">
+              <p class="text-sm font-medium text-gray-700">Menores</p>
+              <p class="text-xs text-gray-400">{{ categoryInfos.minors.range }}</p>
+            </div>
+            <AppCounter v-model="form.minors" :min="0" :max="20" size="sm" />
+          </div>
+
+          <!-- Niños -->
+          <div
+            v-if="activeCategories.includes('children')"
+            class="flex min-h-[44px] items-center justify-between py-1.5 sm:flex-col sm:items-center sm:justify-center sm:gap-2 sm:py-2"
+          >
+            <div class="sm:text-center">
+              <p class="text-sm font-medium text-gray-700">Niños</p>
+              <p class="text-xs text-gray-400">{{ categoryInfos.children.range }}</p>
+            </div>
+            <AppCounter v-model="form.children" :min="0" :max="20" size="sm" />
+          </div>
+
+          <!-- Bebés -->
+          <div
+            v-if="activeCategories.includes('infants')"
+            class="flex min-h-[44px] items-center justify-between py-1.5 sm:flex-col sm:items-center sm:justify-center sm:gap-2 sm:py-2"
+          >
+            <div class="sm:text-center">
+              <p class="text-sm font-medium text-gray-700">Bebés</p>
+              <p class="text-xs text-gray-400">{{ categoryInfos.infants.range }}</p>
+            </div>
+            <AppCounter v-model="form.infants" :min="0" :max="20" size="sm" />
+          </div>
+        </div>
 
         <p v-if="nights > 0" class="text-sm text-gray-500">
           {{ nights }} noche{{ nights !== 1 ? 's' : '' }}
@@ -584,6 +625,15 @@ const totalPersonas = computed(() =>
   Number(form.value.children || 0) +
   Number(form.value.infants || 0)
 )
+
+const categoryInfos = computed(() => {
+  const s = ageCategorySettings.value
+  return {
+    minors:   { range: `${s?.minors_min_age ?? 10} a 17 años` },
+    children: { range: `${s?.children_min_age ?? 2} a ${s?.children_max_age ?? 9} años` },
+    infants:  { range: `0 a ${s?.infants_max_age ?? 2} años` },
+  }
+})
 
 const nights = computed(() => {
   if (!form.value.check_in || !form.value.check_out) return 0
