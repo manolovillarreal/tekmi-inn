@@ -112,6 +112,7 @@ export const useInquiriesStore = defineStore('inquiries', () => {
       guest_first_name: payload.guest_first_name || null,
       guest_last_name: payload.guest_last_name || null,
       guest_phone: payload.guest_phone || null,
+      guest_email: payload.guest_email || null,
       phone_country_code: payload.phone_country_code || null,
       check_in: normalizeDate(payload.check_in),
       check_out: normalizeDate(payload.check_out),

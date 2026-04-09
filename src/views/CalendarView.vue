@@ -996,7 +996,9 @@ async function fetchOccupancies() {
       .gte('end_date', periodFrom.value)
       .or('occupancy_type.neq.inquiry_hold,expires_at.gt.now()')
 
-    occupancies.value = (data || []).map((occ) => ({
+    occupancies.value = (data || [])
+      .filter((occ) => occ.occupancy_type !== 'reservation' || occ.reservations?.status !== 'cancelled')
+      .map((occ) => ({
       ...occ,
       start_date: normalizeIsoDate(occ.start_date),
       end_date: normalizeIsoDate(occ.end_date),

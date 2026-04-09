@@ -1089,6 +1089,7 @@ const save = async () => {
         guest_first_name: form.value.guest_first_name,
         guest_last_name: form.value.guest_last_name,
         guest_phone: form.value.guest_phone,
+        guest_email: form.value.guest_email || null,
         phone_country_code: form.value.guest_phone_country_code,
         price_per_night: form.value.price_per_night !== '' ? Number(form.value.price_per_night) : null,
         discount_percentage: form.value.discount_percentage !== '' ? Number(form.value.discount_percentage) : 0,
