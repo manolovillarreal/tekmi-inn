@@ -295,8 +295,7 @@ function emitValue(start, end) {
 }
 
 function shiftMonths(delta) {
-  const step = isMobile.value ? 1 : 2
-  const d = new Date(baseYear.value, baseMonth.value + (delta * step), 1)
+  const d = new Date(baseYear.value, baseMonth.value + delta, 1)
   baseYear.value = d.getFullYear()
   baseMonth.value = d.getMonth()
 }
