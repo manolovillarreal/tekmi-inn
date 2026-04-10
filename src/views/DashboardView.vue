@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between">
       <h1 class="text-3xl font-semibold text-gray-900 tracking-tight">Dashboard</h1>
       <router-link to="/reservar" class="btn-primary">
-        + Nueva reserva
+        + Nuevo Registro
       </router-link>
     </div>
 

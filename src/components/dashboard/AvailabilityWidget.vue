@@ -81,7 +81,7 @@
 
       <div class="pt-1">
         <button type="button" class="btn-primary" @click="goToForm">
-          + Nueva reserva / consulta
+          + Nuevo Registro
         </button>
       </div>
     </div>

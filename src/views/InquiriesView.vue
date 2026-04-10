@@ -4,7 +4,7 @@
        <h1 class="text-3xl font-semibold tracking-tight text-gray-900">Consultas</h1>
        <div class="flex items-center gap-3">
          <ViewModeToggle v-model="viewMode" class="hidden sm:flex" />
-         <router-link v-if="can('inquiries', 'create')" to="/reservar" class="btn-primary">+ Nueva consulta</router-link>
+         <router-link v-if="can('inquiries', 'create')" to="/reservar" class="btn-primary">+ Nuevo Registro</router-link>
        </div>
      </div>
 
