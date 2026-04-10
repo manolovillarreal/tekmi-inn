@@ -9,6 +9,11 @@
       </button>
       <div class="flex items-center gap-3">
         <button v-if="can('vouchers', 'generate')" class="btn-secondary touch-target text-sm" @click="openVoucher">Generar Voucher</button>
+        <button
+          v-if="can('reservations', 'edit') && res && res.status === 'confirmed' && !res.checkin_date"
+          class="btn-primary touch-target text-sm"
+          @click="router.push('/reservas/' + res.id + '/editar')"
+        >Editar reserva</button>
         <button class="btn-secondary touch-target text-sm" @click="showMessagesPanel = true">Mensajes</button>
       </div>
     </div>

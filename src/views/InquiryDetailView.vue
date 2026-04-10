@@ -9,7 +9,7 @@
           @click="showMessagesPanel = true"
           :disabled="!inquiry"
         >Mensajes</button>
-        <button v-if="can('inquiries', 'edit')" class="btn-secondary text-sm" @click="openEditModal" :disabled="!inquiry">Editar</button>
+        <button v-if="can('inquiries', 'edit')" class="btn-secondary text-sm" :disabled="!inquiry" @click="router.push('/consultas/' + route.params.id + '/editar')">Editar</button>
       </div>
     </div>
 
@@ -112,7 +112,7 @@
             <button
               v-if="can('inquiries', 'convert') && inquiry.status !== 'convertida' && inquiry.status !== 'perdida'"
               class="w-full rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-left text-sm font-medium text-indigo-700 hover:bg-indigo-100"
-              @click="openConversionModal"
+              @click="router.push('/consultas/' + inquiry.id + '/convertir')"
             >Convertir en reserva</button>
           </div>
         </div>
@@ -146,111 +146,6 @@
         </div>
       </div>
     </div>
-
-    <BaseModal :isOpen="showEditModal" title="Editar consulta" size="lg" @close="closeEditModal">
-      <form class="space-y-5" @submit.prevent="submitEdit">
-        <AppFormSection title="Solicitante" :divider="true" :collapsible="true" :defaultOpen="true">
-          <AppFormGrid :columns="2">
-            <AppInput
-              v-model="editForm.guest_first_name"
-              label="Nombres"
-              required
-              :error="editFieldError('guest_first_name')"
-              @blur="touchEditField('guest_first_name')"
-            />
-            <AppInput v-model="editForm.guest_last_name" label="Apellidos" hint="Opcional" />
-            <AppPhoneInput
-              :countryCode="editPhoneCountryCode"
-              :phoneNumber="editForm.guest_phone"
-              label="Teléfono"
-              hint="Opcional"
-              @update:countryCode="editPhoneCountryCode = $event"
-              @update:phoneNumber="editForm.guest_phone = $event"
-            />
-          </AppFormGrid>
-        </AppFormSection>
-
-        <AppFormSection title="Fechas de interés" :divider="true" :collapsible="true" :defaultOpen="true">
-          <AppFormGrid :columns="2">
-            <AppDatePicker v-model="editForm.check_in" label="Check-in" hint="Opcional" />
-            <AppDatePicker v-model="editForm.check_out" label="Check-out" hint="Opcional" />
-          </AppFormGrid>
-          <p v-if="editNights > 0" class="text-sm text-[#6B7280]">{{ editNights }} noches</p>
-
-          <AppFieldGroup title="¿Qué unidades te interesan?" subtitle="Opcional" :compact="true" :border="true">
-            <div class="max-h-40 space-y-1 overflow-y-auto">
-              <p v-if="units.length === 0" class="text-sm text-gray-500">No hay unidades activas.</p>
-              <label v-for="unit in units" :key="unit.id" class="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-sm text-gray-700 hover:bg-white">
-                <input type="checkbox" :value="unit.id" v-model="editForm.unit_ids" class="rounded border-gray-300">
-                <span>{{ unit.name }}<span v-if="venueNameById(unit.venue_id)" class="text-gray-400"> · {{ venueNameById(unit.venue_id) }}</span></span>
-              </label>
-            </div>
-          </AppFieldGroup>
-        </AppFormSection>
-
-        <AppFormSection title="Personas" :divider="true" :collapsible="true" :defaultOpen="true">
-          <AppFormGrid :columns="2">
-            <AppCounter v-model="editForm.adults" label="Adultos" :min="1" :max="20" />
-            <AppCounter v-if="activeCategories.includes('minors')" v-model="editForm.minors" :label="ageCategoryLabels.minors" :min="0" :max="20" />
-            <AppCounter v-if="activeCategories.includes('children')" v-model="editForm.children" :label="ageCategoryLabels.children" :min="0" :max="20" />
-            <AppCounter v-if="activeCategories.includes('infants')" v-model="editForm.infants" :label="ageCategoryLabels.infants" :min="0" :max="20" />
-          </AppFormGrid>
-          <p class="text-sm text-[#6B7280]">Total: <strong class="text-[#111827]">{{ Number(editForm.adults || 0) + Number(editForm.minors || 0) + Number(editForm.children || 0) + Number(editForm.infants || 0) }}</strong></p>
-        </AppFormSection>
-
-        <AppFormSection title="Cotización" :divider="true" :collapsible="true" :defaultOpen="true">
-          <AppInput v-model="editForm.price_per_night" type="number" label="Precio por noche" prefix="$" hint="Opcional" />
-          <AppFormGrid :columns="2">
-            <AppInput v-model="editForm.discount_percentage" type="number" label="Descuento" suffix="%" hint="Opcional" />
-            <AppInput v-model="editForm.commission_percentage" type="number" label="Comisión" suffix="%" hint="Opcional" />
-          </AppFormGrid>
-          <AppDatePicker v-model="editForm.quote_expires_at" label="Cotización válida hasta" hint="Opcional" />
-          <PricingCalculatorPanel
-            :checkIn="editForm.check_in"
-            :checkOut="editForm.check_out"
-            :pricePerNight="Number(editForm.price_per_night || 0)"
-            :discountPercentage="Number(editForm.discount_percentage || 0)"
-            :commissionPercentage="Number(editForm.commission_percentage || 0)"
-            :units="editForm.unit_ids || []"
-            :adults="Number(editForm.adults || 1)"
-            :minors="Number(editForm.minors || 0)"
-            :children="Number(editForm.children || 0)"
-            :infants="Number(editForm.infants || 0)"
-          />
-        </AppFormSection>
-
-        <AppFormSection title="Origen" :divider="true" :collapsible="true" :defaultOpen="false">
-          <AppFieldGroup title="Canal de origen" :border="false" :compact="true">
-            <SourceSelector
-              :modelValue="{ sourceTypeId: editForm.source_type_id, sourceDetailId: editForm.source_detail_id, sourceName: editForm.source_name }"
-              @update:modelValue="updateEditSourceSelection"
-              @suggestions="applyEditSourceSuggestions"
-            />
-          </AppFieldGroup>
-          <AppInput v-model="editForm.commission_name" label="Comisión" placeholder="Booking, agencia..." hint="Opcional" />
-        </AppFormSection>
-
-        <AppFormSection title="Notas" :divider="false" :collapsible="true" :defaultOpen="false">
-          <AppTextarea
-            v-model="editForm.notes"
-            label="Notas"
-            :rows="2"
-            :autoResize="true"
-          />
-        </AppFormSection>
-
-        <AppInlineAlert v-if="editError" type="error" :message="editError" />
-
-        <AppFormActions
-          submit-label="Actualizar consulta"
-          cancel-label="Cancelar"
-          :loading="saving"
-          :submit-disabled="saving"
-          @submit="submitEdit"
-          @cancel="closeEditModal"
-        />
-      </form>
-    </BaseModal>
 
     <BaseModal :isOpen="showHoldModal" title="Generar bloqueo temporal" @close="closeHoldModal">
       <form class="space-y-4" @submit.prevent="submitHold">
@@ -325,14 +220,6 @@
       @confirm="confirmDelete"
     />
 
-    <InquiryConversionModal
-      v-if="inquiry"
-      :isOpen="showConversionModal"
-      :inquiry="inquiry"
-      @close="showConversionModal = false"
-      @converted="onReservationCreated"
-    />
-
     <MessagesPanel
       v-model="showMessagesPanel"
       mode="inquiry"
@@ -378,7 +265,6 @@ import ConfirmActionModal from '../components/ui/ConfirmActionModal.vue'
 import BottomSheet from '../components/ui/BottomSheet.vue'
 import MessagesPanel from '../components/messages/MessagesPanel.vue'
 import SourceSelector from '../components/sources/SourceSelector.vue'
-import InquiryConversionModal from '../components/inquiries/InquiryConversionModal.vue'
 import { useInquiriesStore } from '../stores/inquiries'
 import { usePermissions } from '../composables/usePermissions'
 import { useAccountStore } from '../stores/account'
@@ -448,17 +334,8 @@ const whatsappGuestUrl = computed(() => {
   return digits ? `https://wa.me/${digits}` : null
 })
 
-const showConversionModal = ref(false)
 const showLostSheet = ref(false)
 const lostMotivo = ref('')
-
-const showEditModal = ref(false)
-const editForm = ref({})
-const editError = ref('')
-const saving = ref(false)
-const editTouched = ref({})
-const editSubmitAttempted = ref(false)
-const editPhoneCountryCode = ref('+57')
 
 const showDeleteModal = ref(false)
 const deleting = ref(false)
@@ -493,16 +370,6 @@ const inquiryQuotationNumber = computed(() => {
   const n = inquiry.value?.inquiry_number || ''
   return n.startsWith('INQ-') ? n.replace('INQ-', 'COT-') : (n || '-')
 })
-const editNights = computed(() => getNumericNights(editForm.value.check_in, editForm.value.check_out) || 0)
-const editSubtotal = computed(() => Number(editForm.value.price_per_night || 0) * editNights.value)
-const editDiscountAmount = computed(() => editSubtotal.value * Number(editForm.value.discount_percentage || 0) / 100)
-const editCustomerTotal = computed(() => Math.max(editSubtotal.value - editDiscountAmount.value, 0))
-const editCommissionAmount = computed(() => editCustomerTotal.value * Number(editForm.value.commission_percentage || 0) / 100)
-const editNetAmount = computed(() => Math.max(editCustomerTotal.value - editCommissionAmount.value, 0))
-const showEditCalculationPanel = computed(() => {
-  return editNights.value > 0 && editForm.value.price_per_night !== '' && editForm.value.price_per_night !== null
-})
-
 watch(holdFullHouse, (enabled) => {
   if (enabled) {
     holdForm.value.unit_ids = units.value.map(u => u.id)
@@ -671,81 +538,6 @@ const handleQuoteLink = async () => {
   }
 }
 
-const openEditModal = () => {
-  editPhoneCountryCode.value = '+57'
-  editForm.value = {
-    guest_first_name: inquiry.value?.guest_first_name || '',
-    guest_last_name: inquiry.value?.guest_last_name || '',
-    guest_phone: inquiry.value?.guest_phone || '',
-    check_in: inquiry.value?.check_in || '',
-    check_out: inquiry.value?.check_out || '',
-    adults: inquiry.value?.adults ?? 1,
-    minors: inquiry.value?.minors ?? 0,
-    children: inquiry.value?.children ?? 0,
-    infants: inquiry.value?.infants ?? 0,
-    unit_ids: [...(inquiry.value?.unit_ids || [])],
-    price_per_night: inquiry.value?.price_per_night ?? '',
-    quote_expires_at: inquiry.value?.quote_expires_at ? inquiry.value.quote_expires_at.slice(0, 10) : '',
-    commission_name: inquiry.value?.commission_name || '',
-    commission_percentage: inquiry.value?.commission_percentage ?? '',
-    discount_percentage: inquiry.value?.discount_percentage ?? '',
-    source_type_id: inquiry.value?.source_detail_info?.source_type_id || '',
-    source_detail_id: inquiry.value?.source_detail_id || '',
-    source_name: inquiry.value?.source_name || '',
-    notes: inquiry.value?.notes || ''
-  }
-  editError.value = ''
-  editTouched.value = {}
-  editSubmitAttempted.value = false
-  showEditModal.value = true
-}
-
-const closeEditModal = () => {
-  if (saving.value) return
-  showEditModal.value = false
-}
-
-const updateEditSourceSelection = (value) => {
-  editForm.value.source_type_id = value?.sourceTypeId || ''
-  editForm.value.source_detail_id = value?.sourceDetailId || ''
-  editForm.value.source_name = value?.sourceName || ''
-}
-
-const applyEditSourceSuggestions = (payload) => {
-  if (!String(editForm.value.commission_name || '').trim()) {
-    editForm.value.commission_name = payload.sourceDetailLabel || ''
-  }
-
-  if (editForm.value.commission_percentage === '' || editForm.value.commission_percentage === null) {
-    editForm.value.commission_percentage = Number(payload.commissionPercentage || 0)
-  }
-
-  if (editForm.value.discount_percentage === '' || editForm.value.discount_percentage === null) {
-    editForm.value.discount_percentage = Number(payload.discountPercentage || 0)
-  }
-}
-
-const submitEdit = async () => {
-  if (!inquiry.value) return
-
-  editSubmitAttempted.value = true
-  if (editFieldError('guest_first_name')) return
-
-  saving.value = true
-  editError.value = ''
-
-  try {
-    const updated = await store.updateInquiry(inquiry.value.id, editForm.value)
-    inquiry.value = updated
-    showEditModal.value = false
-    toast.success('Consulta actualizada.')
-  } catch (err) {
-    editError.value = err.message
-  } finally {
-    saving.value = false
-  }
-}
-
 const openHoldModal = () => {
   holdFullHouse.value = false
   holdForm.value = {
@@ -819,10 +611,6 @@ const confirmDelete = async () => {
   }
 }
 
-const openConversionModal = () => {
-  showConversionModal.value = true
-}
-
 const goBack = () => {
   if (window.history.state?.back) {
     router.back()
@@ -831,33 +619,9 @@ const goBack = () => {
   router.push('/consultas')
 }
 
-const onReservationCreated = async (reservationId) => {
-  showConversionModal.value = false
-  // Refresh inquiry to show updated status and reservation link
-  try {
-    inquiry.value = await store.getInquiryById(route.params.id)
-  } catch (err) {
-    // swallow — navigation handled in modal
-  }
-}
-
 const goToQuotation = () => {
   if (!inquiry.value?.id) return
   router.push(`/consultas/${inquiry.value.id}/cotizacion`)
-}
-
-const touchEditField = (field) => {
-  editTouched.value[field] = true
-}
-
-const editFieldError = (field) => {
-  if (!editTouched.value[field] && !editSubmitAttempted.value) return ''
-
-  if (field === 'guest_first_name' && !String(editForm.value.guest_first_name || '').trim()) {
-    return 'El nombre es obligatorio.'
-  }
-
-  return ''
 }
 
 </script>

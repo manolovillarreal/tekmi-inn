@@ -81,6 +81,9 @@
     { "id": 80, "t": "Normalizar source_details — sistema vs custom, configuración por cuenta", "c": "Feature", "s": "d" },
     { "id": 81, "t": "Canales custom por categoría — permitir crear en cualquier tipo", "c": "Feature", "s": "e" },
     { "id": 82, "t": "Rangos de edad configurables — menores, niños y bebés con precios independientes", "c": "Feature", "s": "d" },
-    { "id": 83, "t": "Género en perfil de huésped y pre-registro", "c": "Feature", "s": "d" }
+    { "id": 83, "t": "Género en perfil de huésped y pre-registro", "c": "Feature", "s": "d" },
+    { "id": 84, "t": "Editar consulta — vista pantalla completa con precarga de datos", "c": "Feature", "s": "d" },
+    { "id": 85, "t": "Convertir consulta en reserva — vista pantalla completa con precarga", "c": "Feature", "s": "d" },
+    { "id": 86, "t": "Editar reserva — vista pantalla completa, botón superior", "c": "Feature", "s": "d" }
   ]
 }

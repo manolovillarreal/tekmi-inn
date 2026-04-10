@@ -62,6 +62,12 @@ const router = createRouter({
       meta: { requiresAuth: true, plainLayout: true }
     },
     {
+      path: '/reservas/:id/editar',
+      name: 'editar-reserva',
+      component: () => import('../views/ReservationEditView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/consultas',
       name: 'consultas',
       component: () => import('../views/InquiriesView.vue'),
@@ -71,6 +77,18 @@ const router = createRouter({
       path: '/consultas/:id',
       name: 'detalle-consulta',
       component: () => import('../views/InquiryDetailView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/consultas/:id/editar',
+      name: 'editar-consulta',
+      component: () => import('../views/InquiryEditView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/consultas/:id/convertir',
+      name: 'convertir-consulta',
+      component: () => import('../views/InquiryConversionView.vue'),
       meta: { requiresAuth: true }
     },
     {
