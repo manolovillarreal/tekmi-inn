@@ -64,6 +64,7 @@ const badgeClass = computed(() => {
 const actionClass = (type) => {
   if (type === 'danger') return 'bg-red-50 text-red-700 hover:bg-red-100'
   if (type === 'ghost') return 'bg-white text-[#6B7280] border border-[#E5E7EB] hover:bg-[#F8F9FC]'
+  if (type === 'whatsapp') return 'bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20'
   return 'bg-[#EEF2FF] text-[#4C2FFF] hover:bg-[#E0E7FF]'
 }
 

@@ -294,13 +294,16 @@ const buildInquiryCardMeta = (inquiry) => {
 }
 
 const buildInquiryCardActions = (inquiry) => {
-  const actions = [
-    {
-      label: 'Ver detalle',
-      type: 'ghost',
-      handler: () => router.push(`/consultas/${inquiry.id}`)
+  const actions = []
+
+  if (inquiry.guest_phone) {
+    const digits = ((inquiry.phone_country_code || '').replace(/\D/g, '')) + (inquiry.guest_phone || '').replace(/\D/g, '')
+    if (digits) {
+      actions.push({ label: '📱 WhatsApp', type: 'whatsapp', handler: () => window.open(`https://wa.me/${digits}`, '_blank') })
     }
-  ]
+  }
+
+  actions.push({ label: 'Ver detalle', type: 'ghost', handler: () => router.push(`/consultas/${inquiry.id}`) })
 
   if (canConvertInquiry(inquiry.status)) {
     actions.push({

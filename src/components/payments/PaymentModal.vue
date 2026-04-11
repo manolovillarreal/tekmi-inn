@@ -1,6 +1,11 @@
 <template>
   <BaseModal :isOpen="isOpen" title="Registrar pago" size="md" :fullScreenOnMobile="true" @close="closeModal">
     <form class="space-y-5" @submit.prevent="submitPayment">
+      <AppInlineAlert
+        v-if="isPaymentLocked"
+        type="warning"
+        message="La reserva está finalizada. Solo se pueden registrar devoluciones."
+      />
       <AppFormSection title="Datos del pago" :divider="true">
         <AppFormGrid :columns="2">
           <AppSelect
@@ -113,6 +118,7 @@ const props = defineProps({
   reservationId: { type: String, required: true },
   totalAmount: { type: Number, default: 0 },
   paidAmount: { type: Number, default: 0 },
+  reservationStatus: { type: String, default: '' },
 })
 
 const emit = defineEmits(['close', 'saved'])
@@ -152,10 +158,12 @@ const submitAttempted = computed(() => state.submitAttempted)
 const state = reactive({ saving: false, submitAttempted: false })
 const saving = computed(() => state.saving)
 
-const typeOptions = [
-  { value: 'payment', label: 'Pago' },
+const isPaymentLocked = computed(() => ['completed', 'finalized'].includes(props.reservationStatus))
+
+const typeOptions = computed(() => [
+  ...(!isPaymentLocked.value ? [{ value: 'payment', label: 'Pago' }] : []),
   { value: 'refund', label: 'Devolución' },
-]
+])
 
 const methodOptions = [
   { value: 'efectivo', label: 'Efectivo' },
@@ -166,7 +174,7 @@ const methodOptions = [
 ]
 
 const resetForm = () => {
-  form.type = 'payment'
+  form.type = isPaymentLocked.value ? 'refund' : 'payment'
   form.amount = ''
   form.method = ''
   form.reference = ''

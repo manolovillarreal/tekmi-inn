@@ -115,6 +115,7 @@
           { label: 'Origen', value: reservation.source_detail || 'Directo' }
         ]"
         :actions="[
+          ...(reservation.guest_wa_url ? [{ label: '📱 WhatsApp', type: 'whatsapp', handler: () => window.open(reservation.guest_wa_url, '_blank') }] : []),
           { label: 'Ver detalle', handler: () => goToDetail(reservation) },
           ...(can('payments', 'create') ? [{ label: 'Registrar pago', handler: () => openPaymentModal(reservation) }] : []),
           ...(can('reservations', 'edit') ? [{ label: 'Cambiar estado', handler: () => openStatusModal(reservation) }] : [])

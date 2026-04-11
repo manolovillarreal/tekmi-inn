@@ -89,7 +89,7 @@ export const useReservationsStore = defineStore('reservations', () => {
         .from('reservations')
         .select(`
           *,
-          guests!reservations_guest_id_fkey(first_name, last_name, phone, email, nationality, document_type, document_number),
+          guests!reservations_guest_id_fkey(first_name, last_name, phone, phone_country_code, email, nationality, document_type, document_number),
           source_detail_info:source_details!reservations_source_detail_id_fkey(id, source_type_id, name, label_es, suggested_commission_percentage, suggested_discount_percentage, is_active),
           venues(name),
           reservation_units(unit_id, units(name, venue_id)),
@@ -164,7 +164,13 @@ export const useReservationsStore = defineStore('reservations', () => {
           guests_total: getGuestsTotal(res),
           nights: getDaysDifference(res.check_in, res.check_out),
           balance: getBalanceAmount({ ...res, paid_amount: paidAmount }),
-          source_display_label: getSourceLabel(res)
+          source_display_label: getSourceLabel(res),
+          guest_wa_url: (() => {
+            const phone = res.guests?.phone
+            if (!phone) return null
+            const digits = ((res.guests?.phone_country_code || '').replace(/\D/g, '')) + phone.replace(/\D/g, '')
+            return digits ? `https://wa.me/${digits}` : null
+          })()
         }
       })
     } catch (err) {

@@ -114,7 +114,7 @@
         <div v-if="canViewPayments" class="card">
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold text-gray-900">Historial de Pagos</h2>
-            <button v-if="can('payments', 'create')" class="touch-target inline-flex items-center text-sm font-medium text-primary hover:text-primary-dark" @click="openPaymentModal">+ Registrar Pago</button>
+            <button v-if="can('payments', 'create')" class="touch-target inline-flex items-center text-sm font-medium text-primary hover:text-primary-dark" @click="openPaymentModal">{{ isPaymentLocked ? '+ Registrar Devolución' : '+ Registrar Pago' }}</button>
           </div>
           
           <div v-if="payments.length === 0" class="text-center py-6 text-gray-500 text-sm italic bg-gray-50 rounded-lg border border-dashed border-gray-200">
@@ -139,7 +139,7 @@
                 <td class="py-3 px-3 text-gray-500">{{ p.reference || '-' }}</td>
                 <td class="py-3 px-3 text-right">
                   <button
-                    v-if="can('payments', 'delete')"
+                    v-if="can('payments', 'delete') && !isPaymentLocked"
                     class="touch-target inline-flex items-center text-sm font-medium text-red-600 hover:text-red-800"
                     @click="openDeletePaymentModal(p)"
                   >
@@ -159,7 +159,7 @@
                   <p class="text-xs text-gray-500">Ref: {{ p.reference || '-' }}</p>
                 </div>
                 <button
-                  v-if="can('payments', 'delete')"
+                  v-if="can('payments', 'delete') && !isPaymentLocked"
                   class="touch-target inline-flex items-center text-sm font-medium text-red-600"
                   @click="openDeletePaymentModal(p)"
                 >
@@ -531,6 +531,7 @@
       :reservationId="res.id"
       :totalAmount="Number(res.total_amount || 0)"
       :paidAmount="Number(res.paid_amount || 0)"
+      :reservationStatus="res.status"
       @close="closePaymentModal"
       @saved="handlePaymentSaved"
     />
@@ -694,6 +695,10 @@ const isSyncMissing = computed(() =>
 
 const isEditLocked = computed(() =>
   ['in_stay', 'completed', 'finalized'].includes(res.value?.status)
+)
+
+const isPaymentLocked = computed(() =>
+  ['completed', 'finalized'].includes(res.value?.status)
 )
 
 onMounted(async () => {
