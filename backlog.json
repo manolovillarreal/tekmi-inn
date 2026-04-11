@@ -100,6 +100,10 @@
     { "id": 99, "t": "Tabla reservas: columnas Nro/Código opcionales + WhatsApp en menú acciones", "c": "Ajuste UI", "s": "d" },
     { "id": 100, "t": "Consultas: click en fila navega a detalle, acciones en menú unificado (editar/convertir/WhatsApp/eliminar)", "c": "Ajuste UI", "s": "d" },
     { "id": 101, "t": "Layout campos huésped: documento+nacimiento en filas compactas (4 formularios)", "c": "Ajuste UI", "s": "d" },
-    { "id": 102, "t": "GuidedReservationForm: campos opcionales huésped colapsados bajo 'Datos adicionales'", "c": "Ajuste UI", "s": "d" }
+    { "id": 102, "t": "GuidedReservationForm: campos opcionales huésped colapsados bajo 'Datos adicionales'", "c": "Ajuste UI", "s": "d" },
+    { "id": 103, "t": "Editar reserva y consulta — todos los campos del huésped", "c": "Feature", "s": "d" },
+    { "id": 104, "t": "Checkbox guardar como reserva sin anticipo en formulario guiado", "c": "Ajuste UI", "s": "d" },
+    { "id": 105, "t": "Trim en inputs de texto y teléfono al guardar", "c": "Fix", "s": "d" },
+    { "id": 106, "t": "Acompañantes — teléfono opcional, género obligatorio", "c": "Fix", "s": "d" }
   ]
 }

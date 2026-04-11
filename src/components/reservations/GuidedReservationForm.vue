@@ -444,15 +444,16 @@
           <input id="holdDays" type="number" v-model.number="holdDays" :min="1" :max="30" class="w-16 rounded border border-gray-300 px-2 py-1 text-sm text-center" />
           <span>días desde hoy</span>
         </div>
+        <div class="flex items-center gap-2 rounded border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm text-indigo-800">
+          <input type="checkbox" id="saveAsReservationCheck" v-model="saveAsReservationCheck" class="h-4 w-4 accent-primary rounded" />
+          <label for="saveAsReservationCheck" class="cursor-pointer select-none">Guardar como reserva sin anticipo</label>
+        </div>
       </div>
 
       <div class="flex items-center gap-3">
         <button type="button" class="btn-secondary" @click="prevFromPanels">Atrás</button>
-        <button v-if="!hasPayment" type="button" class="btn-secondary" :disabled="saving" @click="saveAsReservation">
-          {{ saving ? 'Guardando…' : 'Guardar como reserva' }}
-        </button>
-        <button type="button" class="btn-primary" :disabled="saving" @click="save">
-          {{ saving ? 'Guardando…' : hasPayment ? 'Crear reserva' : 'Guardar consulta' }}
+        <button type="button" class="btn-primary" :disabled="saving" @click="saveAsReservationCheck && !hasPayment ? saveAsReservation() : save()">
+          {{ saving ? 'Guardando…' : hasPayment ? 'Crear reserva' : saveAsReservationCheck ? 'Guardar reserva' : 'Guardar consulta' }}
         </button>
         <button v-if="inModal" type="button" class="text-sm text-gray-500 underline" @click="emit('cancel')">Cancelar</button>
       </div>
@@ -563,6 +564,7 @@ const saveAsReservationError = ref('')
 const guestSearchOpen = ref(false)
 const holdInquiry = ref(false)
 const holdDays = ref(1)
+const saveAsReservationCheck = ref(false)
 const panels = ref({ unit: true, price: false, payment: false })
 const useFullHousePricing = ref(false)
 const usePeakPricing = ref(false)
@@ -1050,11 +1052,11 @@ const saveAsReservation = async () => {
     let guestRecord
     if (form.value.guest_id) {
       await guestsStore.updateGuest(form.value.guest_id, {
-        first_name: form.value.guest_first_name,
-        last_name: form.value.guest_last_name,
-        phone: form.value.guest_phone,
+        first_name: form.value.guest_first_name?.trim(),
+        last_name: form.value.guest_last_name?.trim(),
+        phone: form.value.guest_phone?.replace(/\s+/g, '').trim(),
         phone_country_code: form.value.guest_phone_country_code,
-        email: form.value.guest_email || null,
+        email: form.value.guest_email?.trim() || null,
         document_type: form.value.guest_document_type || null,
         document_number: form.value.guest_document_number?.trim() || null,
         nationality: form.value.guest_nationality || null,
@@ -1064,11 +1066,11 @@ const saveAsReservation = async () => {
       guestRecord = { id: form.value.guest_id }
     } else {
       guestRecord = await guestsStore.getOrCreateGuestByPhone({
-            first_name: form.value.guest_first_name,
-            last_name: form.value.guest_last_name,
-            phone: form.value.guest_phone,
+            first_name: form.value.guest_first_name?.trim(),
+            last_name: form.value.guest_last_name?.trim(),
+            phone: form.value.guest_phone?.replace(/\s+/g, '').trim(),
             phone_country_code: form.value.guest_phone_country_code,
-            email: form.value.guest_email || null,
+            email: form.value.guest_email?.trim() || null,
             document_type: form.value.guest_document_type || null,
             document_number: form.value.guest_document_number?.trim() || null,
             nationality: form.value.guest_nationality || null,
@@ -1087,8 +1089,8 @@ const saveAsReservation = async () => {
         infants: form.value.infants,
         venue_id: form.value.venue_id || null,
         guest_id: guestRecord.id,
-        guest_first_name: form.value.guest_first_name,
-        guest_last_name: form.value.guest_last_name,
+        guest_first_name: form.value.guest_first_name?.trim(),
+        guest_last_name: form.value.guest_last_name?.trim(),
         guest_phone_country_code: form.value.guest_phone_country_code,
         unit_ids: form.value.unit_ids,
         price_per_night: Number(form.value.price_per_night),
@@ -1097,7 +1099,7 @@ const saveAsReservation = async () => {
         source_detail_id: form.value.source_detail_id || null,
         source_name: form.value.source_name || null,
         status: 'confirmed',
-        notes: form.value.notes || null
+        notes: form.value.notes?.trim() || null
       },
       { amount: 0, method: 'transferencia', reference: '', payment_date: todayIso }
     )
@@ -1124,11 +1126,11 @@ const save = async () => {
       let guestRecord
       if (form.value.guest_id) {
         await guestsStore.updateGuest(form.value.guest_id, {
-          first_name: form.value.guest_first_name,
-          last_name: form.value.guest_last_name,
-          phone: form.value.guest_phone,
+          first_name: form.value.guest_first_name?.trim(),
+          last_name: form.value.guest_last_name?.trim(),
+          phone: form.value.guest_phone?.replace(/\s+/g, '').trim(),
           phone_country_code: form.value.guest_phone_country_code,
-          email: form.value.guest_email || null,
+          email: form.value.guest_email?.trim() || null,
           document_type: form.value.guest_document_type || null,
           document_number: form.value.guest_document_number?.trim() || null,
           nationality: form.value.guest_nationality || null,
@@ -1138,11 +1140,11 @@ const save = async () => {
         guestRecord = { id: form.value.guest_id }
       } else {
         guestRecord = await guestsStore.getOrCreateGuestByPhone({
-              first_name: form.value.guest_first_name,
-              last_name: form.value.guest_last_name,
-              phone: form.value.guest_phone,
+              first_name: form.value.guest_first_name?.trim(),
+              last_name: form.value.guest_last_name?.trim(),
+              phone: form.value.guest_phone?.replace(/\s+/g, '').trim(),
               phone_country_code: form.value.guest_phone_country_code,
-              email: form.value.guest_email || null,
+              email: form.value.guest_email?.trim() || null,
               document_type: form.value.guest_document_type || null,
               document_number: form.value.guest_document_number?.trim() || null,
               nationality: form.value.guest_nationality || null,
@@ -1161,8 +1163,8 @@ const save = async () => {
           infants: form.value.infants,
           venue_id: form.value.venue_id || null,
           guest_id: guestRecord.id,
-          guest_first_name: form.value.guest_first_name,
-          guest_last_name: form.value.guest_last_name,
+          guest_first_name: form.value.guest_first_name?.trim(),
+          guest_last_name: form.value.guest_last_name?.trim(),
           guest_phone_country_code: form.value.guest_phone_country_code,
           unit_ids: form.value.unit_ids,
           price_per_night: form.value.price_per_night !== '' ? Number(form.value.price_per_night) : null,
@@ -1171,7 +1173,7 @@ const save = async () => {
           source_detail_id: form.value.source_detail_id || null,
           source_name: form.value.source_name || null,
           status: 'confirmed',
-          notes: form.value.notes || null
+          notes: form.value.notes?.trim() || null
         },
         payment.value
       )
@@ -1198,11 +1200,11 @@ const save = async () => {
       // Sin pago → consulta
       if (form.value.guest_id) {
         await guestsStore.updateGuest(form.value.guest_id, {
-          first_name: form.value.guest_first_name,
-          last_name: form.value.guest_last_name,
-          phone: form.value.guest_phone,
+          first_name: form.value.guest_first_name?.trim(),
+          last_name: form.value.guest_last_name?.trim(),
+          phone: form.value.guest_phone?.replace(/\s+/g, '').trim(),
           phone_country_code: form.value.guest_phone_country_code,
-          email: form.value.guest_email || null,
+          email: form.value.guest_email?.trim() || null,
           document_type: form.value.guest_document_type || null,
           document_number: form.value.guest_document_number?.trim() || null,
           nationality: form.value.guest_nationality || null,
@@ -1218,10 +1220,10 @@ const save = async () => {
         children: form.value.children,
         infants: form.value.infants,
         unit_ids: form.value.unit_ids.length > 0 ? [...form.value.unit_ids] : [],
-        guest_first_name: form.value.guest_first_name,
-        guest_last_name: form.value.guest_last_name,
-        guest_phone: form.value.guest_phone,
-        guest_email: form.value.guest_email || null,
+        guest_first_name: form.value.guest_first_name?.trim(),
+        guest_last_name: form.value.guest_last_name?.trim(),
+        guest_phone: form.value.guest_phone?.replace(/\s+/g, '').trim(),
+        guest_email: form.value.guest_email?.trim() || null,
         phone_country_code: form.value.guest_phone_country_code,
         guest_nationality: form.value.guest_nationality || null,
         guest_gender: form.value.guest_gender || null,
@@ -1234,7 +1236,7 @@ const save = async () => {
         quote_expires_at: form.value.quote_expires_at || null,
         source_detail_id: form.value.source_detail_id || null,
         source_name: form.value.source_name || null,
-        notes: form.value.notes || null
+        notes: form.value.notes?.trim() || null
       })
 
       if (holdInquiry.value && form.value.unit_ids.length > 0) {

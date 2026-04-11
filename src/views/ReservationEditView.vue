@@ -39,24 +39,44 @@
             <AppInput v-model="form.guest_first_name" label="Nombres" hint="Opcional" />
             <AppInput v-model="form.guest_last_name" label="Apellidos" hint="Opcional" />
           </AppFormGrid>
-          <AppFormGrid :columns="2">
-            <AppPhoneInput
-              :countryCode="form.guest_phone_country_code"
-              :phoneNumber="form.guest_phone"
-              label="Teléfono"
-              hint="Opcional"
-              @update:countryCode="form.guest_phone_country_code = $event"
-              @update:phoneNumber="form.guest_phone = $event"
-            />
-            <AppInput v-model="form.guest_email" label="Email" type="email" hint="Opcional" />
-          </AppFormGrid>
-          <AppSelect
-            v-model="form.guest_gender"
-            label="Género"
-            :options="genderOptions"
-            placeholder="Sin especificar"
+          <AppPhoneInput
+            :countryCode="form.guest_phone_country_code"
+            :phoneNumber="form.guest_phone"
+            label="Teléfono"
             hint="Opcional"
+            @update:countryCode="form.guest_phone_country_code = $event"
+            @update:phoneNumber="form.guest_phone = $event"
           />
+          <div class="rounded-lg border border-gray-200">
+            <button
+              type="button"
+              class="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              @click="showOptionalGuestFields = !showOptionalGuestFields"
+            >
+              <span>Datos adicionales</span>
+              <svg
+                class="h-4 w-4 text-gray-400 transition-transform"
+                :class="{ 'rotate-180': showOptionalGuestFields }"
+                viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 8l5 5 5-5" />
+              </svg>
+            </button>
+            <div v-if="showOptionalGuestFields" class="border-t px-4 pb-4 pt-3 space-y-4">
+              <AppInput v-model="form.guest_email" label="Email" type="email" hint="Opcional" />
+              <AppFormGrid :columns="3">
+                <AppCountrySelect v-model="form.guest_nationality" label="Nacionalidad" hint="Opcional" />
+                <AppSelect v-model="form.guest_document_type" label="Tipo de documento" :options="documentTypeOptions" placeholder="Sin definir" hint="Opcional" />
+                <AppInput v-model="form.guest_document_number" label="Número de documento" inputmode="numeric" hint="Opcional" />
+              </AppFormGrid>
+              <AppFormGrid :columns="2">
+                <AppSelect v-model="form.guest_gender" label="Género" :options="genderOptions" placeholder="Sin especificar" hint="Opcional" />
+                <AppDatePicker v-model="form.guest_birth_date" label="Fecha de nacimiento" hint="Opcional" />
+              </AppFormGrid>
+            </div>
+          </div>
         </AppFormSection>
 
         <AppFormSection title="Fechas y unidades" :divider="true" :collapsible="true" :defaultOpen="true">
@@ -150,6 +170,7 @@ import SourceSelector from '../components/sources/SourceSelector.vue'
 import {
   AppInput,
   AppSelect,
+  AppCountrySelect,
   AppTextarea,
   AppDatePicker,
   AppCounter,
@@ -161,6 +182,7 @@ import {
   AppPhoneInput,
   PricingCalculatorPanel
 } from '@/components/ui/forms'
+import { DOCUMENT_TYPES_ADULT as documentTypeOptions } from '../utils/documentTypes'
 
 const route = useRoute()
 const router = useRouter()
@@ -182,10 +204,13 @@ const genderOptions = [
   { value: 'other', label: 'Otro' },
 ]
 
+const showOptionalGuestFields = ref(false)
+
 const form = ref({
   guest_first_name: '', guest_last_name: '',
   guest_phone: '', guest_phone_country_code: '+57',
   guest_email: '', guest_gender: '',
+  guest_nationality: '', guest_document_type: '', guest_document_number: '', guest_birth_date: '',
   check_in: '', check_out: '',
   adults: 1, minors: 0, children: 0, infants: 0,
   unit_ids: [],
@@ -242,6 +267,8 @@ onMounted(async () => {
       const g = data.guests || {}
       const unitIds = (data.reservation_units || []).map(ru => ru.unit_id)
       originalUnitIds.value = [...unitIds]
+      const hasOptionalData = !!(g.email || g.nationality || g.document_type || g.document_number || g.gender || g.birth_date)
+      if (hasOptionalData) showOptionalGuestFields.value = true
       form.value = {
         guest_first_name: g.first_name || '',
         guest_last_name: g.last_name || '',
@@ -249,6 +276,10 @@ onMounted(async () => {
         guest_phone_country_code: g.phone_country_code || '+57',
         guest_email: g.email || '',
         guest_gender: g.gender || '',
+        guest_nationality: g.nationality || '',
+        guest_document_type: g.document_type || '',
+        guest_document_number: g.document_number || '',
+        guest_birth_date: g.birth_date || '',
         check_in: data.check_in || '',
         check_out: data.check_out || '',
         adults: data.adults ?? 1,
@@ -299,7 +330,7 @@ const submitEdit = async () => {
         commission_percentage: form.value.commission_percentage === '' ? null : Number(form.value.commission_percentage || 0),
         source_detail_id: form.value.source_detail_id || null,
         source_name: form.value.source_name || null,
-        notes: form.value.notes || null,
+        notes: form.value.notes?.trim() || null,
       })
       .eq('id', id)
       .eq('account_id', accountId)
@@ -311,10 +342,14 @@ const submitEdit = async () => {
         .update({
           first_name: form.value.guest_first_name?.trim() || null,
           last_name: form.value.guest_last_name?.trim() || null,
-          phone: form.value.guest_phone?.trim() || null,
+          phone: form.value.guest_phone?.replace(/\s+/g, '').trim() || null,
           phone_country_code: form.value.guest_phone_country_code || '+57',
           email: form.value.guest_email?.trim() || null,
           gender: form.value.guest_gender || null,
+          nationality: form.value.guest_nationality || null,
+          document_type: form.value.guest_document_type || null,
+          document_number: form.value.guest_document_number?.trim() || null,
+          birth_date: form.value.guest_birth_date || null,
         })
         .eq('id', res.value.guest_id)
         .eq('account_id', accountId)

@@ -224,7 +224,16 @@ const saveGuest = async () => {
   if (!guest.value) return
   saving.value = true
   try {
-    await guestsStore.updateGuest(guest.value.id, editForm.value)
+    const trimmedData = {
+      ...editForm.value,
+      first_name: editForm.value.first_name?.trim(),
+      last_name: editForm.value.last_name?.trim(),
+      phone: editForm.value.phone?.replace(/\s+/g, '').trim(),
+      email: editForm.value.email?.trim() || null,
+      document_number: editForm.value.document_number?.trim() || null,
+      notes: editForm.value.notes?.trim() || null,
+    }
+    await guestsStore.updateGuest(guest.value.id, trimmedData)
     toast.success('Huésped actualizado correctamente.')
     showEditModal.value = false
   } catch (error) {

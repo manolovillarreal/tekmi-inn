@@ -78,6 +78,7 @@
                   :countryCode="guest.phone_country_code"
                   :phoneNumber="guest.phone"
                   label="Teléfono"
+                  hint="Opcional"
                   @update:countryCode="guest.phone_country_code = $event"
                   @update:phoneNumber="guest.phone = $event"
                 />
@@ -151,7 +152,7 @@
 
           <button
             type="submit"
-            :disabled="submitting || !guest.first_name.trim() || !guest.document_type || !guest.document_number.trim() || !guest.nationality || !guest.birth_date"
+            :disabled="submitting || !guest.first_name.trim() || !guest.document_type || !guest.document_number.trim() || !guest.nationality || !guest.birth_date || !guest.gender"
             class="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
           >
             {{ submitting ? 'Enviando...' : 'Completar pre-registro' }}
@@ -251,11 +252,20 @@ const handleSubmit = async () => {
   submitting.value = true
   errorMessage.value = ''
 
+  const guestPayload = {
+    ...guest,
+    first_name: guest.first_name?.trim(),
+    last_name: guest.last_name?.trim(),
+    phone: guest.phone?.replace(/\s+/g, '').trim(),
+    email: guest.email?.trim(),
+    document_number: guest.document_number?.trim(),
+  }
+
   const { data, error } = await supabase.functions.invoke('public-companion-preregistro', {
     body: {
       action: 'register',
       companion_token: String(route.params.token || ''),
-      guest: { ...guest },
+      guest: guestPayload,
     },
   })
 

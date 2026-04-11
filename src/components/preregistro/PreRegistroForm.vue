@@ -94,6 +94,15 @@
           <AppInput v-model="guest.first_name" label="Nombres" required />
           <AppInput v-model="guest.last_name" label="Apellidos" />
 
+          <AppPhoneInput
+            :countryCode="guest.phone_country_code"
+            :phoneNumber="guest.phone"
+            label="Teléfono"
+            hint="Opcional"
+            @update:countryCode="guest.phone_country_code = $event"
+            @update:phoneNumber="guest.phone = $event"
+          />
+
           <AppFormGrid :columns="3">
             <AppCountrySelect v-model="guest.nationality" label="Nacionalidad" required />
             <AppSelect
@@ -112,7 +121,7 @@
               label="Género"
               :options="[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Femenino' }, { value: 'unspecified', label: 'Prefiero no indicar' }]"
               placeholder="Sin definir"
-              hint="Opcional"
+              required
             />
             <AppInput v-model="guest.birth_date" type="date" label="Fecha de nacimiento" required />
           </AppFormGrid>
@@ -124,7 +133,7 @@
           submit-label="Guardar"
           cancel-label="Cancelar"
           :loading="submitting"
-          :submit-disabled="submitting || !primaryGuest.first_name.trim() || !primaryGuest.document_type || !primaryGuest.document_number.trim() || !primaryGuest.phone.trim() || !primaryGuest.email.trim() || !primaryGuest.nationality || !primaryGuest.birth_date || additionalGuests.some(g => !g.first_name.trim() || !g.document_type || !g.document_number.trim() || !g.nationality || !g.birth_date)"
+          :submit-disabled="submitting || !primaryGuest.first_name.trim() || !primaryGuest.document_type || !primaryGuest.document_number.trim() || !primaryGuest.phone.trim() || !primaryGuest.email.trim() || !primaryGuest.nationality || !primaryGuest.birth_date || additionalGuests.some(g => !g.first_name.trim() || !g.document_type || !g.document_number.trim() || !g.nationality || !g.birth_date || !g.gender)"
           @submit="submitForm"
           @cancel="emit('cancel')"
         />
@@ -215,10 +224,19 @@ const removeCompanion = (index) => {
   additionalGuests.splice(index, 1)
 }
 
+const trimGuest = (g) => ({
+  ...g,
+  first_name: g.first_name?.trim(),
+  last_name: g.last_name?.trim(),
+  phone: g.phone?.replace(/\s+/g, '').trim(),
+  email: g.email?.trim(),
+  document_number: g.document_number?.trim(),
+})
+
 const submitForm = () => {
   emit('submitted', {
-    primary_guest: { ...primaryGuest },
-    additional_guests: additionalGuests.map((guest) => ({ ...guest })),
+    primary_guest: trimGuest({ ...primaryGuest }),
+    additional_guests: additionalGuests.map((guest) => trimGuest({ ...guest })),
   })
 }
 

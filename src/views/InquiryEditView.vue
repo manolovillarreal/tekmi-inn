@@ -35,22 +35,44 @@
           />
           <AppInput v-model="form.guest_last_name" label="Apellidos" hint="Opcional" />
         </AppFormGrid>
-        <AppFormGrid :columns="2">
-          <AppPhoneInput
-            :countryCode="form.guest_phone_country_code"
-            :phoneNumber="form.guest_phone"
-            label="Teléfono"
-            hint="Opcional"
-            @update:countryCode="form.guest_phone_country_code = $event"
-            @update:phoneNumber="form.guest_phone = $event"
-          />
-          <AppInput
-            v-model="form.guest_email"
-            label="Email"
-            type="email"
-            hint="Opcional"
-          />
-        </AppFormGrid>
+        <AppPhoneInput
+          :countryCode="form.guest_phone_country_code"
+          :phoneNumber="form.guest_phone"
+          label="Teléfono"
+          hint="Opcional"
+          @update:countryCode="form.guest_phone_country_code = $event"
+          @update:phoneNumber="form.guest_phone = $event"
+        />
+        <div class="rounded-lg border border-gray-200">
+          <button
+            type="button"
+            class="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            @click="showOptionalGuestFields = !showOptionalGuestFields"
+          >
+            <span>Datos adicionales</span>
+            <svg
+              class="h-4 w-4 text-gray-400 transition-transform"
+              :class="{ 'rotate-180': showOptionalGuestFields }"
+              viewBox="0 0 20 20" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M5 8l5 5 5-5" />
+            </svg>
+          </button>
+          <div v-if="showOptionalGuestFields" class="border-t px-4 pb-4 pt-3 space-y-4">
+            <AppInput v-model="form.guest_email" label="Email" type="email" hint="Opcional" />
+            <AppFormGrid :columns="3">
+              <AppCountrySelect v-model="form.guest_nationality" label="Nacionalidad" hint="Opcional" />
+              <AppSelect v-model="form.guest_document_type" label="Tipo de documento" :options="documentTypeOptions" placeholder="Sin definir" hint="Opcional" />
+              <AppInput v-model="form.guest_document_number" label="Número de documento" inputmode="numeric" hint="Opcional" />
+            </AppFormGrid>
+            <AppFormGrid :columns="2">
+              <AppSelect v-model="form.guest_gender" label="Género" :options="genderOptions" placeholder="Sin especificar" hint="Opcional" />
+              <AppDatePicker v-model="form.guest_birth_date" label="Fecha de nacimiento" hint="Opcional" />
+            </AppFormGrid>
+          </div>
+        </div>
       </AppFormSection>
 
       <AppFormSection title="Fechas y unidad" :divider="true" :collapsible="true" :defaultOpen="true">
@@ -141,6 +163,8 @@ import { useAgeCategorySettings } from '../composables/useAgeCategorySettings'
 import SourceSelector from '../components/sources/SourceSelector.vue'
 import {
   AppInput,
+  AppSelect,
+  AppCountrySelect,
   AppPhoneInput,
   AppTextarea,
   AppDatePicker,
@@ -152,6 +176,7 @@ import {
   AppFormGrid,
   PricingCalculatorPanel
 } from '@/components/ui/forms'
+import { DOCUMENT_TYPES_ADULT as documentTypeOptions } from '../utils/documentTypes'
 
 const route = useRoute()
 const router = useRouter()
@@ -169,12 +194,25 @@ const venues = ref([])
 const submitAttempted = ref(false)
 const touched = reactive({ guest_first_name: false })
 
+const showOptionalGuestFields = ref(false)
+
+const genderOptions = [
+  { value: 'male', label: 'Masculino' },
+  { value: 'female', label: 'Femenino' },
+  { value: 'other', label: 'Otro' },
+]
+
 const form = ref({
   guest_first_name: '',
   guest_last_name: '',
   guest_phone: '',
   guest_phone_country_code: '+57',
   guest_email: '',
+  guest_nationality: '',
+  guest_document_type: '',
+  guest_document_number: '',
+  guest_gender: '',
+  guest_birth_date: '',
   check_in: '',
   check_out: '',
   adults: 1,
@@ -225,12 +263,19 @@ const applySourceSuggestions = (payload) => {
 }
 
 const hydrateForm = (inq) => {
+  const hasOptionalData = !!(inq.guest_email || inq.guest_nationality || inq.guest_document_type || inq.guest_document_number || inq.guest_gender || inq.guest_birth_date)
+  if (hasOptionalData) showOptionalGuestFields.value = true
   form.value = {
     guest_first_name: inq.guest_first_name || '',
     guest_last_name: inq.guest_last_name || '',
     guest_phone: inq.guest_phone || '',
     guest_phone_country_code: inq.phone_country_code || '+57',
     guest_email: inq.guest_email || '',
+    guest_nationality: inq.guest_nationality || '',
+    guest_document_type: inq.guest_document_type || '',
+    guest_document_number: inq.guest_document_number || '',
+    guest_gender: inq.guest_gender || '',
+    guest_birth_date: inq.guest_birth_date || '',
     check_in: inq.check_in || '',
     check_out: inq.check_out || '',
     adults: inq.adults ?? 1,
@@ -279,7 +324,13 @@ const submitEdit = async () => {
   try {
     await store.updateInquiry(inquiry.value.id, {
       ...form.value,
-      phone_country_code: form.value.guest_phone_country_code
+      phone_country_code: form.value.guest_phone_country_code,
+      guest_first_name: form.value.guest_first_name?.trim(),
+      guest_last_name: form.value.guest_last_name?.trim(),
+      guest_phone: form.value.guest_phone?.replace(/\s+/g, '').trim(),
+      guest_email: form.value.guest_email?.trim() || null,
+      guest_document_number: form.value.guest_document_number?.trim() || null,
+      notes: form.value.notes?.trim() || null,
     })
     toast.success('Consulta actualizada.')
     router.push(`/consultas/${inquiry.value.id}`)
