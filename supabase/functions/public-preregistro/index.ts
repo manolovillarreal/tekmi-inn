@@ -6,7 +6,7 @@ type GuestInput = {
   first_name?: string
   last_name?: string
   nationality?: string
-  document_type?: 'passport' | 'cedula' | 'dni' | 'foreign_id' | ''
+  document_type?: 'CC' | 'CE' | 'PA' | 'PE' | 'PT' | 'DNI' | 'TI' | 'RC' | 'MS' | ''
   document_number?: string
   phone?: string
   phone_country_code?: string

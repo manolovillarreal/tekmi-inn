@@ -5,7 +5,7 @@ import { createHash, randomBytes } from 'node:crypto'
 type GuestInput = {
   name?: string
   nationality?: string
-  document_type?: 'passport' | 'cedula' | 'dni' | 'foreign_id' | ''
+  document_type?: 'CC' | 'CE' | 'PA' | 'PE' | 'PT' | 'DNI' | 'TI' | 'RC' | 'MS' | ''
   document_number?: string
   phone?: string
   email?: string
