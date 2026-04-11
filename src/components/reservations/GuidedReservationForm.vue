@@ -196,54 +196,62 @@
             />
           </AppFormGrid>
 
-          <AppFormGrid :columns="2">
-            <AppPhoneInput
-              :countryCode="form.guest_phone_country_code"
-              :phoneNumber="form.guest_phone"
-              label="Teléfono"
-              :error="s3Touched.guest_phone && !form.guest_phone?.trim() ? 'El teléfono es obligatorio.' : ''"
-              @update:countryCode="form.guest_phone_country_code = $event"
-              @update:phoneNumber="e => { form.guest_phone = e; s3Touched.guest_phone = true }"
-            />
-            <AppInput
-              v-model="form.guest_email"
-              label="Email"
-              type="email"
-              hint="Opcional"
-            />
-          </AppFormGrid>
-
-          <AppCountrySelect
-            v-model="form.guest_nationality"
-            label="Nacionalidad"
-            hint="Opcional"
-
+          <AppPhoneInput
+            :countryCode="form.guest_phone_country_code"
+            :phoneNumber="form.guest_phone"
+            label="Teléfono"
+            :error="s3Touched.guest_phone && !form.guest_phone?.trim() ? 'El teléfono es obligatorio.' : ''"
+            @update:countryCode="form.guest_phone_country_code = $event"
+            @update:phoneNumber="e => { form.guest_phone = e; s3Touched.guest_phone = true }"
           />
 
-          <AppFormGrid :columns="2">
-            <AppSelect
-              v-model="form.guest_document_type"
-              label="Tipo de documento"
-              :options="documentTypeOptions"
-              placeholder="Sin definir"
-              hint="Opcional"
-            />
-            <AppInput
-              v-model="form.guest_document_number"
-              label="Número de documento"
-              hint="Opcional"
-            />
-          </AppFormGrid>
-
-          <AppSelect
-            v-model="form.guest_gender"
-            label="Género"
-            :options="[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Femenino' }, { value: 'unspecified', label: 'Prefiero no indicar' }]"
-            placeholder="Sin definir"
-            hint="Opcional"
-          />
-
-          <AppDatePicker v-model="form.guest_birth_date" label="Fecha de nacimiento" hint="Opcional" />
+          <div class="rounded-lg border border-gray-200">
+            <button
+              type="button"
+              class="flex w-full items-center justify-between px-4 py-3 text-left"
+              @click="showOptionalFields = !showOptionalFields"
+            >
+              <span class="text-sm font-medium text-gray-700">Datos adicionales</span>
+              <svg class="h-4 w-4 text-gray-400 transition-transform" :class="showOptionalFields ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            <div v-if="showOptionalFields" class="border-t border-gray-100 space-y-4 px-4 pb-4 pt-3">
+              <AppInput
+                v-model="form.guest_email"
+                label="Email"
+                type="email"
+                hint="Opcional"
+              />
+              <AppFormGrid :columns="3">
+                <AppCountrySelect
+                  v-model="form.guest_nationality"
+                  label="Nacionalidad"
+                  hint="Opcional"
+                />
+                <AppSelect
+                  v-model="form.guest_document_type"
+                  label="Tipo de documento"
+                  :options="documentTypeOptions"
+                  placeholder="Sin definir"
+                  hint="Opcional"
+                />
+                <AppInput
+                  v-model="form.guest_document_number"
+                  label="Número de documento"
+                  hint="Opcional"
+                />
+              </AppFormGrid>
+              <AppFormGrid :columns="2">
+                <AppSelect
+                  v-model="form.guest_gender"
+                  label="Género"
+                  :options="[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Femenino' }, { value: 'unspecified', label: 'Prefiero no indicar' }]"
+                  placeholder="Sin definir"
+                  hint="Opcional"
+                />
+                <AppDatePicker v-model="form.guest_birth_date" label="Fecha de nacimiento" hint="Opcional" />
+              </AppFormGrid>
+            </div>
+          </div>
 
         <AppTextarea
           v-model="form.notes"
@@ -564,6 +572,9 @@ const sourceLabelDisplay = ref('')
 const s1Touched = ref({ check_in: false, check_out: false })
 const s3Touched = ref({ guest_first_name: false, guest_phone: false })
 const s4Touched = ref({ source_type_id: false })
+
+// ── Optional fields toggle ─────────────────────────────
+const showOptionalFields = ref(false)
 
 // ── Form data ──────────────────────────────────────────
 const form = ref({
@@ -919,6 +930,9 @@ const selectGuest = (guest) => {
   form.value.guest_gender = guest.gender || ''
   form.value.guest_birth_date = guest.birth_date || ''
   guestSearchOpen.value = false
+  if (guest.email || guest.nationality || guest.document_type || guest.document_number || guest.gender || guest.birth_date) {
+    showOptionalFields.value = true
+  }
 }
 
 const clearGuestSelection = () => {

@@ -95,6 +95,11 @@
     { "id": 94, "t": "Actualizar perfil huésped al guardar formulario", "c": "Fix", "s": "d" },
     { "id": 95, "t": "Mejorar cabecera vista detalle cotización", "c": "Ajuste UI", "s": "d" },
     { "id": 96, "t": "Bloquear registro y eliminación de pago en reservas finalizadas", "c": "Fix", "s": "d" },
-    { "id": 97, "t": "Botón WhatsApp en tarjetas de reservas y consultas", "c": "Feature", "s": "d" }
+    { "id": 97, "t": "Botón WhatsApp en tarjetas de reservas y consultas", "c": "Feature", "s": "d" },
+    { "id": 98, "t": "Reservas móvil siempre tarjetas, escritorio con toggle", "c": "Ajuste UI", "s": "d" },
+    { "id": 99, "t": "Tabla reservas: columnas Nro/Código opcionales + WhatsApp en menú acciones", "c": "Ajuste UI", "s": "d" },
+    { "id": 100, "t": "Consultas: click en fila navega a detalle, acciones en menú unificado (editar/convertir/WhatsApp/eliminar)", "c": "Ajuste UI", "s": "d" },
+    { "id": 101, "t": "Layout campos huésped: documento+nacimiento en filas compactas (4 formularios)", "c": "Ajuste UI", "s": "d" },
+    { "id": 102, "t": "GuidedReservationForm: campos opcionales huésped colapsados bajo 'Datos adicionales'", "c": "Ajuste UI", "s": "d" }
   ]
 }

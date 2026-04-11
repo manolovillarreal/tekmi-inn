@@ -74,6 +74,34 @@
 
             <div class="grid grid-cols-2 gap-4">
               <div>
+                <AppPhoneInput
+                  :countryCode="guest.phone_country_code"
+                  :phoneNumber="guest.phone"
+                  label="Teléfono"
+                  @update:countryCode="guest.phone_country_code = $event"
+                  @update:phoneNumber="guest.phone = $event"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Email</label>
+                <input
+                  v-model="guest.email"
+                  type="email"
+                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Nacionalidad <span class="text-red-500">*</span></label>
+                <AppCountrySelect
+                  v-model="guest.nationality"
+                  class="mt-1"
+                  required
+                />
+              </div>
+              <div>
                 <label class="block text-sm font-medium text-gray-700">Tipo de documento <span class="text-red-500">*</span></label>
                 <select
                   v-model="guest.document_type"
@@ -98,54 +126,26 @@
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <AppPhoneInput
-                  :countryCode="guest.phone_country_code"
-                  :phoneNumber="guest.phone"
-                  label="Teléfono"
-                  @update:countryCode="guest.phone_country_code = $event"
-                  @update:phoneNumber="guest.phone = $event"
-                />
+                <label class="block text-sm font-medium text-gray-700">Género</label>
+                <select
+                  v-model="guest.gender"
+                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="">Sin definir</option>
+                  <option value="male">Masculino</option>
+                  <option value="female">Femenino</option>
+                  <option value="unspecified">Prefiero no indicar</option>
+                </select>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700">Email</label>
+                <label class="block text-sm font-medium text-gray-700">Fecha de nacimiento <span class="text-red-500">*</span></label>
                 <input
-                  v-model="guest.email"
-                  type="email"
+                  v-model="guest.birth_date"
+                  type="date"
+                  required
                   class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
               </div>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Nacionalidad <span class="text-red-500">*</span></label>
-              <AppCountrySelect
-                v-model="guest.nationality"
-                class="mt-1"
-                required
-              />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Fecha de nacimiento <span class="text-red-500">*</span></label>
-              <input
-                v-model="guest.birth_date"
-                type="date"
-                required
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              >
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700">Género</label>
-              <select
-                v-model="guest.gender"
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              >
-                <option value="">Sin definir</option>
-                <option value="male">Masculino</option>
-                <option value="female">Femenino</option>
-                <option value="unspecified">Prefiero no indicar</option>
-              </select>
             </div>
           </div>
 

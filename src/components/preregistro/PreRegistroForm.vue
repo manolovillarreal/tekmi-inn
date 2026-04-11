@@ -48,18 +48,28 @@
           <AppInput v-model="primaryGuest.email" type="email" label="Email" required />
         </AppFormGrid>
 
-        <AppFormGrid :columns="2">
+        <AppFormGrid :columns="3">
           <AppCountrySelect v-model="primaryGuest.nationality" label="Nacionalidad" required />
-          <AppInput v-model="primaryGuest.birth_date" type="date" label="Fecha de nacimiento" required />
+          <AppSelect
+            v-model="primaryGuest.document_type"
+            label="Tipo de documento"
+            :options="DOCUMENT_TYPES_ADULT"
+            placeholder="Sin definir"
+            required
+          />
+          <AppInput v-model="primaryGuest.document_number" label="Número de documento" inputmode="numeric" required />
         </AppFormGrid>
 
-        <AppSelect
-          v-model="primaryGuest.gender"
-          label="Género"
-          :options="[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Femenino' }, { value: 'unspecified', label: 'Prefiero no indicar' }]"
-          placeholder="Sin definir"
-          hint="Opcional"
-        />
+        <AppFormGrid :columns="2">
+          <AppSelect
+            v-model="primaryGuest.gender"
+            label="Género"
+            :options="[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Femenino' }, { value: 'unspecified', label: 'Prefiero no indicar' }]"
+            placeholder="Sin definir"
+            hint="Opcional"
+          />
+          <AppInput v-model="primaryGuest.birth_date" type="date" label="Fecha de nacimiento" required />
+        </AppFormGrid>
       </AppFormSection>
 
       <AppFieldGroup :border="true" :compact="true" title="Acompañantes" subtitle="Opcional">
@@ -84,7 +94,8 @@
           <AppInput v-model="guest.first_name" label="Nombres" required />
           <AppInput v-model="guest.last_name" label="Apellidos" />
 
-          <AppFormGrid :columns="2">
+          <AppFormGrid :columns="3">
+            <AppCountrySelect v-model="guest.nationality" label="Nacionalidad" required />
             <AppSelect
               v-model="guest.document_type"
               label="Tipo de documento"
@@ -96,17 +107,15 @@
           </AppFormGrid>
 
           <AppFormGrid :columns="2">
-            <AppCountrySelect v-model="guest.nationality" label="Nacionalidad" required />
+            <AppSelect
+              v-model="guest.gender"
+              label="Género"
+              :options="[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Femenino' }, { value: 'unspecified', label: 'Prefiero no indicar' }]"
+              placeholder="Sin definir"
+              hint="Opcional"
+            />
             <AppInput v-model="guest.birth_date" type="date" label="Fecha de nacimiento" required />
           </AppFormGrid>
-
-          <AppSelect
-            v-model="guest.gender"
-            label="Género"
-            :options="[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Femenino' }, { value: 'unspecified', label: 'Prefiero no indicar' }]"
-            placeholder="Sin definir"
-            hint="Opcional"
-          />
         </AppFormSection>
       </AppFieldGroup>
 

@@ -80,7 +80,7 @@
 
     <!-- Table View -->
     <ReservationTable 
-      v-if="isTable"
+      v-if="isTable && !isMobile"
       :reservations="store.reservations" 
       :loading="store.loading" 
       :sortKey="filters.sortBy"
@@ -96,7 +96,7 @@
     />
 
     <!-- Cards View -->
-    <div v-if="isCards && (store.reservations.length > 0 || store.loading)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div v-if="(isCards || isMobile) && (store.reservations.length > 0 || store.loading)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <DataCard
         v-for="reservation in store.reservations"
         :key="reservation.id"
@@ -124,7 +124,7 @@
     </div>
 
     <!-- Empty State in Cards -->
-    <div v-if="isCards && store.reservations.length === 0 && !store.loading" class="text-center py-12 card">
+    <div v-if="(isCards || isMobile) && store.reservations.length === 0 && !store.loading" class="text-center py-12 card">
       <p class="text-gray-600">No se encontraron reservas.</p>
       <button v-if="hasActiveFilters" type="button" class="mt-3 text-sm font-medium text-primary hover:text-primary-dark underline" @click="clearFilters">
         Limpiar filtros

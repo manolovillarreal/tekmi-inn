@@ -78,7 +78,8 @@
             <AppInput v-model="editForm.first_name" label="Nombres" required />
             <AppInput v-model="editForm.last_name" label="Apellidos" />
           </AppFormGrid>
-          <AppFormGrid :columns="2">
+          <AppFormGrid :columns="3">
+            <AppCountrySelect v-model="editForm.nationality" label="Nacionalidad" />
             <AppSelect
               v-model="editForm.document_type"
               label="Tipo documento"
@@ -103,15 +104,16 @@
         </AppFormSection>
 
         <AppFormSection title="Información adicional" :divider="false">
-          <AppCountrySelect v-model="editForm.nationality" label="Nacionalidad" />
-          <AppInput v-model="editForm.birth_date" type="date" label="Fecha de nacimiento" />
-          <AppSelect
-            v-model="editForm.gender"
-            label="Género"
-            :options="[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Femenino' }, { value: 'unspecified', label: 'Prefiero no indicar' }]"
-            placeholder="Sin definir"
-            hint="Opcional"
-          />
+          <AppFormGrid :columns="2">
+            <AppInput v-model="editForm.birth_date" type="date" label="Fecha de nacimiento" />
+            <AppSelect
+              v-model="editForm.gender"
+              label="Género"
+              :options="[{ value: 'male', label: 'Masculino' }, { value: 'female', label: 'Femenino' }, { value: 'unspecified', label: 'Prefiero no indicar' }]"
+              placeholder="Sin definir"
+              hint="Opcional"
+            />
+          </AppFormGrid>
           <AppTextarea v-model="editForm.notes" label="Notas" :rows="2" :autoResize="true" />
         </AppFormSection>
 

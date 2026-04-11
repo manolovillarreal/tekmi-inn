@@ -25,8 +25,8 @@
       <table class="w-full text-left border-collapse">
         <thead class="bg-gray-50 text-xs uppercase text-gray-500 font-semibold border-b border-gray-200">
           <tr>
-            <th class="px-6 py-4">Nro</th>
-            <th class="px-6 py-4">Código</th>
+            <th class="hidden xl:table-cell px-6 py-4">Nro</th>
+            <th class="hidden xl:table-cell px-6 py-4">Código</th>
             <th class="px-6 py-4">Huésped</th>
             <th class="px-6 py-4">Unidades</th>
             <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors" @click="sortBy('check_in')">
@@ -61,11 +61,11 @@
             :class="getRowClass(res)"
             @click="handleView(res)"
           >
-            <td class="px-6 py-4 font-mono text-xs text-gray-600">
+            <td class="hidden xl:table-cell px-6 py-4 font-mono text-xs text-gray-600">
               {{ res.reservation_number || '-' }}
             </td>
 
-            <td class="px-6 py-4 font-mono text-xs text-gray-700">
+            <td class="hidden xl:table-cell px-6 py-4 font-mono text-xs text-gray-700">
               {{ res.reference_code || '-' }}
             </td>
 
@@ -133,6 +133,13 @@
                   v-if="openMenuId === res.id"
                   class="absolute right-0 z-10 mt-1 w-40 rounded-md border border-gray-200 bg-white py-1 shadow-lg"
                 >
+                  <button
+                    v-if="res.guest_wa_url"
+                    class="touch-target block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    @click.stop="window.open(res.guest_wa_url, '_blank'); openMenuId = ''"
+                  >
+                    📱 WhatsApp
+                  </button>
                   <button class="touch-target block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" @click.stop="handleView(res)">
                     Ver detalle
                   </button>
@@ -197,7 +204,7 @@ const showFinancialColumns = computed(() => {
   return can('payments', 'view') || can('reports', 'view_financial')
 })
 
-const tableColumnCount = computed(() => (showFinancialColumns.value ? 11 : 9))
+const tableColumnCount = computed(() => (showFinancialColumns.value ? 9 : 7))
 
 const sortBy = (key) => {
   if (key === 'check_in') {
@@ -288,7 +295,13 @@ const mobileMeta = (res) => {
 }
 
 const mobileActions = (res) => {
-  const actions = [{ label: 'Ver detalle', type: 'primary', handler: () => handleView(res) }]
+  const actions = []
+
+  if (res.guest_wa_url) {
+    actions.push({ label: '📱 WhatsApp', type: 'whatsapp', handler: () => window.open(res.guest_wa_url, '_blank') })
+  }
+
+  actions.push({ label: 'Ver detalle', type: 'primary', handler: () => handleView(res) })
 
   if (can('payments', 'create')) {
     actions.push({ label: 'Pago', type: 'ghost', handler: () => handleRegisterPayment(res) })

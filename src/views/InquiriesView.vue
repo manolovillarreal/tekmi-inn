@@ -59,7 +59,7 @@
             <tr v-else-if="filteredInquiries.length === 0">
               <td colspan="10" class="px-6 py-10 text-center text-gray-500 italic">No hay consultas para mostrar.</td>
             </tr>
-            <tr v-for="inquiry in filteredInquiries" :key="inquiry.id" class="hover:bg-gray-50">
+            <tr v-for="inquiry in filteredInquiries" :key="inquiry.id" class="cursor-pointer hover:bg-gray-50" @click="router.push('/consultas/' + inquiry.id)">
               <td class="px-4 py-4">
                 <span class="font-mono text-xs text-gray-500">{{ inquiry.inquiry_number || '-' }}</span>
               </td>
@@ -88,8 +88,48 @@
                 </div>
               </td>
               <td class="px-4 py-4 text-gray-700">{{ inquiry.source_display_label || '-' }}</td>
-              <td class="px-4 py-4 text-right">
-                <router-link :to="`/consultas/${inquiry.id}`" class="text-sm font-medium text-primary hover:text-primary-dark">Ver detalle</router-link>
+              <td class="px-4 py-4 text-right" @click.stop>
+                <div class="relative inline-block text-left">
+                  <button
+                    class="inline-flex h-9 w-9 items-center justify-center rounded text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                    type="button"
+                    @click.stop="toggleInquiryMenu(inquiry.id)"
+                  >
+                    ...
+                  </button>
+                  <div
+                    v-if="openInquiryMenuId === inquiry.id"
+                    class="absolute right-0 z-10 mt-1 w-44 rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+                  >
+                    <button class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" @click.stop="router.push('/consultas/' + inquiry.id); openInquiryMenuId = ''">
+                      Ver detalle
+                    </button>
+                    <button class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" @click.stop="router.push('/consultas/' + inquiry.id + '/editar'); openInquiryMenuId = ''">
+                      Editar
+                    </button>
+                    <button
+                      v-if="canConvertInquiry(inquiry.status)"
+                      class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                      @click.stop="openConversionModal(inquiry); openInquiryMenuId = ''"
+                    >
+                      Convertir
+                    </button>
+                    <button
+                      v-if="inquiry.guest_phone"
+                      class="block w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                      @click.stop="openWhatsApp(inquiry); openInquiryMenuId = ''"
+                    >
+                      📱 WhatsApp
+                    </button>
+                    <button
+                      v-if="can('inquiries', 'delete')"
+                      class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                      @click.stop="requestDeleteInquiry(inquiry)"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -222,6 +262,7 @@ const filters = ref({ search: '', status: '', dateFrom: '', dateTo: '' })
 const showFiltersSheet = ref(false)
 const showConversionModal = ref(false)
 const selectedInquiryForConversion = ref(null)
+const openInquiryMenuId = ref('')
 
 onMounted(async () => {
   store.fetchInquiries().catch(() => {})
@@ -269,6 +310,26 @@ const handleConverted = async () => {
 
 const canConvertInquiry = (status) => getAvailableInquiryTransitions(status).includes('convertida')
 
+const toggleInquiryMenu = (id) => {
+  openInquiryMenuId.value = openInquiryMenuId.value === id ? '' : id
+}
+
+const openWhatsApp = (inquiry) => {
+  const digits = ((inquiry.phone_country_code || '').replace(/\D/g, '')) + (inquiry.guest_phone || '').replace(/\D/g, '')
+  if (digits) window.open(`https://wa.me/${digits}`, '_blank')
+}
+
+const requestDeleteInquiry = async (inquiry) => {
+  openInquiryMenuId.value = ''
+  if (!confirm(`¿Eliminar la consulta de ${[inquiry.guest_first_name, inquiry.guest_last_name].filter(Boolean).join(' ') || 'este huésped'}?`)) return
+  try {
+    await store.deleteInquiry(inquiry.id)
+    toast.success('Consulta eliminada')
+  } catch {
+    toast.error('No se pudo eliminar la consulta')
+  }
+}
+
 const inquiryCardBadgeType = (status) => {
   if (status === 'perdida') return 'danger'
   if (status === 'convertida') return 'success'
@@ -304,6 +365,7 @@ const buildInquiryCardActions = (inquiry) => {
   }
 
   actions.push({ label: 'Ver detalle', type: 'ghost', handler: () => router.push(`/consultas/${inquiry.id}`) })
+  actions.push({ label: 'Editar', type: 'ghost', handler: () => router.push(`/consultas/${inquiry.id}/editar`) })
 
   if (canConvertInquiry(inquiry.status)) {
     actions.push({
@@ -311,6 +373,10 @@ const buildInquiryCardActions = (inquiry) => {
       type: 'primary',
       handler: () => openConversionModal(inquiry)
     })
+  }
+
+  if (can('inquiries', 'delete')) {
+    actions.push({ label: 'Eliminar', type: 'danger', handler: () => requestDeleteInquiry(inquiry) })
   }
 
   return actions
