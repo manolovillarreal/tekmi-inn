@@ -968,14 +968,29 @@ async function fetchMasterData() {
   const accountId = accountStore.getRequiredAccountId()
   const [{ data: venuesData }, { data: unitsData }] = await Promise.all([
     supabase.from('venues').select('id, name').eq('account_id', accountId).order('name', { ascending: true }),
-    supabase.from('units').select('id, name, venue_id').eq('account_id', accountId).eq('is_active', true).order('name', { ascending: true })
+    supabase.from('units').select('id, name, venue_id, venues(name)').eq('account_id', accountId).eq('is_active', true).order('name', { ascending: true })
   ])
 
-  venues.value = venuesData || []
-  units.value = unitsData || []
+  const mergedVenues = [...(venuesData || [])]
+  const knownVenueIds = new Set(mergedVenues.map((venue) => venue.id))
+  const normalizedUnits = unitsData || []
+
+  for (const unit of normalizedUnits) {
+    if (!unit?.venue_id || knownVenueIds.has(unit.venue_id)) continue
+    mergedVenues.push({
+      id: unit.venue_id,
+      name: unit.venues?.name || String(unit.venue_id),
+    })
+    knownVenueIds.add(unit.venue_id)
+  }
+
+  venues.value = mergedVenues
+  units.value = normalizedUnits
+
+  selectedVenueIds.value = selectedVenueIds.value.filter((venueId) => knownVenueIds.has(venueId))
 
   if (selectedVenueIds.value.length === 0) {
-    selectedVenueIds.value = (venues.value || []).map((venue) => venue.id)
+    selectedVenueIds.value = Array.from(knownVenueIds)
   }
 }
 
