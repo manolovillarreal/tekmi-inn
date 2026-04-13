@@ -346,8 +346,8 @@ const disponibilidadVariables = computed(() => ({
   noches: 3,
   personas: 3,
   unidades: [
-    { nombre_unidad: 'Cabaña 1' },
-    { nombre_unidad: 'Cabaña 2' },
+    { nombre_unidad: 'Cabaña 1', descripcion_unidad: '2 camas dobles, balcón y aire acondicionado' },
+    { nombre_unidad: 'Cabaña 2', descripcion_unidad: '1 cama king, jacuzzi y vista al jardín' },
   ],
   precio_noche: '$450.000',
   nombre_huesped: 'Carlos Pérez',

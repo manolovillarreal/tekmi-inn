@@ -123,6 +123,7 @@ import { useBreakpoint } from '../composables/useBreakpoint'
 import { copyAsWhatsApp, formatCop } from '../utils/voucherUtils'
 import { formatReferenceDisplay } from '../utils/referenceUtils'
 import { getDocumentSettings } from '../services/documentSettingsService'
+import { getMessageSettings, getPredefinedMessages } from '../services/messageSettingsService'
 
 const route = useRoute()
 const router = useRouter()
@@ -138,6 +139,9 @@ const profile = ref({})
 const voucherConditions = ref('')
 const issuedAt = ref(new Date())
 const documentSettings = ref(null)
+const accountSettings = ref({})
+const messageSettings = ref(null)
+const voucherTemplate = ref('')
 
 const fetchData = async () => {
   loading.value = true
@@ -151,10 +155,12 @@ const fetchData = async () => {
       { data: profileData },
       { data: settingsData },
       loadedDocumentSettings,
+      loadedMessageSettings,
+      predefinedMessages,
     ] = await Promise.all([
       supabase
         .from('reservations')
-.select('id, account_id, reservation_number, reference_code, check_in, check_out, adults, children, source_detail_info:source_details!reservations_source_detail_id_fkey(id, name, label_es), guest_id, total_amount, paid_amount, guests!reservations_guest_id_fkey(first_name, last_name, phone, email, document_type, document_number), reservation_units(unit_id, units(name))') 
+        .select('id, account_id, reservation_number, reference_code, check_in, check_out, adults, children, source_detail_info:source_details!reservations_source_detail_id_fkey(id, name, label_es), guest_id, total_amount, paid_amount, guests!reservations_guest_id_fkey(first_name, last_name, phone, email, document_type, document_number), reservation_units(unit_id, units(name, description))')
         .eq('account_id', accountId)
         .eq('id', route.params.id)
         .single(),
@@ -165,10 +171,12 @@ const fetchData = async () => {
         .maybeSingle(),
       supabase
         .from('settings')
-        .select('voucher_conditions')
+        .select('property_name, anticipo_pct, voucher_conditions')
         .eq('account_id', accountId)
         .maybeSingle(),
       getDocumentSettings(accountId),
+      getMessageSettings(accountId),
+      getPredefinedMessages(accountId),
     ])
 
     if (reservationError) throw reservationError
@@ -185,8 +193,13 @@ const fetchData = async () => {
     reservation.value = reservationData
     payments.value = paymentRows || []
     profile.value = profileData || {}
+    accountSettings.value = settingsData || {}
     voucherConditions.value = String(settingsData?.voucher_conditions || '').trim()
     documentSettings.value = loadedDocumentSettings
+    messageSettings.value = loadedMessageSettings
+    voucherTemplate.value = String(
+      (predefinedMessages || []).find((msg) => msg.type === 'system' && msg.key === 'voucher')?.body || ''
+    ).trim()
     issuedAt.value = new Date()
   } catch (error) {
     loadError.value = error.message || 'No se pudo cargar el voucher.'
@@ -288,18 +301,15 @@ const handleCopyWhatsApp = async () => {
 
   try {
     await copyAsWhatsApp(
+      reservation.value,
+      profile.value,
       {
-        ...reservation.value,
-        voucher_conditions: voucherConditions.value,
         nights: nights.value,
-        paid_amount: totalPaid.value,
-        total_amount: totalAmount.value,
-        adults: reservation.value?.adults,
-        children: reservation.value?.children,
-        unitName: unitLabel.value,
-        guestName: guestData.value.name,
-      },
-      profile.value
+        voucherConditions: voucherConditions.value,
+        accountSettings: accountSettings.value,
+        systemSettings: messageSettings.value,
+        systemTemplate: voucherTemplate.value,
+      }
     )
 
     toast.success('Copiado al portapapeles')

@@ -114,29 +114,17 @@
       class="rounded-lg border border-gray-200 bg-white shadow-sm"
       :class="isMobile ? 'p-2' : 'overflow-x-auto p-6'"
     >
-      <div class="mb-3 sm:mb-6">
-        <button
-          v-if="isMobile"
-          type="button"
-          class="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
-          @click="mobileLegendOpen = !mobileLegendOpen"
-        >
-          {{ mobileLegendOpen ? 'Ocultar leyenda' : 'Ver leyenda' }}
-          <span class="text-[10px]">{{ mobileLegendOpen ? '▲' : '▼' }}</span>
-        </button>
-
-        <transition name="legend-collapse">
-          <div v-if="!isMobile || mobileLegendOpen" class="mt-2 flex flex-wrap gap-3 text-xs font-medium text-gray-600 sm:mt-0 sm:gap-4 sm:text-sm">
-            <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-blue-500"></span> Reserva</span>
-            <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-orange-500"></span> Mantenimiento</span>
-            <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-purple-500"></span> Uso propietario</span>
-            <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-amber-500"></span> Hold temporal</span>
-            <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-gray-500"></span> Externo</span>
-          </div>
-        </transition>
+      <div v-if="!isMobile" class="mb-3 sm:mb-6">
+        <div class="mt-2 flex flex-wrap gap-3 text-xs font-medium text-gray-600 sm:mt-0 sm:gap-4 sm:text-sm">
+          <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-blue-500"></span> Reserva</span>
+          <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-orange-500"></span> Mantenimiento</span>
+          <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-purple-500"></span> Uso propietario</span>
+          <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-amber-500"></span> Hold temporal</span>
+          <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-gray-500"></span> Externo</span>
+        </div>
       </div>
 
-      <div v-if="calendarMetrics && !loading" class="mb-4 flex flex-wrap gap-6 rounded-md border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+      <div v-if="calendarMetrics && !loading && !isMobile" class="mb-4 flex flex-wrap gap-6 rounded-md border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-700">
         <span>Ocupación: <span class="font-semibold text-gray-900">{{ calendarMetrics.occupancyPct }}%</span></span>
         <span>Entradas: <span class="font-semibold text-gray-900">{{ calendarMetrics.arrivals }}</span></span>
         <span>Salidas: <span class="font-semibold text-gray-900">{{ calendarMetrics.departures }}</span></span>
@@ -149,9 +137,9 @@
       </div>
 
       <div v-if="periodPreset === 'this_month'" class="mb-4 flex items-center justify-between gap-2">
-        <button class="btn-secondary text-sm" @click="goToPreviousMonth">← Mes anterior</button>
+        <button class="btn-secondary text-sm" @click="goToPreviousMonth">←</button>
         <span class="text-sm font-medium text-gray-700">{{ monthLabel }}</span>
-        <button class="btn-secondary text-sm" @click="goToNextMonth">Mes siguiente →</button>
+        <button class="btn-secondary text-sm" @click="goToNextMonth">→</button>
       </div>
 
       <div v-if="showAgendaView" class="mb-4 flex items-center justify-between gap-2">
@@ -230,55 +218,54 @@
         </div>
       </div>
 
-      <div v-else-if="viewMode === 'clasica' && isMobile" class="space-y-3">
-        <section
-          v-for="week in mobileClassicWeeks"
-          :key="`classic-mobile-week-${week.rowStart}`"
-          class="rounded-md border border-gray-200 bg-white p-2"
-        >
-          <div class="grid grid-cols-7 gap-px border border-gray-200 bg-gray-200">
+      <div v-else-if="viewMode === 'clasica' && isMobile" class="rounded-md border border-gray-200 bg-white p-2">
+        <div class="grid grid-cols-7 gap-px border border-gray-200 bg-gray-200">
+          <div
+            v-for="dayLabel in mobileClassicDayHeaders"
+            :key="`classic-mobile-header-${dayLabel}`"
+            class="bg-white px-1 py-1 text-center"
+          >
+            <p class="text-[9px] font-medium uppercase text-gray-500">{{ dayLabel }}</p>
+          </div>
+        </div>
+
+        <div class="mt-1.5 space-y-1.5">
+          <div
+            v-for="week in mobileClassicRows"
+            :key="`classic-mobile-row-${week.rowStart}`"
+            class="grid gap-px border border-gray-200 bg-gray-200"
+            :style="mobileClassicWeekGridStyle(week)"
+          >
             <div
               v-for="day in week.days"
-              :key="`classic-mobile-head-${week.rowStart}-${day.date}`"
-              class="bg-white px-1 py-1 text-center"
+              :key="`classic-mobile-day-${week.rowStart}-${day.column}`"
+              class="bg-white px-1 text-center"
               :class="day.isToday ? 'bg-primary/5' : ''"
+              :style="{ gridColumn: day.column, gridRow: `1 / span ${week.barRows}` }"
             >
-              <p class="text-[9px] font-medium uppercase text-gray-500">{{ getMobileWeekDayShort(day.date) }}</p>
-              <p class="text-xs font-semibold text-gray-700">{{ day.dayNumber }}</p>
+              <p v-if="day.date" class="pt-0.5 text-[10px] font-semibold text-gray-700">{{ day.dayNumber }}</p>
             </div>
-          </div>
 
-          <div class="mt-1.5">
-            <div class="grid gap-px border border-gray-200 bg-gray-200" :style="mobileClassicWeekGridStyle(week)">
-              <div
-                v-for="day in week.days"
-                :key="`classic-mobile-body-${week.rowStart}-${day.date}`"
-                class="bg-white"
-                :class="day.isToday ? 'bg-primary/5' : ''"
-                :style="{ gridColumn: day.column, gridRow: `1 / span ${week.barRows}` }"
-              ></div>
-
-              <button
-                v-for="segment in week.segments"
-                :key="`classic-mobile-seg-${week.rowStart}-${segment.id}-${segment.rowColStart}`"
-                type="button"
-                class="z-10 overflow-hidden rounded px-1 text-left text-white"
-                :class="[occupancyColor(segment), segment.reservation_id ? '' : 'opacity-70']"
-                :style="mobileClassicSegmentStyle(segment, week)"
-                :disabled="!segment.reservation_id"
-                @click="onMobileClassicBarTap(segment)"
+            <button
+              v-for="segment in week.segments"
+              :key="`classic-mobile-segment-${week.rowStart}-${segment.id}-${segment.rowColStart}`"
+              type="button"
+              class="z-10 overflow-hidden rounded px-1 text-left text-white"
+              :class="[occupancyColor(segment), segment.reservation_id ? '' : 'opacity-70']"
+              :style="mobileClassicSegmentStyle(segment, week)"
+              :disabled="!segment.reservation_id"
+              @click="onMobileClassicBarTap(segment)"
+            >
+              <span
+                v-if="week.showText && segment.checkinInView"
+                class="block truncate"
+                :class="week.textSizeClass"
               >
-                <span
-                  v-if="week.showText && segment.checkinInView"
-                  class="block truncate"
-                  :class="week.textSizeClass"
-                >
-                  {{ mobileClassicSegmentLabel(segment) }}
-                </span>
-              </button>
-            </div>
+                {{ mobileClassicSegmentLabel(segment) }}
+              </span>
+            </button>
           </div>
-        </section>
+        </div>
       </div>
 
       <div v-else-if="viewMode === 'completa' && isMobile" class="space-y-3">
@@ -449,6 +436,33 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <div v-if="isMobile" class="mt-3 space-y-2">
+        <div v-if="calendarMetrics && !loading" class="flex flex-wrap gap-4 rounded-md border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-700">
+          <span>Ocupación: <span class="font-semibold text-gray-900">{{ calendarMetrics.occupancyPct }}%</span></span>
+          <span>Entradas: <span class="font-semibold text-gray-900">{{ calendarMetrics.arrivals }}</span></span>
+          <span>Salidas: <span class="font-semibold text-gray-900">{{ calendarMetrics.departures }}</span></span>
+        </div>
+
+        <button
+          type="button"
+          class="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+          @click="mobileLegendOpen = !mobileLegendOpen"
+        >
+          {{ mobileLegendOpen ? 'Ocultar leyenda' : 'Ver leyenda' }}
+          <span class="text-[10px]">{{ mobileLegendOpen ? '▲' : '▼' }}</span>
+        </button>
+
+        <transition name="legend-collapse">
+          <div v-if="mobileLegendOpen" class="flex flex-wrap gap-3 text-xs font-medium text-gray-600">
+            <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-blue-500"></span> Reserva</span>
+            <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-orange-500"></span> Mantenimiento</span>
+            <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-purple-500"></span> Uso propietario</span>
+            <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-amber-500"></span> Hold temporal</span>
+            <span class="flex items-center"><span class="mr-2 h-3 w-3 rounded-full bg-gray-500"></span> Externo</span>
+          </div>
+        </transition>
       </div>
     </div>
 
@@ -1012,10 +1026,12 @@ const classicRowLayoutMap = computed(() => {
   return layout
 })
 
-const mobileClassicWeeks = computed(() => {
+const mobileClassicDayHeaders = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom']
+
+const mobileClassicRows = computed(() => {
   if (!isMobile.value || viewMode.value !== 'clasica' || calendarDays.value.length === 0) return []
 
-  const weeks = []
+  const rows = []
   const todayIso = toIsoDate(new Date())
 
   for (let rowStartIndex = 0; rowStartIndex < calendarDays.value.length; rowStartIndex += 7) {
@@ -1040,13 +1056,19 @@ const mobileClassicWeeks = computed(() => {
       showText = true
     }
 
-    weeks.push({
-      rowStart,
-      days: rowDays.map((day, index) => ({
-        ...day,
+    const paddedDays = Array.from({ length: 7 }, (_, index) => {
+      const day = rowDays[index] || null
+      return {
+        date: day?.date || null,
+        dayNumber: day?.dayNumber || '',
         column: index + 1,
-        isToday: day.date === todayIso,
-      })),
+        isToday: day?.date === todayIso,
+      }
+    })
+
+    rows.push({
+      rowStart,
+      days: paddedDays,
       segments: rowLayout?.segments || [],
       barRows: laneCount,
       barHeight,
@@ -1055,7 +1077,7 @@ const mobileClassicWeeks = computed(() => {
     })
   }
 
-  return weeks
+  return rows
 })
 
 function mobileClassicWeekGridStyle(week) {
@@ -1073,12 +1095,6 @@ function mobileClassicSegmentStyle(segment, week) {
     height: `${week.barHeight}px`,
     lineHeight: `${week.barHeight}px`,
   }
-}
-
-function getMobileWeekDayShort(dateStr) {
-  return new Date(`${dateStr}T00:00:00Z`)
-    .toLocaleDateString('es-CO', { weekday: 'short', timeZone: 'UTC' })
-    .replace('.', '')
 }
 
 function mobileClassicSegmentLabel(segment) {

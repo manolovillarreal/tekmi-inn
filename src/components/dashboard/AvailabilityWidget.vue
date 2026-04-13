@@ -218,7 +218,10 @@ const templateVariablesBase = computed(() => {
     fecha_checkout_larga: formatDateLongEs(checkOut.value),
     noches: nights.value,
     personas: Number(personas.value || 0),
-    unidades: selectedAvailableUnits.value.map((unit) => ({ nombre_unidad: unit.name })),
+    unidades: selectedAvailableUnits.value.map((unit) => ({
+      nombre_unidad: unit.name,
+      descripcion_unidad: String(unit.description || '').trim() || 'Sin descripción',
+    })),
     precio_noche: hasPrice ? formatCop(parsedPrice) : null,
     nombre_huesped: normalizedGuestName || null,
   }

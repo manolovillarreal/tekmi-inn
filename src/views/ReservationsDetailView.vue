@@ -987,12 +987,168 @@ const formatDateTime = (ds) => {
 const parseFunctionError = async (error) => {
   if (!error) return 'Ocurrió un error inesperado.'
 
-  if (typeof error.context?.json === 'function') {
-    const payload = await error.context.json()
-    return payload.message || 'Ocurrió un error inesperado.'
+  const baseMessage = String(error.message || '')
+  if (/invalid\s+jwt|jwt/i.test(baseMessage)) {
+    return 'Tu sesión expiró. Vuelve a iniciar sesión e inténtalo de nuevo.'
   }
 
-  return error.message || 'Ocurrió un error inesperado.'
+  if (typeof error.context?.json === 'function') {
+    const payload = await error.context.json()
+    const payloadMessage = String(payload?.message || '').trim()
+    if (/invalid\s+jwt|jwt/i.test(payloadMessage)) {
+      return 'Tu sesión expiró. Vuelve a iniciar sesión e inténtalo de nuevo.'
+    }
+    return payloadMessage || 'Ocurrió un error inesperado.'
+  }
+
+  return baseMessage || 'Ocurrió un error inesperado.'
+}
+
+const isJwtAuthError = (error) => {
+  if (!error) return false
+  const message = String(error?.message || '').toLowerCase()
+  const status = Number(error?.context?.status || 0)
+  return status === 401 || message.includes('invalid jwt') || message.includes('jwt')
+}
+
+const toHex = (bytes) => Array.from(bytes).map((byte) => byte.toString(16).padStart(2, '0')).join('')
+
+const sha256Hex = async (value) => {
+  if (!globalThis.crypto?.subtle) {
+    throw new Error('No se pudo acceder al cifrado del navegador para generar el token.')
+  }
+  const encoded = new TextEncoder().encode(String(value || ''))
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', encoded)
+  return toHex(new Uint8Array(digest))
+}
+
+const generateRawToken = () => {
+  if (!globalThis.crypto?.getRandomValues) {
+    throw new Error('No se pudo acceder al generador de seguridad del navegador.')
+  }
+  const bytes = new Uint8Array(32)
+  globalThis.crypto.getRandomValues(bytes)
+  return toHex(bytes)
+}
+
+const buildPreregistroExpiryIso = (checkOutDate) => {
+  const date = new Date(checkOutDate)
+  if (Number.isNaN(date.getTime())) {
+    const fallback = new Date()
+    fallback.setUTCDate(fallback.getUTCDate() + 1)
+    fallback.setUTCHours(23, 59, 59, 999)
+    return fallback.toISOString()
+  }
+
+  date.setUTCDate(date.getUTCDate() + 1)
+  date.setUTCHours(23, 59, 59, 999)
+  return date.toISOString()
+}
+
+const generatePreregistroTokenLocally = async ({ regenerate = false } = {}) => {
+  if (!res.value?.id) {
+    throw new Error('No se encontró la reserva para generar el pre-registro.')
+  }
+
+  const accountId = accountStore.getRequiredAccountId()
+  const existingRawToken = String(res.value?.preregistro_token_raw || '').trim()
+  const rawToken = !regenerate && existingRawToken ? existingRawToken : generateRawToken()
+  const tokenExpiry = buildPreregistroExpiryIso(res.value?.check_out)
+
+  const updatePayload = {
+    preregistro_token_expiry: tokenExpiry,
+  }
+
+  if (!existingRawToken || regenerate) {
+    updatePayload.preregistro_token_raw = rawToken
+    updatePayload.preregistro_token = await sha256Hex(rawToken)
+  }
+
+  const { error: updateError } = await supabase
+    .from('reservations')
+    .update(updatePayload)
+    .eq('account_id', accountId)
+    .eq('id', res.value.id)
+
+  if (updateError) {
+    throw updateError
+  }
+
+  res.value = {
+    ...res.value,
+    preregistro_token_raw: rawToken,
+    preregistro_token_expiry: tokenExpiry,
+  }
+
+  return {
+    checkin_url: `/prerregistro/${rawToken}`,
+  }
+}
+
+const invokeGeneratePreregistroToken = async ({ regenerate = false } = {}) => {
+  const { data: sessionData } = await supabase.auth.getSession()
+  const accessToken = sessionData?.session?.access_token
+
+  if (!accessToken) {
+    return {
+      data: null,
+      error: {
+        message: 'Invalid JWT',
+      },
+    }
+  }
+
+  const payload = {
+    reservation_id: res.value.id,
+    ...(regenerate ? { regenerate: true } : {}),
+  }
+
+  let response = await supabase.functions.invoke('generate-preregistro-token', {
+    body: payload,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+
+  if (!response.error) return response
+
+  const errorMessage = String(response.error?.message || '').toLowerCase()
+  const status = Number(response.error?.context?.status || 0)
+  const shouldRetryWithRefresh = status === 401 || errorMessage.includes('invalid jwt') || errorMessage.includes('jwt')
+
+  if (!shouldRetryWithRefresh) return response
+
+  const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession()
+  const refreshedToken = refreshed?.session?.access_token
+
+  if (refreshError || !refreshedToken) {
+    return response
+  }
+
+  response = await supabase.functions.invoke('generate-preregistro-token', {
+    body: payload,
+    headers: {
+      Authorization: `Bearer ${refreshedToken}`,
+    },
+  })
+
+  if (!response.error) return response
+
+  if (isJwtAuthError(response.error)) {
+    try {
+      const data = await generatePreregistroTokenLocally({ regenerate })
+      return { data, error: null }
+    } catch (fallbackError) {
+      return {
+        data: null,
+        error: {
+          message: fallbackError?.message || 'No se pudo generar el token de pre-registro.',
+        },
+      }
+    }
+  }
+
+  return response
 }
 
 // Interactions
@@ -1298,9 +1454,7 @@ watch(
 const regeneratePreregistroLink = async () => {
   regeneratingLink.value = true
   try {
-    const { data, error } = await supabase.functions.invoke('generate-preregistro-token', {
-      body: { reservation_id: res.value.id, regenerate: true },
-    })
+    const { data, error } = await invokeGeneratePreregistroToken({ regenerate: true })
     if (error) {
       toast.error(await parseFunctionError(error))
       return
@@ -1318,9 +1472,7 @@ const regeneratePreregistroLink = async () => {
 }
 
 const copyWhatsappPreregistroMessage = async () => {
-  const { data, error } = await supabase.functions.invoke('generate-preregistro-token', {
-    body: { reservation_id: res.value.id },
-  })
+  const { data, error } = await invokeGeneratePreregistroToken()
 
   if (error) {
     toast.error(await parseFunctionError(error))
@@ -1349,11 +1501,7 @@ const copyWhatsappPreregistroMessage = async () => {
 }
 
 const copyPreregistroLink = async () => {
-  const { data, error } = await supabase.functions.invoke('generate-preregistro-token', {
-    body: {
-      reservation_id: res.value.id,
-    }
-  })
+  const { data, error } = await invokeGeneratePreregistroToken()
 
   if (error) {
     toast.error(await parseFunctionError(error))

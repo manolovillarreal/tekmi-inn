@@ -166,7 +166,6 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { supabase } from '../services/supabase'
 import AppCountrySelect from '../components/ui/forms/AppCountrySelect.vue'
 import AppPhoneInput from '../components/ui/forms/AppPhoneInput.vue'
 import { DOCUMENT_TYPES_ALL as documentTypeOptions } from '../utils/documentTypes'
@@ -222,27 +221,6 @@ const parseErrorMessage = (status, message) => {
   return message || 'Ocurrió un error inesperado.'
 }
 
-const extractFunctionError = async (error) => {
-  if (!error) return { status: 500, message: 'Ocurrió un error inesperado.' }
-
-  const status = Number(error.context?.status || 500)
-
-  if (typeof error.context?.json === 'function') {
-    try {
-      const payload = await error.context.json()
-      return {
-        status,
-        message: payload?.message || error.message || 'Ocurrió un error inesperado.',
-        contactPhone: String(payload?.contact_phone || ''),
-      }
-    } catch {
-      return { status, message: error.message || 'Ocurrió un error inesperado.' }
-    }
-  }
-
-  return { status, message: error.message || 'Ocurrió un error inesperado.' }
-}
-
 const resetForm = () => {
   Object.assign(guest, buildGuest())
   viewState.value = 'form'
@@ -261,18 +239,25 @@ const handleSubmit = async () => {
     document_number: guest.document_number?.trim(),
   }
 
-  const { data, error } = await supabase.functions.invoke('public-companion-preregistro', {
-    body: {
+  const res = await fetch(`${FUNCTIONS_URL}/public-companion-preregistro`, {
+    method: 'POST',
+    headers: {
+      apikey: ANON_KEY,
+      Authorization: `Bearer ${ANON_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
       action: 'register',
       companion_token: String(route.params.token || ''),
       guest: guestPayload,
-    },
+    }),
   })
 
-  if (error) {
-    const parsed = await extractFunctionError(error)
-    errorMessage.value = parseErrorMessage(parsed.status, parsed.message)
-    if (parsed.contactPhone) contactPhone.value = parsed.contactPhone
+  const data = await res.json()
+
+  if (!res.ok) {
+    errorMessage.value = parseErrorMessage(res.status, data?.message)
+    if (data?.contact_phone) contactPhone.value = String(data.contact_phone)
     viewState.value = 'error'
     submitting.value = false
     return

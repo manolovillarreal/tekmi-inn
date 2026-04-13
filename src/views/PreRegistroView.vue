@@ -106,7 +106,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { supabase } from '../services/supabase'
 import PreRegistroForm from '../components/preregistro/PreRegistroForm.vue'
 
 const route = useRoute()
@@ -230,10 +229,19 @@ const handleSubmit = async ({ primary_guest, additional_guests }) => {
 const generateCompanionLink = async () => {
   companionLinkLoading.value = true
   try {
-    const { data, error } = await supabase.functions.invoke('public-companion-preregistro', {
-      body: { action: 'generate', primary_token: token.value },
+    const res = await fetch(`${FUNCTIONS_URL}/public-companion-preregistro`, {
+      method: 'POST',
+      headers: {
+        apikey: ANON_KEY,
+        Authorization: `Bearer ${ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'generate', primary_token: token.value }),
     })
-    if (error || !data?.companion_url) throw new Error('No se pudo generar el link.')
+
+    const data = await res.json()
+    if (!res.ok || !data?.companion_url) throw new Error('No se pudo generar el link.')
+
     const appOrigin = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '')
     companionLink.value = appOrigin + data.companion_url
   } catch {

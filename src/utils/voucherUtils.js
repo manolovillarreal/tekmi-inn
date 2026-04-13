@@ -124,54 +124,97 @@ export const formatDateLongEs = (value) => {
   return longDateFormatter.format(date)
 }
 
-export const copyAsWhatsApp = async (reservation, profile) => {
-  const guestName = reservation?.guestName || reservation?.guest_name || 'huesped'
-  const businessName = profile?.commercial_name || profile?.legal_name || 'nuestro alojamiento'
-  const contactPhone = profile?.phone || ''
-  const nights = Number(reservation?.nights || 0)
+const splitGuestName = (reservation = {}) => {
+  const firstName = String(reservation?.guests?.first_name || '').trim()
+  const lastName = String(reservation?.guests?.last_name || '').trim()
+
+  if (firstName || lastName) {
+    return {
+      firstName,
+      lastName,
+      fullName: `${firstName} ${lastName}`.trim(),
+    }
+  }
+
+  const fallbackName = String(
+    reservation?.guestName || reservation?.guest_name || reservation?.nombre_huesped || ''
+  ).trim()
+  const parts = fallbackName ? fallbackName.split(/\s+/) : []
+
+  return {
+    firstName: parts[0] || '',
+    lastName: parts.length > 1 ? parts.slice(1).join(' ') : '',
+    fullName: fallbackName,
+  }
+}
+
+export const buildVoucherWhatsAppMessage = (reservation, profile, options = {}) => {
+  const guest = splitGuestName(reservation)
+  const nights = Number(options?.nights ?? reservation?.nights ?? 0)
   const totalGuests = Number(reservation?.adults || 0) + Number(reservation?.children || 0)
-  const unitName = reservation?.unitName || reservation?.unitLabel || 'Unidad'
-  const referenceCode = reservation?.reference_code || reservation?.referenceCode || '-'
-  const referenceDisplay = formatReferenceDisplay(referenceCode, reservation?.guestName || reservation?.guest_name)
   const total = Number(reservation?.total_amount || reservation?.total || 0)
   const paid = Number(reservation?.paid_amount || reservation?.paid || 0)
   const balance = Math.max(0, total - paid)
+  const referenceCode = reservation?.reference_code || reservation?.referenceCode || reservation?.reservation_number || '-'
+  const referenceDisplay = formatReferenceDisplay(referenceCode, guest.fullName)
+  const units = (reservation?.reservation_units || []).map((row) => row?.units).filter(Boolean)
+  const templateToUse = String(options?.systemTemplate || '').trim() || DEFAULT_VOUCHER_TEMPLATE
+  const voucherConditions = String(options?.voucherConditions || reservation?.voucher_conditions || '').trim()
+  const globalVars = buildGlobalVariables({
+    profile,
+    accountSettings: options?.accountSettings || {},
+    context: {
+      nombres: guest.firstName,
+      apellidos: guest.lastName,
+      nombre_completo: guest.fullName,
+      guest_first_name: guest.firstName,
+      guest_last_name: guest.lastName,
+      guest_name: guest.fullName,
+      check_in: reservation?.check_in,
+      check_out: reservation?.check_out,
+      nights,
+      personas: totalGuests,
+      reference: referenceDisplay,
+      total,
+      paid,
+      balance,
+    },
+  })
 
-  const lines = [
-    `Hola ${guestName}! 👋`,
-    '',
-    `Te compartimos el resumen de tu reserva en ${businessName}.`,
-    '',
-    `🗓 Check-in: ${formatDateLongEs(reservation?.check_in)}`,
-    `🗓 Check-out: ${formatDateLongEs(reservation?.check_out)}`,
-    `🌙 ${nights} noches · ${totalGuests} personas`,
-    `🏠 ${unitName}`,
-    '',
-    `💳 Código de reserva: ${referenceDisplay}`,
-    '',
-    `💰 Total: ${formatCop(total)}`,
-    `✅ Pagado: ${formatCop(paid)}`,
-  ]
-
-  if (balance > 0) {
-    lines.push(`⏳ Saldo pendiente: ${formatCop(balance)}`)
+  const templateVariables = {
+    ...globalVars,
+    nombre_huesped: guest.fullName || globalVars.nombre_huesped,
+    telefono_huesped: reservation?.guests?.phone || reservation?.guest_phone || '-',
+    fechas: reservation?.check_in && reservation?.check_out
+      ? `${formatDateLongEs(reservation.check_in)} al ${formatDateLongEs(reservation.check_out)}`
+      : '-',
+    noches: nights,
+    personas: totalGuests,
+    codigo_referencia: referenceDisplay,
+    total: formatCop(total),
+    pagado: formatCop(paid),
+    saldo_pendiente: formatCop(balance),
+    fecha_checkin_larga: formatDateLongEs(reservation?.check_in),
+    fecha_checkout_larga: formatDateLongEs(reservation?.check_out),
+    hora_checkin: options?.systemSettings?.checkin_time || '3:00 PM',
+    hora_checkout: options?.systemSettings?.checkout_time || '12:00 PM',
+    condiciones: voucherConditions,
+    unidades: units.map((unit) => ({
+      nombre_unidad: unit?.name || 'Unidad',
+      descripcion_unidad: unit?.description || '',
+    })),
+    pago_completo: total > 0 && paid >= total ? { total: formatCop(total), pagado: formatCop(paid) } : null,
+    saldo_pendiente: paid > 0 && balance > 0
+      ? { total: formatCop(total), pagado: formatCop(paid), saldo_pendiente: formatCop(balance) }
+      : null,
+    sin_pagos: paid <= 0 ? { total: formatCop(total) } : null,
   }
 
-  const firstConditionLine = String(reservation?.voucher_conditions || '')
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .find(Boolean)
+  return resolveTemplate(templateToUse, templateVariables).text.trim()
+}
 
-  if (firstConditionLine) {
-    lines.push('')
-    lines.push(`📋 ${firstConditionLine}`)
-  }
-
-  lines.push('')
-  lines.push('Cualquier duda estamos a tu disposición.')
-  lines.push(`${businessName} · ${contactPhone || '-'}`)
-
-  const message = lines.join('\n')
+export const copyAsWhatsApp = async (reservation, profile, options = {}) => {
+  const message = buildVoucherWhatsAppMessage(reservation, profile, options)
   await navigator.clipboard.writeText(message)
   return message
 }
