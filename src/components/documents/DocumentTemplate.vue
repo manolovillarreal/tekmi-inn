@@ -3,14 +3,14 @@
     <div :class="['doc-sheet-wrapper', previewMode ? 'is-preview' : '']">
       <article class="doc-sheet" :style="[cssVariables, fontFamilyStyle]">
         <!-- HEADER -->
-        <header class="doc-header" :class="['header-' + preset.header.style, 'header-size-' + preset.header.size]">
+        <header class="doc-header" :class="['header-' + preset.header.style, 'header-size-' + preset.header.size]" :style="headerContainerStyle">
           <!-- Logo-Left Layout -->
           <div v-if="preset.header.layout === 'logo-left'" class="header-layout-logo-left">
-            <div v-if="showLogo" class="header-logo-wrap">
+            <div v-if="showLogo" class="header-logo-wrap" :style="logoWrapStyle">
               <img v-if="profile.logo_url" :src="profile.logo_url" alt="Logo" class="header-logo">
               <div v-else class="header-logo-empty">Sin logo</div>
             </div>
-            <div class="header-content">
+            <div class="header-content" :style="headerContentStyle">
               <p v-if="headerValue('nombre_comercial')" class="header-commercial-name">{{ headerValue('nombre_comercial') }}</p>
               <p v-if="headerValue('nit')" class="header-nit">{{ headerValue('nit') }}</p>
               <p v-if="headerContactLine" class="header-contact">{{ headerContactLine }}</p>
@@ -23,8 +23,8 @@
           </div>
 
           <!-- Centered Layout -->
-          <div v-else-if="preset.header.layout === 'centered'" class="header-layout-centered">
-            <div v-if="showLogo" class="header-logo-wrap-centered">
+          <div v-else-if="preset.header.layout === 'centered'" class="header-layout-centered" :style="headerCenteredStyle">
+            <div v-if="showLogo" class="header-logo-wrap-centered" :style="logoWrapStyle">
               <img v-if="profile.logo_url" :src="profile.logo_url" alt="Logo" class="header-logo">
               <div v-else class="header-logo-empty">Sin logo</div>
             </div>
@@ -73,7 +73,6 @@ import {
   DEFAULT_DOCUMENT_SETTINGS,
   deriveThemeTokens,
   getDocumentThemeColors,
-  getLogoHeightPx,
   getPresetConfig,
   normalizeDocumentSettings,
   resolvePresetColors,
@@ -135,8 +134,62 @@ const profileData = computed(() => ({
   nit_display: props.profile?.nit_display || props.profile?.nit || '',
 }))
 
-const logoHeight = computed(() => getLogoHeightPx(normalizedSettings.value.header_logo_size))
 const showLogo = computed(() => normalizedSettings.value.header_show_logo)
+const logoShape = computed(() => normalizedSettings.value.header_logo_shape || 'square')
+const logoSizePx = computed(() => Number(normalizedSettings.value.header_logo_size_px) || 60)
+const logoWidthPx = computed(() => (logoShape.value === 'rectangular' ? Math.round(logoSizePx.value * 1.6) : logoSizePx.value))
+const logoBackground = computed(() => normalizedSettings.value.header_logo_bg_color || 'transparent')
+const logoBorderRadius = computed(() => {
+  if (logoShape.value === 'round') return '9999px'
+  if (logoShape.value === 'rectangular') return '8px'
+  return '4px'
+})
+const logoWrapStyle = computed(() => ({
+  width: `${logoWidthPx.value}px`,
+  height: `${logoSizePx.value}px`,
+  background: logoBackground.value,
+  borderRadius: logoBorderRadius.value,
+}))
+
+const headerTextAlignX = computed(() => normalizedSettings.value.header_text_align_x || 'left')
+const headerTextAlignY = computed(() => normalizedSettings.value.header_text_align_y || 'top')
+
+const resolveHorizontalAlign = (value) => {
+  if (value === 'center') return 'center'
+  if (value === 'right') return 'right'
+  return 'left'
+}
+
+const resolveVerticalAlign = (value) => {
+  if (value === 'middle') return 'center'
+  if (value === 'bottom') return 'flex-end'
+  return 'flex-start'
+}
+
+const resolveHorizontalItems = (value) => {
+  if (value === 'center') return 'center'
+  if (value === 'right') return 'flex-end'
+  return 'flex-start'
+}
+
+const headerContainerStyle = computed(() => ({
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: resolveVerticalAlign(headerTextAlignY.value),
+}))
+
+const headerContentStyle = computed(() => ({
+  textAlign: resolveHorizontalAlign(headerTextAlignX.value),
+  alignItems: resolveHorizontalItems(headerTextAlignX.value),
+  justifyContent: resolveVerticalAlign(headerTextAlignY.value),
+}))
+
+const headerCenteredStyle = computed(() => ({
+  width: '100%',
+  textAlign: resolveHorizontalAlign(headerTextAlignX.value),
+  alignItems: resolveHorizontalItems(headerTextAlignX.value),
+  justifyContent: resolveVerticalAlign(headerTextAlignY.value),
+}))
 
 const availableValues = computed(() => ({
   nombre_comercial: profileData.value.commercial_name || profileData.value.legal_name || '',
@@ -307,7 +360,7 @@ const resolvedCustomFieldContent = computed(() => resolveVariables(normalizedSet
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 16px;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .header-layout-centered {
@@ -320,14 +373,10 @@ const resolvedCustomFieldContent = computed(() => resolveVariables(normalizedSet
 
 .header-logo-wrap,
 .header-logo-wrap-centered {
-  width: 60px;
-  height: v-bind('logoHeight + "px"');
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 4px;
   flex-shrink: 0;
 }
 
@@ -339,6 +388,7 @@ const resolvedCustomFieldContent = computed(() => resolveVariables(normalizedSet
   height: 100%;
   width: 100%;
   object-fit: contain;
+
 }
 
 .header-logo-empty {

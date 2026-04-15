@@ -198,12 +198,19 @@ export const DEFAULT_FOOTER_FIELDS = {
   slogan: false
 }
 
+export const HEADER_SETTINGS_META_KEY = '__document_header_settings'
+
 export const DEFAULT_DOCUMENT_SETTINGS = {
   color_theme: 'tekmi',
   color_primary: DOCUMENT_THEMES.tekmi.primary,
   color_accent: DOCUMENT_THEMES.tekmi.accent,
   color_background: DOCUMENT_THEMES.tekmi.background,
   header_show_logo: true,
+  header_text_align_x: 'left',
+  header_text_align_y: 'top',
+  header_logo_shape: 'square',
+  header_logo_bg_color: 'transparent',
+  header_logo_size_px: 60,
   header_logo_size: 'medium',
   header_fields: { ...DEFAULT_HEADER_FIELDS },
   header_extra_text: '',
@@ -220,9 +227,55 @@ const normalizeFields = (value, defaults) => ({
   ...(value || {})
 })
 
+const normalizeLegacyLogoSize = (legacySize) => {
+  if (legacySize === 'small') return 40
+  if (legacySize === 'large') return 80
+  return 60
+}
+
+const normalizeLogoSizePx = (value, fallbackLegacySize) => {
+  const parsed = Number(value)
+  if (Number.isFinite(parsed)) {
+    return Math.min(160, Math.max(40, Math.round(parsed)))
+  }
+  return normalizeLegacyLogoSize(fallbackLegacySize)
+}
+
+const normalizeLogoShape = (value) => {
+  if (value === 'round' || value === 'rectangular' || value === 'square') return value
+  return 'square'
+}
+
+const normalizeLogoBackground = (value) => {
+  if (value === 'transparent') return 'transparent'
+  if (typeof value === 'string' && /^#[0-9A-Fa-f]{6}$/.test(value)) return value
+  return 'transparent'
+}
+
+const getLegacyHeaderSettings = (value = {}) => {
+  const raw = value?.header_fields?.[HEADER_SETTINGS_META_KEY]
+  return raw && typeof raw === 'object' ? raw : {}
+}
+
+const normalizeHeaderTextAlignX = (value, presetKey) => {
+  if (value === 'left' || value === 'center' || value === 'right') return value
+  const preset = DOCUMENT_PRESETS[presetKey] || DOCUMENT_PRESETS[DEFAULT_DOCUMENT_SETTINGS.preset]
+  return preset?.header?.layout === 'centered' ? 'center' : 'left'
+}
+
+const normalizeHeaderTextAlignY = (value) => {
+  if (value === 'top' || value === 'middle' || value === 'bottom') return value
+  return 'top'
+}
+
 export const normalizeDocumentSettings = (value = {}) => ({
   ...DEFAULT_DOCUMENT_SETTINGS,
   ...value,
+  header_text_align_x: normalizeHeaderTextAlignX(value.header_text_align_x ?? getLegacyHeaderSettings(value).text_align_x, value.preset),
+  header_text_align_y: normalizeHeaderTextAlignY(value.header_text_align_y ?? getLegacyHeaderSettings(value).text_align_y),
+  header_logo_shape: normalizeLogoShape(value.header_logo_shape ?? getLegacyHeaderSettings(value).logo_shape),
+  header_logo_bg_color: normalizeLogoBackground(value.header_logo_bg_color ?? getLegacyHeaderSettings(value).logo_bg_color),
+  header_logo_size_px: normalizeLogoSizePx(value.header_logo_size_px ?? getLegacyHeaderSettings(value).logo_size_px, value.header_logo_size),
   header_fields: normalizeFields(value.header_fields, DEFAULT_HEADER_FIELDS),
   footer_fields: normalizeFields(value.footer_fields, DEFAULT_FOOTER_FIELDS),
   preset: DOCUMENT_PRESETS[value.preset] ? value.preset : DEFAULT_DOCUMENT_SETTINGS.preset,
