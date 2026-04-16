@@ -1,25 +1,46 @@
 ﻿<template>
   <div :class="inModal ? 'space-y-6' : 'space-y-6 max-w-2xl mx-auto'">
 
-    <!-- Step progress indicator -->
-    <nav class="flex items-center gap-1 text-sm" aria-label="Pasos del formulario">
-      <template v-for="(step, i) in navSteps" :key="step.n">
-        <button
-          type="button"
-          class="flex items-center gap-1.5 rounded px-2 py-1 transition-colors"
-          :class="stepButtonClass(step.n)"
-          :disabled="step.n > maxReachedStep"
-          @click="goToStep(step.n)"
-        >
-          <span
-            class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-            :class="stepCircleClass(step.n)"
-          >{{ i + 1 }}</span>
-          <span class="hidden sm:inline">{{ step.label }}</span>
-        </button>
-        <span v-if="i < navSteps.length - 1" class="text-gray-300">›</span>
+    <div class="flex items-start justify-between gap-3">
+      <nav class="flex items-center gap-1 text-sm" aria-label="Pasos del formulario">
+        <template v-for="(step, i) in navSteps" :key="step.n">
+          <button
+            type="button"
+            class="flex items-center gap-1.5 rounded px-2 py-1 transition-colors"
+            :class="stepButtonClass(step.n)"
+            :disabled="step.n > maxReachedStep"
+            @click="goToStep(step.n)"
+          >
+            <span
+              class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+              :class="stepCircleClass(step.n)"
+            >{{ i + 1 }}</span>
+            <span class="hidden sm:inline">{{ step.label }}</span>
+          </button>
+          <span v-if="i < navSteps.length - 1" class="text-gray-300">›</span>
+        </template>
+      </nav>
+
+      <button
+        v-if="draftLoaded"
+        type="button"
+        class="shrink-0 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 transition hover:bg-amber-100"
+        @click="clearLoadedDraft"
+      >
+        Limpiar borrador
+      </button>
+    </div>
+
+    <AppInlineAlert
+      v-if="draftPromptVisible"
+      type="info"
+      message="Tienes un formulario en borrador. ¿Deseas continuar donde lo dejaste?"
+    >
+      <template #actions>
+        <button type="button" class="btn-primary" @click="restoreDraft">Continuar</button>
+        <button type="button" class="btn-secondary" @click="discardDraft">Descartar</button>
       </template>
-    </nav>
+    </AppInlineAlert>
 
     <!-- ── STEP 1: Fechas ─────────────────────────── -->
     <template v-if="currentStep === 1">
@@ -455,7 +476,7 @@
         <button type="button" class="btn-primary" :disabled="saving" @click="saveAsReservationCheck && !hasPayment ? saveAsReservation() : save()">
           {{ saving ? 'Guardando…' : hasPayment ? 'Crear reserva' : saveAsReservationCheck ? 'Guardar reserva' : 'Guardar consulta' }}
         </button>
-        <button v-if="inModal" type="button" class="text-sm text-gray-500 underline" @click="emit('cancel')">Cancelar</button>
+        <button v-if="inModal" type="button" class="text-sm text-gray-500 underline" @click="handleCancelForm">Cancelar</button>
       </div>
     </template>
 
@@ -492,7 +513,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../../services/supabase'
 import { DOCUMENT_TYPES_ADULT as documentTypeOptions } from '../../utils/documentTypes'
@@ -552,34 +573,9 @@ const PAYMENT_METHOD_OPTIONS = [
 ]
 
 const todayIso = new Date().toISOString().slice(0, 10)
+const GUIDED_FORM_DRAFT_KEY = 'guided_form_draft'
 
-// ── Navigation state ───────────────────────────────────
-const currentStep = ref(1)
-const maxReachedStep = ref(1)
-
-// ── UI state ───────────────────────────────────────────
-const saving = ref(false)
-const submitError = ref('')
-const saveAsReservationError = ref('')
-const guestSearchOpen = ref(false)
-const holdInquiry = ref(false)
-const holdDays = ref(1)
-const saveAsReservationCheck = ref(false)
-const panels = ref({ unit: true, price: false, payment: false })
-const useFullHousePricing = ref(false)
-const usePeakPricing = ref(false)
-const sourceLabelDisplay = ref('')
-
-// ── Touched trackers ───────────────────────────────────
-const s1Touched = ref({ check_in: false, check_out: false })
-const s3Touched = ref({ guest_first_name: false, guest_phone: false })
-const s4Touched = ref({ source_type_id: false })
-
-// ── Optional fields toggle ─────────────────────────────
-const showOptionalFields = ref(false)
-
-// ── Form data ──────────────────────────────────────────
-const form = ref({
+const createInitialFormState = () => ({
   check_in: props.initialCheckIn || '',
   check_out: props.initialCheckOut || '',
   adults: Number(props.initialPersonas) || 2,
@@ -609,12 +605,47 @@ const form = ref({
   unit_ids: []
 })
 
-const payment = ref({
+const createInitialPaymentState = () => ({
   amount: '',
   method: 'transferencia',
   reference: '',
   payment_date: todayIso
 })
+
+// ── Navigation state ───────────────────────────────────
+const currentStep = ref(1)
+const maxReachedStep = ref(1)
+
+// ── UI state ───────────────────────────────────────────
+const saving = ref(false)
+const submitError = ref('')
+const saveAsReservationError = ref('')
+const guestSearchOpen = ref(false)
+const holdInquiry = ref(false)
+const holdDays = ref(1)
+const saveAsReservationCheck = ref(false)
+const panels = ref({ unit: true, price: false, payment: false })
+const useFullHousePricing = ref(false)
+const usePeakPricing = ref(false)
+const sourceLabelDisplay = ref('')
+const pendingDraft = ref(null)
+const draftPromptVisible = ref(false)
+const draftLoaded = ref(false)
+const suppressDraftPersistence = ref(true)
+let draftSaveTimer = null
+
+// ── Touched trackers ───────────────────────────────────
+const s1Touched = ref({ check_in: false, check_out: false })
+const s3Touched = ref({ guest_first_name: false, guest_phone: false })
+const s4Touched = ref({ source_type_id: false })
+
+// ── Optional fields toggle ─────────────────────────────
+const showOptionalFields = ref(false)
+
+// ── Form data ──────────────────────────────────────────
+const form = ref(createInitialFormState())
+
+const payment = ref(createInitialPaymentState())
 
 const accountPricing = ref({
   price_general_base: null,
@@ -675,6 +706,12 @@ const canProceedStep3 = computed(() =>
 const sourceRequired = computed(() => !form.value.source_detail_id)
 
 const hasPayment = computed(() => Number(payment.value.amount || 0) > 0)
+
+const hasPreloadedContext = computed(() => Boolean(
+  props.initialCheckIn
+  || props.initialCheckOut
+  || (props.initialPersonas && Number(props.initialPersonas) !== 2)
+))
 
 const reservationValidationError = computed(() => {
   if (!hasPayment.value) return ''
@@ -912,12 +949,191 @@ const onStep1DateBlur = () => {
   s1Touched.value.check_out = true
 }
 
+const buildDraftPayload = () => ({
+  accountId: accountStore.getRequiredAccountId(),
+  currentStep: currentStep.value,
+  maxReachedStep: maxReachedStep.value,
+  form: {
+    ...form.value,
+    unit_ids: [...(form.value.unit_ids || [])]
+  },
+  payment: { ...payment.value },
+  holdInquiry: holdInquiry.value,
+  holdDays: holdDays.value,
+  saveAsReservationCheck: saveAsReservationCheck.value,
+  panels: { ...panels.value },
+  useFullHousePricing: useFullHousePricing.value,
+  usePeakPricing: usePeakPricing.value,
+  showOptionalFields: showOptionalFields.value,
+  sourceLabelDisplay: sourceLabelDisplay.value,
+  savedAt: new Date().toISOString(),
+})
+
+const hasMeaningfulDraft = () => {
+  const initialAdults = Number(props.initialPersonas) || 2
+  return Boolean(
+    currentStep.value > 1
+    || form.value.check_in
+    || form.value.check_out
+    || Number(form.value.adults || 0) !== initialAdults
+    || Number(form.value.minors || 0) > 0
+    || Number(form.value.children || 0) > 0
+    || Number(form.value.infants || 0) > 0
+    || form.value.venue_id
+    || form.value.guest_first_name?.trim()
+    || form.value.guest_last_name?.trim()
+    || form.value.guest_phone?.trim()
+    || form.value.guest_email?.trim()
+    || form.value.notes?.trim()
+    || form.value.source_type_id
+    || form.value.source_detail_id
+    || form.value.source_name?.trim()
+    || form.value.price_per_night !== ''
+    || form.value.discount_percentage !== ''
+    || form.value.commission_percentage !== ''
+    || form.value.quote_expires_at
+    || (form.value.unit_ids?.length || 0) > 0
+    || Number(payment.value.amount || 0) > 0
+  )
+}
+
+const clearDraftStorage = () => {
+  localStorage.removeItem(GUIDED_FORM_DRAFT_KEY)
+  if (draftSaveTimer) {
+    window.clearTimeout(draftSaveTimer)
+    draftSaveTimer = null
+  }
+  pendingDraft.value = null
+  draftPromptVisible.value = false
+  draftLoaded.value = false
+}
+
+const resetFormState = () => {
+  form.value = createInitialFormState()
+  payment.value = createInitialPaymentState()
+  currentStep.value = 1
+  maxReachedStep.value = 1
+  submitError.value = ''
+  saveAsReservationError.value = ''
+  guestSearchOpen.value = false
+  holdInquiry.value = false
+  holdDays.value = 1
+  saveAsReservationCheck.value = false
+  panels.value = { unit: true, price: false, payment: false }
+  useFullHousePricing.value = false
+  usePeakPricing.value = false
+  sourceLabelDisplay.value = ''
+  showOptionalFields.value = false
+  s1Touched.value = { check_in: false, check_out: false }
+  s3Touched.value = { guest_first_name: false, guest_phone: false }
+  s4Touched.value = { source_type_id: false }
+  avail.reset()
+}
+
+const saveDraftToLocalStorage = () => {
+  if (suppressDraftPersistence.value || draftPromptVisible.value) return
+
+  if (!hasMeaningfulDraft()) {
+    clearDraftStorage()
+    return
+  }
+
+  localStorage.setItem(GUIDED_FORM_DRAFT_KEY, JSON.stringify(buildDraftPayload()))
+  draftLoaded.value = true
+}
+
+const scheduleDraftSave = () => {
+  if (suppressDraftPersistence.value || draftPromptVisible.value) return
+
+  if (draftSaveTimer) {
+    window.clearTimeout(draftSaveTimer)
+  }
+
+  draftSaveTimer = window.setTimeout(() => {
+    saveDraftToLocalStorage()
+    draftSaveTimer = null
+  }, 2000)
+}
+
+const restoreDraft = async () => {
+  if (!pendingDraft.value) return
+
+  suppressDraftPersistence.value = true
+
+  const draft = pendingDraft.value
+  form.value = {
+    ...createInitialFormState(),
+    ...(draft.form || {}),
+    unit_ids: Array.isArray(draft.form?.unit_ids) ? [...draft.form.unit_ids] : []
+  }
+  payment.value = {
+    ...createInitialPaymentState(),
+    ...(draft.payment || {})
+  }
+  currentStep.value = Number(draft.currentStep || 1)
+  maxReachedStep.value = Math.max(Number(draft.maxReachedStep || 1), currentStep.value)
+  holdInquiry.value = Boolean(draft.holdInquiry)
+  holdDays.value = Number(draft.holdDays || 1)
+  saveAsReservationCheck.value = Boolean(draft.saveAsReservationCheck)
+  panels.value = { unit: true, price: false, payment: false, ...(draft.panels || {}) }
+  useFullHousePricing.value = Boolean(draft.useFullHousePricing)
+  usePeakPricing.value = Boolean(draft.usePeakPricing)
+  showOptionalFields.value = Boolean(draft.showOptionalFields)
+  sourceLabelDisplay.value = String(draft.sourceLabelDisplay || '')
+  draftLoaded.value = true
+  draftPromptVisible.value = false
+  pendingDraft.value = null
+
+  try {
+    if (form.value.check_in && form.value.check_out) {
+      await avail.checkAvailability({
+        accountId: accountStore.getRequiredAccountId(),
+        checkIn: form.value.check_in,
+        checkOut: form.value.check_out,
+        personas: totalPersonas.value
+      })
+    }
+  } finally {
+    suppressDraftPersistence.value = false
+  }
+}
+
+const discardDraft = () => {
+  suppressDraftPersistence.value = true
+  clearDraftStorage()
+  resetFormState()
+  suppressDraftPersistence.value = false
+}
+
+const clearLoadedDraft = () => {
+  suppressDraftPersistence.value = true
+  clearDraftStorage()
+  resetFormState()
+  suppressDraftPersistence.value = false
+  toast.success('Borrador eliminado.')
+}
+
+const handleCancelForm = () => {
+  suppressDraftPersistence.value = true
+  clearDraftStorage()
+  resetFormState()
+  emit('cancel')
+}
+
 // ── Guest search ───────────────────────────────────────
 watch(() => form.value.guest_first_name, (val) => {
   if ((val?.length ?? 0) >= 1 && !form.value.guest_id) {
     guestSearchOpen.value = true
   }
 })
+
+watch(
+  [form, payment, currentStep, maxReachedStep, holdInquiry, holdDays, saveAsReservationCheck, panels, useFullHousePricing, usePeakPricing, showOptionalFields],
+  () => {
+    scheduleDraftSave()
+  },
+  { deep: true }
+)
 
 const selectGuest = (guest) => {
   form.value.guest_id = guest.id
@@ -1104,6 +1320,8 @@ const saveAsReservation = async () => {
       { amount: 0, method: 'transferencia', reference: '', payment_date: todayIso }
     )
 
+    suppressDraftPersistence.value = true
+    clearDraftStorage()
     emit('saved', result)
     if (!props.inModal) router.push(`/reservas/${result.id}`)
     toast.success('Reserva creada correctamente.')
@@ -1178,6 +1396,8 @@ const save = async () => {
         payment.value
       )
 
+      suppressDraftPersistence.value = true
+      clearDraftStorage()
       emit('saved', result)
       if (!props.inModal) router.push(`/reservas/${result.id}`)
 
@@ -1253,6 +1473,8 @@ const save = async () => {
           })
         }
       }
+      suppressDraftPersistence.value = true
+      clearDraftStorage()
       toast.success('Consulta guardada correctamente.')
       emit('saved', result)
       if (!props.inModal) router.push(`/consultas/${result.id}`)
@@ -1270,7 +1492,7 @@ onMounted(async () => {
   await guestsStore.fetchGuests()
   await Promise.all([loadAccountPricing(), loadAgeCategorySettings()])
 
-  if (props.initialCheckIn && props.initialCheckOut) {
+  if (hasPreloadedContext.value && props.initialCheckIn && props.initialCheckOut) {
     await avail.checkAvailability({
       accountId,
       checkIn: props.initialCheckIn,
@@ -1287,6 +1509,31 @@ onMounted(async () => {
         currentStep.value = 2
       }
     }
+    suppressDraftPersistence.value = false
+    return
   }
+
+  try {
+    const rawDraft = localStorage.getItem(GUIDED_FORM_DRAFT_KEY)
+    if (rawDraft) {
+      const parsedDraft = JSON.parse(rawDraft)
+      if (!parsedDraft?.accountId || parsedDraft.accountId === accountId) {
+        pendingDraft.value = parsedDraft
+        draftPromptVisible.value = true
+      }
+    }
+  } catch {
+    clearDraftStorage()
+  } finally {
+    suppressDraftPersistence.value = false
+  }
+})
+
+onBeforeUnmount(() => {
+  if (draftSaveTimer) {
+    window.clearTimeout(draftSaveTimer)
+    draftSaveTimer = null
+  }
+  saveDraftToLocalStorage()
 })
 </script>

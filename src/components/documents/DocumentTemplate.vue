@@ -771,7 +771,9 @@ table.data-table-rounded th {
 
   .doc-sheet {
     width: 8.5in !important;
-    min-height: 11in !important;
+    height: 11in !important;
+    display: flex !important;
+    flex-direction: column !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
@@ -791,9 +793,15 @@ table.data-table-rounded th {
 
   .doc-footer {
     page-break-inside: avoid;
+    margin-top: auto !important;
   }
 
-  .doc-main,
+  .doc-main {
+    flex: 1 !important;
+    overflow: visible !important;
+    page-break-inside: avoid;
+  }
+
   .doc-section {
     page-break-inside: avoid;
   }
