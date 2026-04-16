@@ -108,7 +108,7 @@
         <AppFormGrid :columns="3">
           <AppInput v-model="form.discount_percentage" type="number" label="Descuento" suffix="%" hint="Opcional" />
           <AppInput v-model="form.commission_percentage" type="number" label="Comisión" suffix="%" hint="Opcional" />
-          <AppInput v-model="commissionAmountModel" type="number" label="Comisión en valor" prefix="$" hint="Editable" />
+          <AppInput v-model="commissionAmountModel" type="number" label="Comisión en valor" prefix="$" hint="Editable" @focus="startCommissionAmountEdit" @blur="finishCommissionAmountEdit" />
         </AppFormGrid>
         <AppDatePicker v-model="form.quote_expires_at" label="Cotización válida hasta" hint="Opcional" />
         <PricingCalculatorPanel
@@ -241,7 +241,7 @@ const nights = computed(() => {
   return diff > 0 ? diff : 0
 })
 
-const { commissionAmountModel } = useCommissionInputSync(form, nights)
+const { commissionAmountModel, startCommissionAmountEdit, finishCommissionAmountEdit } = useCommissionInputSync(form, nights)
 
 const touchField = (field) => { touched[field] = true }
 

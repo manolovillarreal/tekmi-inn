@@ -117,7 +117,7 @@
           </AppFormGrid>
           <AppFormGrid :columns="2">
             <AppInput v-model="form.commission_percentage" type="number" label="Comisión" suffix="%" hint="Opcional" />
-            <AppInput v-model="commissionAmountModel" type="number" label="Comisión en valor" prefix="$" hint="Editable" />
+            <AppInput v-model="commissionAmountModel" type="number" label="Comisión en valor" prefix="$" hint="Editable" @focus="startCommissionAmountEdit" @blur="finishCommissionAmountEdit" />
           </AppFormGrid>
           <PricingCalculatorPanel
             :checkIn="form.check_in"
@@ -237,7 +237,7 @@ const nights = computed(() => {
   return diff > 0 ? diff : 0
 })
 
-const { commissionAmountModel } = useCommissionInputSync(form, nights)
+const { commissionAmountModel, startCommissionAmountEdit, finishCommissionAmountEdit } = useCommissionInputSync(form, nights)
 
 const fieldError = (field) => {
   if (field === 'check_out' && form.value.check_in && form.value.check_out) {

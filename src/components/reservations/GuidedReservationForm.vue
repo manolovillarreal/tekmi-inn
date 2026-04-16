@@ -416,7 +416,7 @@
           <AppFormGrid :columns="3">
             <AppInput v-model="form.discount_percentage" type="number" label="Descuento" suffix="%" hint="Opcional" />
             <AppInput v-model="form.commission_percentage" type="number" label="Comisión" suffix="%" hint="Opcional" />
-            <AppInput v-model="commissionAmountModel" type="number" label="Comisión en valor" prefix="$" hint="Editable" />
+            <AppInput v-model="commissionAmountModel" type="number" label="Comisión en valor" prefix="$" hint="Editable" @focus="startCommissionAmountEdit" @blur="finishCommissionAmountEdit" />
           </AppFormGrid>
           <AppDatePicker v-model="form.quote_expires_at" label="Cotización válida hasta" hint="Opcional" />
           <PricingCalculatorPanel
@@ -696,7 +696,7 @@ const checkOutError = computed(() => {
   return ''
 })
 
-const { commissionAmountModel } = useCommissionInputSync(form, nights)
+const { commissionAmountModel, startCommissionAmountEdit, finishCommissionAmountEdit } = useCommissionInputSync(form, nights)
 
 const canProceedStep1 = computed(() => !!form.value.check_in && !checkOutError.value)
 

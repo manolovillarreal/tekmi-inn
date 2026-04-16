@@ -767,6 +767,9 @@ table.data-table-rounded th {
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+    height: 100% !important;
   }
 
   .doc-host {
@@ -775,12 +778,13 @@ table.data-table-rounded th {
 
   .doc-sheet-wrapper {
     height: 100% !important;
+    min-height: 11in !important;
     align-items: flex-start !important;
   }
 
   .doc-sheet {
     width: 8.5in !important;
-    height: 11in !important;
+    min-height: 11in !important;
     display: flex !important;
     flex-direction: column !important;
     border: none !important;

@@ -166,7 +166,7 @@
         <AppFormGrid :columns="3">
           <AppInput v-model="form.discount_percentage" type="number" label="Descuento" suffix="%" hint="Opcional" />
           <AppInput v-model="form.commission_percentage" type="number" label="Comisión" suffix="%" hint="Opcional" />
-          <AppInput v-model="commissionAmountModel" type="number" label="Comisión en valor" prefix="$" hint="Editable" />
+          <AppInput v-model="commissionAmountModel" type="number" label="Comisión en valor" prefix="$" hint="Editable" @focus="startCommissionAmountEdit" @blur="finishCommissionAmountEdit" />
         </AppFormGrid>
 
         <PricingCalculatorPanel
@@ -339,7 +339,7 @@ const subtotal = computed(() => Number(form.value.price_per_night || 0) * nights
 const discountAmount = computed(() => subtotal.value * Number(form.value.discount_percentage || 0) / 100)
 const customerTotal = computed(() => Math.max(subtotal.value - discountAmount.value, 0))
 const hasAvailabilityConflict = computed(() => selectedUnavailableNames.value.length > 0)
-const { commissionAmountModel } = useCommissionInputSync(form, nights)
+const { commissionAmountModel, startCommissionAmountEdit, finishCommissionAmountEdit } = useCommissionInputSync(form, nights)
 
 const selectedUnits = computed(() => {
   const s = new Set(form.value.unit_ids || [])
