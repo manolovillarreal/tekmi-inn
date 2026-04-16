@@ -769,6 +769,15 @@ table.data-table-rounded th {
     padding: 0 !important;
   }
 
+  .doc-host {
+    height: 100% !important;
+  }
+
+  .doc-sheet-wrapper {
+    height: 100% !important;
+    align-items: flex-start !important;
+  }
+
   .doc-sheet {
     width: 8.5in !important;
     height: 11in !important;
