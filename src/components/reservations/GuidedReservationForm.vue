@@ -409,9 +409,10 @@
             <AppToggle v-model="usePeakPricing" label="Aplicar precio pico" description="Activa politica global de temporada pico" />
           </div>
 
-          <AppFormGrid :columns="2">
+          <AppFormGrid :columns="3">
             <AppInput v-model="form.discount_percentage" type="number" label="Descuento" suffix="%" hint="Opcional" />
             <AppInput v-model="form.commission_percentage" type="number" label="Comisión" suffix="%" hint="Opcional" />
+            <AppInput v-model="commissionAmountModel" type="number" label="Comisión en valor" prefix="$" hint="Editable" />
           </AppFormGrid>
           <AppDatePicker v-model="form.quote_expires_at" label="Cotización válida hasta" hint="Opcional" />
           <PricingCalculatorPanel
@@ -544,6 +545,7 @@ import { useRoomBlocksStore } from '../../stores/roomBlocks'
 import { useToast } from '../../composables/useToast'
 import { buildPricingSuggestion } from '../../utils/pricingUtils'
 import { useAgeCategorySettings } from '../../composables/useAgeCategorySettings'
+import { useCommissionInputSync } from '../../composables/useCommissionInputSync'
 
 const props = defineProps({
   initialCheckIn: { type: String, default: '' },
@@ -688,6 +690,8 @@ const checkOutError = computed(() => {
   if (form.value.check_in && form.value.check_out <= form.value.check_in) return 'Debe ser posterior al check-in'
   return ''
 })
+
+const { commissionAmountModel } = useCommissionInputSync(form, nights)
 
 const canProceedStep1 = computed(() => !!form.value.check_in && !checkOutError.value)
 

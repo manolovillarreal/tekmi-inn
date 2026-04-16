@@ -163,9 +163,10 @@
           <AppToggle v-model="usePeakPricing" label="Aplicar precio pico" description="Activa politica global de temporada pico" />
         </div>
 
-        <AppFormGrid :columns="2">
+        <AppFormGrid :columns="3">
           <AppInput v-model="form.discount_percentage" type="number" label="Descuento" suffix="%" hint="Opcional" />
           <AppInput v-model="form.commission_percentage" type="number" label="Comisión" suffix="%" hint="Opcional" />
+          <AppInput v-model="commissionAmountModel" type="number" label="Comisión en valor" prefix="$" hint="Editable" />
         </AppFormGrid>
 
         <PricingCalculatorPanel
@@ -242,6 +243,7 @@ import { useInquiriesStore } from '../stores/inquiries'
 import { useGuestsStore } from '../stores/guests'
 import { useToast } from '../composables/useToast'
 import { useAgeCategorySettings } from '../composables/useAgeCategorySettings'
+import { useCommissionInputSync } from '../composables/useCommissionInputSync'
 import { generateUniqueReferenceCode } from '../utils/referenceUtils'
 import { buildPricingSuggestion } from '../utils/pricingUtils'
 import { DOCUMENT_TYPES_ADULT as documentTypeOptions } from '../utils/documentTypes'
@@ -337,6 +339,7 @@ const subtotal = computed(() => Number(form.value.price_per_night || 0) * nights
 const discountAmount = computed(() => subtotal.value * Number(form.value.discount_percentage || 0) / 100)
 const customerTotal = computed(() => Math.max(subtotal.value - discountAmount.value, 0))
 const hasAvailabilityConflict = computed(() => selectedUnavailableNames.value.length > 0)
+const { commissionAmountModel } = useCommissionInputSync(form, nights)
 
 const selectedUnits = computed(() => {
   const s = new Set(form.value.unit_ids || [])

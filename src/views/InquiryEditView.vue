@@ -105,9 +105,10 @@
 
       <AppFormSection title="Cotización" :divider="true" :collapsible="true" :defaultOpen="true">
         <AppInput v-model="form.price_per_night" type="number" label="Precio por noche" prefix="$" hint="Opcional" />
-        <AppFormGrid :columns="2">
+        <AppFormGrid :columns="3">
           <AppInput v-model="form.discount_percentage" type="number" label="Descuento" suffix="%" hint="Opcional" />
           <AppInput v-model="form.commission_percentage" type="number" label="Comisión" suffix="%" hint="Opcional" />
+          <AppInput v-model="commissionAmountModel" type="number" label="Comisión en valor" prefix="$" hint="Editable" />
         </AppFormGrid>
         <AppDatePicker v-model="form.quote_expires_at" label="Cotización válida hasta" hint="Opcional" />
         <PricingCalculatorPanel
@@ -160,6 +161,7 @@ import { useInquiriesStore } from '../stores/inquiries'
 import { useAccountStore } from '../stores/account'
 import { useToast } from '../composables/useToast'
 import { useAgeCategorySettings } from '../composables/useAgeCategorySettings'
+import { useCommissionInputSync } from '../composables/useCommissionInputSync'
 import SourceSelector from '../components/sources/SourceSelector.vue'
 import {
   AppInput,
@@ -238,6 +240,8 @@ const nights = computed(() => {
   const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24))
   return diff > 0 ? diff : 0
 })
+
+const { commissionAmountModel } = useCommissionInputSync(form, nights)
 
 const touchField = (field) => { touched[field] = true }
 

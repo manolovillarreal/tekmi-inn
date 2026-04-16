@@ -178,9 +178,10 @@
           <AppToggle v-model="usePeakPricing" label="Aplicar precio pico" description="Activa politica global de temporada pico" />
         </div>
 
-        <AppFormGrid :columns="2">
+        <AppFormGrid :columns="3">
           <AppInput v-model="form.discount_percentage" type="number" label="Descuento" suffix="%" hint="Opcional" />
           <AppInput v-model="form.commission_percentage" type="number" label="Comisión" suffix="%" hint="Opcional" />
+          <AppInput v-model="commissionAmountModel" type="number" label="Comisión en valor" prefix="$" hint="Editable" />
         </AppFormGrid>
 
         <PricingCalculatorPanel
@@ -285,6 +286,7 @@ import { useReservationsStore } from '../../stores/reservations'
 import { useInquiriesStore } from '../../stores/inquiries'
 import { useGuestsStore } from '../../stores/guests'
 import { useToast } from '../../composables/useToast'
+import { useCommissionInputSync } from '../../composables/useCommissionInputSync'
 import { generateUniqueReferenceCode } from '../../utils/referenceUtils'
 import BaseModal from '../ui/BaseModal.vue'
 import SourceSelector from '../sources/SourceSelector.vue'
@@ -407,6 +409,7 @@ const nights = computed(() => {
 const subtotal = computed(() => Number(form.value.price_per_night || 0) * nights.value)
 const discountAmount = computed(() => subtotal.value * Number(form.value.discount_percentage || 0) / 100)
 const customerTotal = computed(() => Math.max(subtotal.value - discountAmount.value, 0))
+const { commissionAmountModel } = useCommissionInputSync(form, nights)
 const guestsTotal = computed(() =>
   Number(form.value.adults || 0) +
   Number(form.value.minors || 0) +

@@ -115,7 +115,10 @@
             <AppInput v-model="form.price_per_night" type="number" label="Precio por noche" prefix="$" />
             <AppInput v-model="form.discount_percentage" type="number" label="Descuento" suffix="%" hint="Opcional" />
           </AppFormGrid>
-          <AppInput v-model="form.commission_percentage" type="number" label="Comisión" suffix="%" hint="Opcional" />
+          <AppFormGrid :columns="2">
+            <AppInput v-model="form.commission_percentage" type="number" label="Comisión" suffix="%" hint="Opcional" />
+            <AppInput v-model="commissionAmountModel" type="number" label="Comisión en valor" prefix="$" hint="Editable" />
+          </AppFormGrid>
           <PricingCalculatorPanel
             :checkIn="form.check_in"
             :checkOut="form.check_out"
@@ -166,6 +169,7 @@ import { useAccountStore } from '../stores/account'
 import { useReservationsStore } from '../stores/reservations'
 import { useToast } from '../composables/useToast'
 import { useAgeCategorySettings } from '../composables/useAgeCategorySettings'
+import { useCommissionInputSync } from '../composables/useCommissionInputSync'
 import SourceSelector from '../components/sources/SourceSelector.vue'
 import {
   AppInput,
@@ -232,6 +236,8 @@ const nights = computed(() => {
   const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24))
   return diff > 0 ? diff : 0
 })
+
+const { commissionAmountModel } = useCommissionInputSync(form, nights)
 
 const fieldError = (field) => {
   if (field === 'check_out' && form.value.check_in && form.value.check_out) {
