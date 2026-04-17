@@ -24,82 +24,23 @@
         :profile="profile"
         type="voucher"
       >
-        <section class="doc-content-section border-b pb-4">
-          <div class="flex items-baseline justify-between gap-3">
-            <div>
-              <h1 class="doc-content-title text-xl font-semibold">Comprobante de Reserva</h1>
-              <p class="mt-1 text-xs text-gray-400">Este documento no constituye factura de venta.</p>
-            </div>
-            <span class="text-xs text-gray-400 font-mono">{{ reservation.reference_code || '-' }} · {{ guestData.name }} · Emitido {{ issuedAtLabel }}</span>
-          </div>
-
-          <div class="mt-3 rounded-md border border-gray-100 bg-gray-50 px-3 py-2">
-            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Titular</p>
-            <div class="grid grid-cols-2 gap-x-6 gap-y-1 print:grid-cols-2 text-sm text-gray-700">
-              <p><span class="font-semibold">Nombre:</span> {{ guestData.name }}</p>
-              <p><span class="font-semibold">Documento:</span> {{ guestData.document }}</p>
-              <p><span class="font-semibold">Teléfono:</span> {{ guestData.phone }}</p>
-              <p><span class="font-semibold">Email:</span> {{ guestData.email }}</p>
-            </div>
-          </div>
-
-          <div class="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm text-gray-700 print:grid-cols-3 md:grid-cols-3">
-            <p><span class="font-semibold">Unidad:</span> {{ unitLabel }}</p>
-            <p><span class="font-semibold">Check-in:</span> {{ formatDateShort(reservation.check_in) }}</p>
-            <p><span class="font-semibold">Check-out:</span> {{ formatDateShort(reservation.check_out) }}</p>
-            <p><span class="font-semibold">Origen:</span> {{ sourceLabel }}</p>
-            <p><span class="font-semibold">Noches:</span> {{ nights }}</p>
-            <p><span class="font-semibold">Huéspedes:</span> {{ Number(reservation.adults || 0) }} · <span class="font-semibold">Ninos:</span> {{ Number(reservation.children || 0) }}</p>
-          </div>
-        </section>
-
-        <section class="doc-content-section border-b py-4">
-          <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Resumen financiero</h2>
-
-          <div class="mt-3 space-y-1 text-sm text-gray-700">
-            <p class="flex justify-between gap-3"><span>Precio por noche:</span> <span class="font-medium">{{ formatCop(pricePerNight) }}</span></p>
-            <p class="flex justify-between gap-3"><span>Total reserva:</span> <span class="font-medium">{{ formatCop(totalAmount) }}</span></p>
-          </div>
-
-          <div class="my-4 border-t border-dashed border-gray-300"></div>
-
-          <div class="space-y-2 text-sm text-gray-700">
-            <p class="font-semibold">Pagos registrados:</p>
-            <div v-if="payments.length === 0" class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500">
-              No hay pagos registrados.
-            </div>
-            <table v-else class="w-full text-left text-sm">
-              <thead class="text-xs uppercase text-gray-500">
-                <tr>
-                  <th class="py-1">Fecha</th>
-                  <th class="py-1">Metodo</th>
-                  <th class="py-1">Ref</th>
-                  <th class="py-1 text-right">Monto</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="payment in payments" :key="payment.id" class="border-t border-gray-100">
-                  <td class="py-2">{{ formatDateShort(payment.payment_date) }}</td>
-                  <td class="py-2 capitalize">{{ payment.method || '-' }}</td>
-                  <td class="py-2">{{ payment.reference || '-' }}</td>
-                  <td class="py-2 text-right font-medium">{{ formatCop(payment.amount) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="my-4 border-t border-dashed border-gray-300"></div>
-
-          <div class="space-y-1 text-sm">
-            <p class="flex justify-between gap-3 text-gray-700"><span>Total pagado:</span> <span class="font-medium">{{ formatCop(totalPaid) }}</span></p>
-            <p class="flex justify-between gap-3 font-semibold" :class="balance > 0 ? 'text-red-600' : 'text-emerald-700'">
-              <span>Saldo pendiente:</span>
-              <span>{{ formatCop(balance) }}</span>
-            </p>
-          </div>
-        </section>
-
-        <footer class="pt-4 text-sm text-gray-700"></footer>
+        <VoucherSlotContent
+          :reference-code="reservation.reference_code || '-'"
+          :issued-at-label="issuedAtLabel"
+          :guest-data="guestData"
+          :unit-label="unitLabel"
+          :check-in-label="formatDateShort(reservation.check_in)"
+          :check-out-label="formatDateShort(reservation.check_out)"
+          :source-label="sourceLabel"
+          :nights="nights"
+          :adults="Number(reservation.adults || 0)"
+          :children="Number(reservation.children || 0)"
+          :price-per-night="pricePerNight"
+          :total-amount="totalAmount"
+          :total-paid="totalPaid"
+          :balance="balance"
+          :payments="payments.map((payment) => ({ ...payment, payment_date: formatDateShort(payment.payment_date) }))"
+        />
       </DocumentTemplate>
     </div>
   </div>
@@ -110,11 +51,12 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import DocumentTemplate from '../components/documents/DocumentTemplate.vue'
 import DocumentActionBar from '../components/documents/DocumentActionBar.vue'
+import VoucherSlotContent from '../components/documents/VoucherSlotContent.vue'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
 import { useToast } from '../composables/useToast'
 import { useBreakpoint } from '../composables/useBreakpoint'
-import { copyAsWhatsApp, formatCop } from '../utils/voucherUtils'
+import { copyAsWhatsApp } from '../utils/voucherUtils'
 import { formatReferenceDisplay } from '../utils/referenceUtils'
 import { getDocumentSettings } from '../services/documentSettingsService'
 import { getMessageSettings, getPredefinedMessages } from '../services/messageSettingsService'
@@ -315,14 +257,4 @@ const handleCopyWhatsApp = async () => {
 onMounted(fetchData)
 </script>
 
-<style scoped>
-.doc-content-title,
-.doc-content-subtitle {
-  color: var(--doc-accent);
-}
 
-.doc-content-section {
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-</style>

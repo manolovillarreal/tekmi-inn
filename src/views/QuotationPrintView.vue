@@ -14,60 +14,33 @@
       :profile="profile"
       type="quotation"
     >
-      <section class="doc-content-section border-b pb-4">
-        <h1 class="doc-content-title text-2xl font-semibold">Cotizacion</h1>
-        <p class="mt-2 text-base font-semibold text-gray-900">Codigo de referencia: {{ formattedReferenceDisplay }}</p>
-        <div class="mt-3 grid grid-cols-1 gap-1 text-sm text-gray-700 md:grid-cols-3 md:gap-3">
-          <p><span class="font-semibold">Numero:</span> {{ quotationNumber }}</p>
-          <p><span class="font-semibold">Fecha:</span> {{ formatDateShort(now) }}</p>
-          <p v-if="inquiry?.quote_expires_at"><span class="font-semibold">Valida hasta:</span> {{ formatDateShort(inquiry.quote_expires_at) }}</p>
-        </div>
-      </section>
-
-      <section class="doc-content-section border-b py-4">
-        <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Datos del solicitante</h2>
-        <div class="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-700 md:grid-cols-2">
-          <p><span class="font-semibold">Nombre:</span> {{ [inquiry?.guest_first_name, inquiry?.guest_last_name].filter(Boolean).join(' ') || '-' }}</p>
-          <p><span class="font-semibold">Telefono:</span> {{ inquiry?.guest_phone || '-' }}</p>
-        </div>
-      </section>
-
-      <section v-if="showStaySection" class="doc-content-section border-b py-4">
-        <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Detalle de la estadia</h2>
-        <div class="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-700 md:grid-cols-2">
-          <p v-if="unitsLabel"><span class="font-semibold">Unidades:</span> {{ unitsLabel }}</p>
-          <p><span class="font-semibold">Check-in:</span> {{ formatDateShort(inquiry?.check_in) }}</p>
-          <p><span class="font-semibold">Check-out:</span> {{ formatDateShort(inquiry?.check_out) }}</p>
-          <p><span class="font-semibold">Noches:</span> {{ nights }}</p>
-          <p><span class="font-semibold">Adultos:</span> {{ Number(inquiry?.adults || 0) }} · <span class="font-semibold">Ninos:</span> {{ Number(inquiry?.children || 0) }}</p>
-        </div>
-      </section>
-
-      <section v-if="showFinancialSection" class="doc-content-section border-b py-4">
-        <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Resumen financiero</h2>
-        <div class="mt-3 space-y-1 text-sm text-gray-700">
-          <p class="flex justify-between gap-3"><span>Precio por noche:</span> <span class="font-medium">{{ formatCop(pricePerNight) }}</span></p>
-          <p class="flex justify-between gap-3"><span>Subtotal:</span> <span class="font-medium">{{ formatCop(subtotal) }}</span></p>
-          <p v-if="discountPercentage > 0" class="flex justify-between gap-3"><span>Descuento ({{ discountPercentage }}%):</span> <span class="font-medium">-{{ formatCop(discountAmount) }}</span></p>
-        </div>
-
-        <div class="my-4 border-t border-dashed border-gray-300"></div>
-
-        <div class="space-y-1 text-sm text-gray-700">
-          <p class="flex justify-between gap-3 font-semibold text-gray-900"><span>Total:</span> <span>{{ formatCop(totalCustomer) }}</span></p>
-        </div>
-      </section>
-
-      <section class="doc-content-section border-b py-4">
-        <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Notas</h2>
-        <p class="mt-3 text-sm text-gray-700">Esta cotizacion no constituye una reserva confirmada.</p>
-        <p v-if="inquiry?.quote_expires_at" class="mt-2 text-sm text-gray-700">Valida hasta el {{ formatDateShort(inquiry.quote_expires_at) }}.</p>
-      </section>
-
-      <footer class="pt-4 text-sm text-gray-700">
-        <p>{{ footerContactLine || '-' }}</p>
-        <p class="mt-2"><span class="font-semibold">Generado el:</span> {{ formatDateTime(now) }}</p>
-      </footer>
+      <div class="doc-content-wrapper">
+        <QuotationSlotContent
+          :guest-name="[inquiry?.guest_first_name, inquiry?.guest_last_name].filter(Boolean).join(' ') || '-'"
+          :reference-display="formattedReferenceDisplay"
+          :quotation-number="quotationNumber"
+          :is-quote-expired="isQuoteExpired"
+          :current-date-label="formatDateShort(now)"
+          :quote-expires-label="inquiry?.quote_expires_at ? formatDateShort(inquiry.quote_expires_at) : ''"
+          :check-in-label="formatDateShort(inquiry?.check_in)"
+          :check-out-label="formatDateShort(inquiry?.check_out)"
+          :nights="nights"
+          :total-persons="Number(inquiry?.adults || 0) + Number(inquiry?.children || 0) + Number(inquiry?.minors || 0)"
+          :guest-phone="inquiry?.guest_phone || '-'"
+          :units-label="unitsLabel"
+          :adults="Number(inquiry?.adults || 0)"
+          :children="Number(inquiry?.children || 0)"
+          :show-stay-section="showStaySection"
+          :show-financial-section="showFinancialSection"
+          :price-per-night="pricePerNight"
+          :subtotal="subtotal"
+          :discount-percentage="discountPercentage"
+          :discount-amount="discountAmount"
+          :total-customer="totalCustomer"
+          :footer-contact-line="footerContactLine"
+          :generated-at-label="formatDateTime(now)"
+        />
+      </div>
     </DocumentTemplate>
   </div>
 </template>
@@ -76,9 +49,9 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import DocumentTemplate from '../components/documents/DocumentTemplate.vue'
+import QuotationSlotContent from '../components/documents/QuotationSlotContent.vue'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
-import { formatCop } from '../utils/voucherUtils'
 import { formatReferenceDisplay } from '../utils/referenceUtils'
 import { getDocumentSettings } from '../services/documentSettingsService'
 import { getMessageSettings, getPredefinedMessages } from '../services/messageSettingsService'
@@ -194,6 +167,10 @@ const discountAmount = computed(() => subtotal.value * discountPercentage.value 
 const totalCustomer = computed(() => Math.max(subtotal.value - discountAmount.value, 0))
 
 const showFinancialSection = computed(() => showStaySection.value && pricePerNight.value > 0)
+const isQuoteExpired = computed(() => {
+  if (!inquiry.value?.quote_expires_at) return false
+  return new Date(inquiry.value.quote_expires_at) < new Date()
+})
 
 const formatDateShort = (value) => {
   if (!value) return '-'
@@ -230,12 +207,12 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.doc-content-title,
-.doc-content-subtitle {
+:deep(.doc-content-title),
+:deep(.doc-content-subtitle) {
   color: var(--doc-accent);
 }
 
-.doc-content-section {
+:deep(.doc-content-section) {
   break-inside: avoid;
   page-break-inside: avoid;
 }
@@ -329,6 +306,11 @@ onMounted(async () => {
     overflow: visible !important;
   }
 
+  .doc-content-wrapper {
+    display: table-row !important;
+    height: 100% !important;
+  }
+
   /* Condiciones y campo personalizado */
   :deep(.doc-section) {
     display: table-row-group !important;
@@ -361,7 +343,7 @@ onMounted(async () => {
    * Se añade padding horizontal porque doc-main (table-row-group)
    * no transfiere su propio padding a los hijos.
    */
-  .doc-content-section {
+  :deep(.doc-content-section) {
     padding-top: 5px !important;
     padding-bottom: 5px !important;
     padding-left: 12px !important;
@@ -369,38 +351,38 @@ onMounted(async () => {
   }
 
   /* Título principal más compacto */
-  .doc-content-title {
+  :deep(.doc-content-title) {
     font-size: 14px !important;
     margin-bottom: 2px !important;
   }
 
   /* Reducir márgenes superiores de Tailwind */
-  .mt-2 { margin-top: 2px !important; }
-  .mt-3 { margin-top: 4px !important; }
-  .mt-4 { margin-top: 5px !important; }
+  :deep(.mt-2) { margin-top: 2px !important; }
+  :deep(.mt-3) { margin-top: 4px !important; }
+  :deep(.mt-4) { margin-top: 5px !important; }
 
   /* Tighten grids */
-  .gap-1 { gap: 1px !important; }
-  .gap-2 { gap: 2px !important; }
-  .gap-3 { gap: 4px !important; }
+  :deep(.gap-1) { gap: 1px !important; }
+  :deep(.gap-2) { gap: 2px !important; }
+  :deep(.gap-3) { gap: 4px !important; }
 
   /* Divisores */
-  .my-4 {
+  :deep(.my-4) {
     margin-top: 4px !important;
     margin-bottom: 4px !important;
   }
 
   /* space-y */
-  .space-y-1 > * + * { margin-top: 1px !important; }
-  .space-y-2 > * + * { margin-top: 2px !important; }
+  :deep(.space-y-1 > * + *) { margin-top: 1px !important; }
+  :deep(.space-y-2 > * + *) { margin-top: 2px !important; }
 
   /* Filas de tabla de pagos */
-  td, th {
+  :deep(td), :deep(th) {
     padding-top: 2px !important;
     padding-bottom: 2px !important;
   }
 
   /* Nota de pie en template */
-  footer.pt-4 { padding-top: 5px !important; }
+  :deep(footer.pt-4) { padding-top: 5px !important; }
 }
 </style>

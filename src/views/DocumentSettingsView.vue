@@ -333,35 +333,7 @@
                 type="voucher"
                 :previewMode="true"
               >
-                <section class="doc-content-section border-b pb-4">
-                  <h1 class="doc-content-title text-2xl font-semibold">Comprobante de Reserva</h1>
-                  <p class="mt-2 text-base font-semibold text-gray-900">Codigo de reserva: REF-AB12CD</p>
-                  <div class="mt-3 grid grid-cols-1 gap-1 text-sm text-gray-700 md:grid-cols-3 md:gap-3">
-                    <p><span class="font-semibold">Reserva:</span> RSV-202603-0012</p>
-                    <p><span class="font-semibold">Codigo:</span> AB12CD</p>
-                    <p><span class="font-semibold">Emitido:</span> {{ issuedAtPreview }}</p>
-                  </div>
-                </section>
-
-                <section class="doc-content-section border-b py-4">
-                  <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Datos de la reserva</h2>
-                  <div class="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-700 md:grid-cols-2">
-                    <p><span class="font-semibold">Unidad:</span> Suite 301</p>
-                    <p><span class="font-semibold">Origen:</span> Directo</p>
-                    <p><span class="font-semibold">Check-in:</span> 22/03/2026</p>
-                    <p><span class="font-semibold">Check-out:</span> 25/03/2026</p>
-                    <p><span class="font-semibold">Noches:</span> 3</p>
-                    <p><span class="font-semibold">Adultos:</span> 2 · <span class="font-semibold">Ninos:</span> 1</p>
-                  </div>
-                </section>
-
-                <section class="doc-content-section py-4">
-                  <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Resumen financiero</h2>
-                  <div class="mt-3 space-y-1 text-sm text-gray-700">
-                    <p class="flex justify-between gap-3"><span>Precio por noche:</span> <span class="font-medium">$320.000</span></p>
-                    <p class="flex justify-between gap-3"><span>Total reserva:</span> <span class="font-medium">$960.000</span></p>
-                  </div>
-                </section>
+                <VoucherSlotContent />
               </DocumentTemplate>
               </div>
             </div>
@@ -381,6 +353,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import DocumentTemplate from '../components/documents/DocumentTemplate.vue'
+import VoucherSlotContent from '../components/documents/VoucherSlotContent.vue'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
 import { usePermissions } from '../composables/usePermissions'
@@ -826,15 +799,6 @@ onMounted(async () => {
   flex-direction: column;
 }
 
-.doc-content-title,
-.doc-content-subtitle {
-  color: var(--doc-accent);
-}
-
-.doc-content-section {
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
 
 @media (max-width: 1023px) {
   .doc-config-panel,

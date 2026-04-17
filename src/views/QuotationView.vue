@@ -24,95 +24,31 @@
         :profile="profile"
         type="quotation"
       >
-        <section class="doc-content-section border-b pb-4">
-          <div class="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <h1 class="doc-content-title text-2xl font-bold text-gray-900">
-                {{ inquiry?.guest_first_name }} {{ inquiry?.guest_last_name }}
-              </h1>
-              <p class="mt-0.5 text-sm text-gray-500">Ref. {{ formattedReferenceDisplay }} · Nro. {{ quotationNumber }}</p>
-            </div>
-            <div class="flex flex-col items-end gap-1">
-              <span
-                class="rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                :class="isQuoteExpired ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'"
-              >
-                {{ isQuoteExpired ? 'Vencida' : 'Vigente' }}
-              </span>
-              <p class="text-xs text-gray-400">{{ formatDateShort(now) }}</p>
-            </div>
-          </div>
-          <div class="mt-3 grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
-            <div>
-              <p class="text-xs font-medium uppercase tracking-wide text-gray-400">Check-in</p>
-              <p class="font-semibold text-gray-900">{{ formatDateShort(inquiry?.check_in) }}</p>
-            </div>
-            <div>
-              <p class="text-xs font-medium uppercase tracking-wide text-gray-400">Check-out</p>
-              <p class="font-semibold text-gray-900">{{ formatDateShort(inquiry?.check_out) }}</p>
-            </div>
-            <div>
-              <p class="text-xs font-medium uppercase tracking-wide text-gray-400">Noches</p>
-              <p class="font-semibold text-gray-900">{{ nights }}</p>
-            </div>
-            <div>
-              <p class="text-xs font-medium uppercase tracking-wide text-gray-400">Personas</p>
-              <p class="font-semibold text-gray-900">{{ totalPersons }}</p>
-            </div>
-          </div>
-          <p
-            v-if="inquiry?.quote_expires_at"
-            class="mt-2 text-xs"
-            :class="isQuoteExpired ? 'text-orange-600' : 'text-gray-400'"
-          >
-            {{ isQuoteExpired ? 'Venció el' : 'Válida hasta' }} {{ formatDateShort(inquiry.quote_expires_at) }}
-          </p>
-        </section>
-
-        <section class="doc-content-section border-b py-4">
-          <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Datos del solicitante</h2>
-          <div class="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-700 md:grid-cols-2">
-            <p><span class="font-semibold">Nombre:</span> {{ [inquiry?.guest_first_name, inquiry?.guest_last_name].filter(Boolean).join(' ') || '-' }}</p>
-            <p><span class="font-semibold">Telefono:</span> {{ inquiry?.guest_phone || '-' }}</p>
-          </div>
-        </section>
-
-        <section v-if="showStaySection" class="doc-content-section border-b py-4">
-          <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Detalle de la estadia</h2>
-          <div class="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-700 md:grid-cols-2">
-            <p v-if="unitsLabel"><span class="font-semibold">Unidades:</span> {{ unitsLabel }}</p>
-            <p><span class="font-semibold">Check-in:</span> {{ formatDateShort(inquiry?.check_in) }}</p>
-            <p><span class="font-semibold">Check-out:</span> {{ formatDateShort(inquiry?.check_out) }}</p>
-            <p><span class="font-semibold">Noches:</span> {{ nights }}</p>
-            <p><span class="font-semibold">Adultos:</span> {{ Number(inquiry?.adults || 0) }} · <span class="font-semibold">Ninos:</span> {{ Number(inquiry?.children || 0) }}</p>
-          </div>
-        </section>
-
-        <section v-if="showFinancialSection" class="doc-content-section border-b py-4">
-          <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Resumen financiero</h2>
-          <div class="mt-3 space-y-1 text-sm text-gray-700">
-            <p class="flex justify-between gap-3"><span>Precio por noche:</span> <span class="font-medium">{{ formatCop(pricePerNight) }}</span></p>
-            <p class="flex justify-between gap-3"><span>Subtotal:</span> <span class="font-medium">{{ formatCop(subtotal) }}</span></p>
-            <p v-if="discountPercentage > 0" class="flex justify-between gap-3"><span>Descuento ({{ discountPercentage }}%):</span> <span class="font-medium">-{{ formatCop(discountAmount) }}</span></p>
-          </div>
-
-          <div class="my-4 border-t border-dashed border-gray-300"></div>
-
-          <div class="space-y-1 text-sm text-gray-700">
-            <p class="flex justify-between gap-3 font-semibold text-gray-900"><span>Total:</span> <span>{{ formatCop(totalCustomer) }}</span></p>
-          </div>
-        </section>
-
-        <section class="doc-content-section border-b py-4">
-          <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Notas</h2>
-          <p class="mt-3 text-sm text-gray-700">Esta cotizacion no constituye una reserva confirmada.</p>
-          <p v-if="inquiry?.quote_expires_at" class="mt-2 text-sm text-gray-700">Valida hasta el {{ formatDateShort(inquiry.quote_expires_at) }}.</p>
-        </section>
-
-        <footer class="pt-4 text-sm text-gray-700">
-          <p>{{ footerContactLine || '-' }}</p>
-          <p class="mt-2"><span class="font-semibold">Generado el:</span> {{ formatDateTime(now) }}</p>
-        </footer>
+        <QuotationSlotContent
+          :guest-name="[inquiry?.guest_first_name, inquiry?.guest_last_name].filter(Boolean).join(' ') || '-'"
+          :reference-display="formattedReferenceDisplay"
+          :quotation-number="quotationNumber"
+          :is-quote-expired="isQuoteExpired"
+          :current-date-label="formatDateShort(now)"
+          :quote-expires-label="inquiry?.quote_expires_at ? formatDateShort(inquiry.quote_expires_at) : ''"
+          :check-in-label="formatDateShort(inquiry?.check_in)"
+          :check-out-label="formatDateShort(inquiry?.check_out)"
+          :nights="nights"
+          :total-persons="totalPersons"
+          :guest-phone="inquiry?.guest_phone || '-'"
+          :units-label="unitsLabel"
+          :adults="Number(inquiry?.adults || 0)"
+          :children="Number(inquiry?.children || 0)"
+          :show-stay-section="showStaySection"
+          :show-financial-section="showFinancialSection"
+          :price-per-night="pricePerNight"
+          :subtotal="subtotal"
+          :discount-percentage="discountPercentage"
+          :discount-amount="discountAmount"
+          :total-customer="totalCustomer"
+          :footer-contact-line="footerContactLine"
+          :generated-at-label="formatDateTime(now)"
+        />
       </DocumentTemplate>
     </div>
   </div>
@@ -123,11 +59,12 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import DocumentTemplate from '../components/documents/DocumentTemplate.vue'
 import DocumentActionBar from '../components/documents/DocumentActionBar.vue'
+import QuotationSlotContent from '../components/documents/QuotationSlotContent.vue'
 import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
 import { useToast } from '../composables/useToast'
 import { useBreakpoint } from '../composables/useBreakpoint'
-import { copyQuotationAsWhatsApp, formatCop, buildQuotePublicUrl } from '../utils/voucherUtils'
+import { copyQuotationAsWhatsApp, buildQuotePublicUrl } from '../utils/voucherUtils'
 import { formatReferenceDisplay } from '../utils/referenceUtils'
 import { getDocumentSettings } from '../services/documentSettingsService'
 import { getMessageSettings, getPredefinedMessages } from '../services/messageSettingsService'
@@ -329,14 +266,4 @@ const handleCopyWhatsApp = async () => {
 onMounted(fetchData)
 </script>
 
-<style scoped>
-.doc-content-title,
-.doc-content-subtitle {
-  color: var(--doc-accent);
-}
 
-.doc-content-section {
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-</style>
