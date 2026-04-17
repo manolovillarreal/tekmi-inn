@@ -16,7 +16,10 @@
     >
       <section class="doc-content-section border-b pb-4">
         <div class="flex items-baseline justify-between gap-3">
-          <h1 class="doc-content-title text-xl font-semibold">Comprobante de Reserva</h1>
+          <div>
+            <h1 class="doc-content-title text-xl font-semibold">Comprobante de Reserva</h1>
+            <p class="mt-1 text-xs text-gray-400">Este documento no constituye factura de venta.</p>
+          </div>
           <span class="text-xs text-gray-400 font-mono">{{ reservation.reference_code || '-' }} · {{ guestData.name }} · Emitido {{ issuedAtLabel }}</span>
         </div>
 
@@ -86,9 +89,7 @@
         </div>
       </section>
 
-      <footer class="pt-4 text-sm text-gray-700">
-        <p>Este documento es un comprobante de reserva y no constituye factura de venta.</p>
-      </footer>
+      <footer class="pt-4 text-sm text-gray-700"></footer>
     </DocumentTemplate>
   </div>
 </template>

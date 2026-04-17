@@ -818,5 +818,9 @@ table.data-table-rounded th {
   .doc-section {
     page-break-inside: avoid;
   }
+
+  .doc-section-conditions {
+    margin-bottom: 1px !important;
+  }
 }
 </style>
