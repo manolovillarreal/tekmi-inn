@@ -65,6 +65,16 @@
             :autoResize="true"
             placeholder="Nuestra casa está ubicada en el corazón de la isla, a pocos pasos de la playa..."
           />
+          <div class="space-y-2">
+            <AppTextarea
+              v-model="profileForm.amenidades_generales"
+              label="Amenidades generales"
+              :rows="4"
+              :autoResize="true"
+              placeholder="WiFi, piscina, parqueadero..."
+            />
+            <AppFieldHint message="Se usa en cotizaciones sin unidades seleccionadas" />
+          </div>
           <AppTextarea
             v-model="profileForm.common_amenities"
             label="Amenidades comunes"
@@ -114,6 +124,17 @@
             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
             placeholder="Escribe aquí las condiciones del alojamiento..."
           ></textarea>
+        </AppFormSection>
+
+        <AppFormSection title="Politica de reserva" :collapsible="isMobile" :defaultOpen="!isMobile">
+          <AppTextarea
+            v-model="profileForm.politica_reserva"
+            label="Politica de reserva"
+            :rows="6"
+            :autoResize="true"
+            placeholder="Política de reserva"
+          />
+          <AppFieldHint message="Aparece después de las condiciones en los documentos de cotización y voucher" />
         </AppFormSection>
 
         <div :class="isMobile ? 'sticky bottom-0 z-20 -mx-4 border-t border-[#E5E7EB] bg-white px-4 py-3 shadow-[0_-6px_18px_rgba(15,23,42,0.06)]' : ''">
@@ -195,6 +216,9 @@ const profileForm = ref({
   reference_prefix: '',
   short_description: '',
   common_amenities: '',
+  amenidades_generales: '',
+  descripcion_detallada: '',
+  politica_reserva: '',
   location_url: '',
 })
 
@@ -231,6 +255,9 @@ const setProfileForm = (data = {}) => {
     reference_prefix: data.reference_prefix || '',
     short_description: data.short_description || '',
     common_amenities: data.common_amenities || '',
+    amenidades_generales: data.amenidades_generales || '',
+    descripcion_detallada: data.descripcion_detallada || '',
+    politica_reserva: data.politica_reserva || '',
     location_url: data.location_url || '',
   }
 }
@@ -377,6 +404,9 @@ const saveProfile = async () => {
       reference_prefix: profileForm.value.reference_prefix,
       short_description: profileForm.value.short_description || null,
       common_amenities: profileForm.value.common_amenities || null,
+      amenidades_generales: profileForm.value.amenidades_generales || null,
+      descripcion_detallada: profileForm.value.descripcion_detallada || null,
+      politica_reserva: profileForm.value.politica_reserva || null,
       location_url: profileForm.value.location_url || null,
     }
 

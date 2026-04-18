@@ -61,6 +61,52 @@
         </div>
       </div>
 
+      <!-- Horarios -->
+      <div class="card">
+        <h2 class="mb-1 text-sm font-semibold uppercase tracking-wide text-gray-500">Horarios</h2>
+        <p class="mb-4 text-xs text-gray-400">Define los horarios operativos del alojamiento.</p>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <AppInput
+              v-model="form.checkin_time"
+              label="Hora de check-in"
+              placeholder="3:00 PM"
+              @blur="save"
+            />
+            <AppFieldHint message="Hora en que los huéspedes pueden ingresar al alojamiento" />
+          </div>
+
+          <div>
+            <AppInput
+              v-model="form.checkout_time"
+              label="Hora de check-out"
+              placeholder="12:00 PM"
+              @blur="save"
+            />
+            <AppFieldHint message="Hora límite de salida" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="mb-1 text-sm font-semibold uppercase tracking-wide text-gray-500">Anticipo</h2>
+        <p class="mb-4 text-xs text-gray-400">Configura el porcentaje base que se solicita para confirmar una reserva.</p>
+
+        <div class="md:max-w-sm">
+          <AppInput
+            v-model="form.anticipo_pct"
+            type="number"
+            min="0"
+            max="100"
+            label="Porcentaje de anticipo"
+            placeholder="50"
+            @blur="save"
+          />
+          <AppFieldHint message="Porcentaje del total que se solicita como anticipo para confirmar la reserva" />
+        </div>
+      </div>
+
       <!-- Fechas -->
       <div class="card">
         <h2 class="mb-1 text-sm font-semibold uppercase tracking-wide text-gray-500">Fechas</h2>
@@ -227,6 +273,7 @@ import { supabase } from '../services/supabase'
 import { useAccountStore } from '../stores/account'
 import { usePermissions } from '../composables/usePermissions'
 import { getAgeCategorySettings, saveAgeCategorySettings } from '../services/ageRangeService'
+import { AppInput, AppFieldHint } from '@/components/ui/forms'
 
 const accountStore = useAccountStore()
 const { can } = usePermissions()
@@ -239,21 +286,38 @@ const form = ref({
   allow_checkin_without_preregistro: true,
   allow_checkout_without_preregistro: true,
   allow_past_dates_in_pickers: true,
+  checkin_time: '3:00 PM',
+  checkout_time: '12:00 PM',
+  anticipo_pct: 50,
 })
 
 const load = async () => {
   try {
     const accountId = accountStore.getRequiredAccountId()
-    const { data } = await supabase
-      .from('settings')
-      .select('allow_checkin_without_preregistro, allow_checkout_without_preregistro, allow_past_dates_in_pickers')
-      .eq('account_id', accountId)
-      .maybeSingle()
+    const [{ data }, { data: profileData }] = await Promise.all([
+      supabase
+        .from('settings')
+        .select('allow_checkin_without_preregistro, allow_checkout_without_preregistro, allow_past_dates_in_pickers, anticipo_pct')
+        .eq('account_id', accountId)
+        .maybeSingle(),
+      supabase
+        .from('account_profile')
+        .select('checkin_time, checkout_time, anticipo_pct')
+        .eq('account_id', accountId)
+        .maybeSingle(),
+    ])
 
     if (data) {
       form.value.allow_checkin_without_preregistro = data.allow_checkin_without_preregistro ?? true
       form.value.allow_checkout_without_preregistro = data.allow_checkout_without_preregistro ?? true
       form.value.allow_past_dates_in_pickers = data.allow_past_dates_in_pickers ?? true
+      form.value.anticipo_pct = data.anticipo_pct ?? form.value.anticipo_pct
+    }
+
+    if (profileData) {
+      form.value.checkin_time = profileData.checkin_time || '3:00 PM'
+      form.value.checkout_time = profileData.checkout_time || '12:00 PM'
+      form.value.anticipo_pct = profileData.anticipo_pct ?? form.value.anticipo_pct
     }
   } catch (e) {
     console.warn('[OperationalSettings] load failed:', e?.message)
@@ -266,16 +330,30 @@ const save = async () => {
   saveOk.value = false
   try {
     const accountId = accountStore.getRequiredAccountId()
+    const anticipoPct = Math.min(100, Math.max(0, Number(form.value.anticipo_pct || 50)))
+
     const { error } = await supabase
       .from('settings')
       .update({
         allow_checkin_without_preregistro: form.value.allow_checkin_without_preregistro,
         allow_checkout_without_preregistro: form.value.allow_checkout_without_preregistro,
         allow_past_dates_in_pickers: form.value.allow_past_dates_in_pickers,
+        anticipo_pct: anticipoPct,
       })
       .eq('account_id', accountId)
 
     if (error) throw error
+
+    const { error: profileError } = await supabase
+      .from('account_profile')
+      .upsert({
+        account_id: accountId,
+        checkin_time: String(form.value.checkin_time || '').trim() || '3:00 PM',
+        checkout_time: String(form.value.checkout_time || '').trim() || '12:00 PM',
+        anticipo_pct: anticipoPct,
+      }, { onConflict: 'account_id' })
+
+    if (profileError) throw profileError
     saveOk.value = true
     setTimeout(() => { saveOk.value = false }, 2500)
   } catch (e) {
