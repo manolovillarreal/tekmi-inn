@@ -43,7 +43,7 @@
         </section>
 
         <!-- CONDITIONS -->
-        <section v-if="shouldShowConditions" class="doc-section doc-section-conditions" :class="'section-' + preset.body.sectionStyle">
+        <section v-if="shouldShowConditions" class="doc-section doc-section-conditions mt-5" :class="'section-' + preset.body.sectionStyle">
           <h2 class="section-title">Condiciones de hospedaje</h2>
           <p class="section-text section-text-padded">{{ conditionsText }}</p>
         </section>
@@ -783,15 +783,14 @@ table.data-table-rounded th {
   }
 
   .doc-sheet {
-    width: 8.5in !important;
-    min-height: 11in !important;
-    display: flex !important;
-    flex-direction: column !important;
+    display: table !important;
+    width: 100% !important;
+    height: 100vh !important;
+    min-height: 0 !important;
     border: none !important;
     box-shadow: none !important;
-    padding: 0 !important;
-    background: #FFFFFF !important;
-    page-break-after: always;
+    font-size: 10px !important;
+    line-height: 1.35 !important;
   }
 
   .doc-sheet,
@@ -801,22 +800,28 @@ table.data-table-rounded th {
   }
 
   .doc-header {
-    page-break-inside: avoid;
-  }
-
-  .doc-footer {
-    page-break-inside: avoid;
-    margin-top: auto !important;
+    display: table-header-group !important;
+    page-break-inside: avoid !important;
   }
 
   .doc-main {
-    flex: 1 !important;
+    display: table-row-group !important;
     overflow: visible !important;
-    page-break-inside: avoid;
+  }
+
+  .doc-footer {
+    display: table-footer-group !important;
+    page-break-inside: avoid !important;
   }
 
   .doc-section {
-    page-break-inside: avoid;
+    display: table-row-group !important;
+    margin: 0 !important;
+    page-break-inside: avoid !important;
+  }
+
+  .doc-section:last-of-type {
+    height: 100% !important;
   }
 
   .doc-section-conditions {

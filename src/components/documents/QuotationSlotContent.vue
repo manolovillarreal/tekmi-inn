@@ -48,11 +48,13 @@
     </div>
   </section>
 
-  <section class="doc-content-section border-b py-4">
+  <section class="doc-content-section border-b py-4 pb-2">
     <h2 class="doc-content-subtitle text-sm font-semibold uppercase tracking-wide">Notas</h2>
     <p class="mt-3 text-sm text-gray-700">Esta cotizacion no constituye una reserva confirmada.</p>
     <p v-if="safeQuoteExpiresLabel" class="mt-2 text-sm text-gray-700">Valida hasta el {{ safeQuoteExpiresLabel }}.</p>
   </section>
+
+  <footer class="mt-4 pt-4 pb-6 text-sm text-gray-700"></footer>
 </template>
 
 <script setup>

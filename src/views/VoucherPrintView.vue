@@ -211,10 +211,6 @@ onMounted(async () => {
 }
 
 @media print {
-  @page {
-    margin: 1.2cm 1.5cm;
-  }
-
   /*
    * html/body con height:auto evita que el navegador interprete
    * la altura de la ventana (1 página) como el mínimo del documento,
@@ -252,20 +248,6 @@ onMounted(async () => {
    * Nota: display:table-header/footer-group ignoran padding en el elemento
    * grupo — por eso el padding se aplica a los hijos directos del layout.
    */
-  :deep(.doc-sheet) {
-    display: table !important;
-    width: 100% !important;
-    min-height: calc(100vh - 2.4cm) !important;
-    height: auto !important;
-    border: none !important;
-    box-shadow: none !important;
-    font-size: 10px !important;
-    line-height: 1.35 !important;
-  }
-
-  :deep(.doc-header) {
-    display: table-header-group !important;
-  }
 
   /* min-height reserva demasiado espacio en pantalla, no tiene sentido en print */
   :deep(.header-size-sm),
@@ -295,21 +277,12 @@ onMounted(async () => {
     width: 46px !important;
   }
 
-  :deep(.doc-main) {
-    display: table-row-group !important;
-    overflow: visible !important;
-  }
-
   .doc-content-wrapper {
     display: table-row !important;
     height: 100% !important;
   }
 
   /* Condiciones y campo personalizado */
-  :deep(.doc-section) {
-    display: table-row-group !important;
-    margin: 0 !important;
-  }
 
   /* El padding en los elementos interiores (table-row-group ignora padding del grupo) */
   :deep(.section-title) {
