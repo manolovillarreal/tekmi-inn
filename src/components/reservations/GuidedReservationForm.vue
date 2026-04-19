@@ -547,6 +547,7 @@ import { useInquiriesStore } from '../../stores/inquiries'
 import { useGuestsStore } from '../../stores/guests'
 import { useRoomBlocksStore } from '../../stores/roomBlocks'
 import { useToast } from '../../composables/useToast'
+import { OFFLINE_MUTATION_MESSAGE, isOnlineNow } from '../../composables/useConnectivity'
 import { buildPricingSuggestion } from '../../utils/pricingUtils'
 import { useAgeCategorySettings } from '../../composables/useAgeCategorySettings'
 import { useCommissionInputSync } from '../../composables/useCommissionInputSync'
@@ -1282,6 +1283,11 @@ const saveAsReservation = async () => {
   saveAsReservationError.value = ''
   submitError.value = ''
 
+  if (!isOnlineNow()) {
+    saveAsReservationError.value = OFFLINE_MUTATION_MESSAGE
+    return
+  }
+
   if (!form.value.unit_ids.length || !form.value.price_per_night) {
     saveAsReservationError.value = 'Para guardar como reserva sin pago debes seleccionar una unidad y un precio por noche.'
     return
@@ -1359,6 +1365,12 @@ const saveAsReservation = async () => {
 // ── Save ───────────────────────────────────────────────
 const save = async () => {
   submitError.value = ''
+
+  if (!isOnlineNow()) {
+    submitError.value = OFFLINE_MUTATION_MESSAGE
+    return
+  }
+
   if (reservationValidationError.value) return
 
   saving.value = true

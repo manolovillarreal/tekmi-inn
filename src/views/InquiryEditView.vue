@@ -159,6 +159,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../services/supabase'
 import { useInquiriesStore } from '../stores/inquiries'
 import { useAccountStore } from '../stores/account'
+import { OFFLINE_MUTATION_MESSAGE, isOnlineNow } from '../composables/useConnectivity'
 import { useToast } from '../composables/useToast'
 import { useAgeCategorySettings } from '../composables/useAgeCategorySettings'
 import { useCommissionInputSync } from '../composables/useCommissionInputSync'
@@ -322,6 +323,10 @@ const submitEdit = async () => {
   if (!inquiry.value) return
   submitAttempted.value = true
   if (fieldError('guest_first_name')) return
+  if (!isOnlineNow()) {
+    saveError.value = OFFLINE_MUTATION_MESSAGE
+    return
+  }
 
   saving.value = true
   saveError.value = ''

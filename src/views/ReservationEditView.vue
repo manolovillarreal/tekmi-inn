@@ -167,6 +167,7 @@ import { supabase } from '../services/supabase'
 import { syncReservationOccupancy } from '../services/reservationService'
 import { useAccountStore } from '../stores/account'
 import { useReservationsStore } from '../stores/reservations'
+import { OFFLINE_MUTATION_MESSAGE, isOnlineNow } from '../composables/useConnectivity'
 import { useToast } from '../composables/useToast'
 import { useAgeCategorySettings } from '../composables/useAgeCategorySettings'
 import { useCommissionInputSync } from '../composables/useCommissionInputSync'
@@ -311,6 +312,10 @@ onMounted(async () => {
 
 const submitEdit = async () => {
   if (fieldError('check_out')) { errorMessage.value = fieldError('check_out'); return }
+  if (!isOnlineNow()) {
+    errorMessage.value = OFFLINE_MUTATION_MESSAGE
+    return
+  }
   submitting.value = true
   errorMessage.value = ''
   try {

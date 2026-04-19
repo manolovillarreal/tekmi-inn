@@ -241,6 +241,7 @@ import { useAccountStore } from '../stores/account'
 import { useReservationsStore } from '../stores/reservations'
 import { useInquiriesStore } from '../stores/inquiries'
 import { useGuestsStore } from '../stores/guests'
+import { OFFLINE_MUTATION_MESSAGE, isOnlineNow } from '../composables/useConnectivity'
 import { useToast } from '../composables/useToast'
 import { useAgeCategorySettings } from '../composables/useAgeCategorySettings'
 import { useCommissionInputSync } from '../composables/useCommissionInputSync'
@@ -490,6 +491,11 @@ onMounted(async () => {
 })
 
 const submitConversion = async () => {
+  if (!isOnlineNow()) {
+    errorMessage.value = OFFLINE_MUTATION_MESSAGE
+    return
+  }
+
   submitting.value = true
   submitAttempted.value = true
   errorMessage.value = ''

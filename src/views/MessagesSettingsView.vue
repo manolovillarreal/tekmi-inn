@@ -259,23 +259,10 @@
                   <div class="min-w-0">
                     <p class="font-medium text-gray-900">{{ msg.name }}</p>
                   </div>
-                  <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                  <div class="flex shrink-0 flex-wrap items-center justify-end gap-1">
                     <button
                       type="button"
-                      class="btn-secondary inline-flex items-center gap-1 text-xs"
-                      @click="toggleCustomPreview(msg.id)"
-                      :aria-label="isCustomPreviewOpen(msg.id) ? 'Ocultar mensaje' : 'Ver mensaje'"
-                      :title="isCustomPreviewOpen(msg.id) ? 'Ocultar mensaje' : 'Ver mensaje'"
-                    >
-                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
-                      <span class="hidden sm:inline">{{ isCustomPreviewOpen(msg.id) ? 'Ocultar mensaje' : 'Ver mensaje' }}</span>
-                    </button>
-                    <button
-                      type="button"
-                      class="inline-flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
                       @click="copyToClipboard(msg.renderedText)"
                       title="Copiar mensaje"
                       :aria-label="`Copiar ${msg.name}`"
@@ -287,7 +274,19 @@
                     </button>
                     <button
                       type="button"
-                      class="btn-secondary inline-flex items-center gap-1 text-xs"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+                      @click="toggleCustomPreview(msg.id)"
+                      :aria-label="isCustomPreviewOpen(msg.id) ? 'Ocultar mensaje' : 'Ver mensaje'"
+                      :title="isCustomPreviewOpen(msg.id) ? 'Ocultar mensaje' : 'Ver mensaje'"
+                    >
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
                       @click="openMessageEditor(msg.id)"
                       aria-label="Editar mensaje"
                       title="Editar mensaje"
@@ -296,23 +295,21 @@
                         <path d="M12 20h9"></path>
                         <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
                       </svg>
-                      <span class="hidden sm:inline">Editar</span>
                     </button>
                     <button
                       type="button"
-                      class="btn-secondary inline-flex items-center gap-1 text-xs text-red-700"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 hover:text-red-600 hover:bg-red-50"
                       @click="removeCustom(msg.id)"
                       aria-label="Eliminar mensaje"
                       title="Eliminar mensaje"
                     >
-                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <svg class="h-4 w-4 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M3 6h18"></path>
                         <path d="M8 6V4h8v2"></path>
                         <path d="M19 6l-1 14H6L5 6"></path>
                         <path d="M10 11v6"></path>
                         <path d="M14 11v6"></path>
                       </svg>
-                      <span class="hidden sm:inline">Eliminar</span>
                     </button>
                   </div>
                 </div>
