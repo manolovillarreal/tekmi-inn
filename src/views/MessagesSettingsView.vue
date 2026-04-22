@@ -213,7 +213,7 @@
     <div class="card space-y-4">
       <div class="flex items-center justify-between">
         <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-900">Mensajes personalizados</h2>
-        <button type="button" class="btn-primary text-sm" @click="openNewCustom">Nuevo mensaje</button>
+        <button type="button" class="btn-primary text-sm" @click="openNewCustom">Nuevo</button>
       </div>
 
       <div v-if="customMessages.length === 0" class="rounded-md border border-dashed border-gray-300 p-5 text-sm text-gray-500">
@@ -272,45 +272,43 @@
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                       </svg>
                     </button>
-                    <button
-                      type="button"
-                      class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
-                      @click="toggleCustomPreview(msg.id)"
-                      :aria-label="isCustomPreviewOpen(msg.id) ? 'Ocultar mensaje' : 'Ver mensaje'"
-                      :title="isCustomPreviewOpen(msg.id) ? 'Ocultar mensaje' : 'Ver mensaje'"
-                    >
-                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
-                      @click="openMessageEditor(msg.id)"
-                      aria-label="Editar mensaje"
-                      title="Editar mensaje"
-                    >
-                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M12 20h9"></path>
-                        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      class="inline-flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 hover:text-red-600 hover:bg-red-50"
-                      @click="removeCustom(msg.id)"
-                      aria-label="Eliminar mensaje"
-                      title="Eliminar mensaje"
-                    >
-                      <svg class="h-4 w-4 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M3 6h18"></path>
-                        <path d="M8 6V4h8v2"></path>
-                        <path d="M19 6l-1 14H6L5 6"></path>
-                        <path d="M10 11v6"></path>
-                        <path d="M14 11v6"></path>
-                      </svg>
-                    </button>
+                    <details class="relative">
+                      <summary
+                        class="inline-flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+                        aria-label="Más acciones"
+                        title="Más acciones"
+                      >
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                          <circle cx="5" cy="12" r="1.8"></circle>
+                          <circle cx="12" cy="12" r="1.8"></circle>
+                          <circle cx="19" cy="12" r="1.8"></circle>
+                        </svg>
+                      </summary>
+
+                      <div class="absolute right-0 top-9 z-20 min-w-[130px] rounded-md border border-gray-200 bg-white py-1 shadow-lg">
+                        <button
+                          type="button"
+                          class="block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                          @click="toggleCustomPreview(msg.id)"
+                        >
+                          {{ isCustomPreviewOpen(msg.id) ? 'Ocultar' : 'Ver' }}
+                        </button>
+                        <button
+                          type="button"
+                          class="block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                          @click="openMessageEditor(msg.id)"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          class="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
+                          @click="removeCustom(msg.id)"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </details>
                   </div>
                 </div>
                 <div v-if="isCustomPreviewOpen(msg.id)" class="mt-3 border-t border-gray-100 pt-3">
@@ -375,6 +373,7 @@ import {
   deletePredefinedMessage,
   reorderPredefinedMessages,
 } from '../services/messageSettingsService'
+import { copyTextToClipboard } from '../utils/clipboard'
 import {
   buildGlobalVariables,
   buildVoucherMessage,
@@ -756,7 +755,7 @@ const openMessageEditor = (id) => {
 }
 
 const copyToClipboard = async (text) => {
-  await navigator.clipboard.writeText(String(text || ''))
+  await copyTextToClipboard(text)
   toast.success('Mensaje copiado al portapapeles.')
 }
 

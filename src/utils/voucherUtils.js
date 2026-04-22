@@ -1,5 +1,6 @@
 import { formatReferenceDisplay } from './referenceUtils'
 import { buildReservationContext, buildGlobalVariables, resolveTemplate } from './messageUtils'
+import { copyTextToClipboard } from './clipboard'
 
 export const DEFAULT_QUOTATION_TEMPLATE = `Hola {{nombre_huesped}}! 👋
 Te compartimos tu cotización de {{nombre_alojamiento}}.
@@ -182,7 +183,7 @@ export const buildVoucherWhatsAppMessage = (reservation, profile, options = {}) 
 
 export const copyAsWhatsApp = async (reservation, profile, options = {}) => {
   const message = buildVoucherWhatsAppMessage(reservation, profile, options)
-  await navigator.clipboard.writeText(message)
+  await copyTextToClipboard(message)
   return message
 }
 
@@ -214,6 +215,6 @@ export const buildQuotationWhatsAppMessage = (inquiry, profile, quoteUrl = '', o
 
 export const copyQuotationAsWhatsApp = async (inquiry, profile, quoteUrl = '', options = {}) => {
   const message = buildQuotationWhatsAppMessage(inquiry, profile, quoteUrl, options)
-  await navigator.clipboard.writeText(message)
+  await copyTextToClipboard(message)
   return message
 }

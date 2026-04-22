@@ -107,6 +107,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import PreRegistroForm from '../components/preregistro/PreRegistroForm.vue'
+import { copyTextToClipboard } from '../utils/clipboard'
 
 const route = useRoute()
 
@@ -253,7 +254,7 @@ const generateCompanionLink = async () => {
 
 const copyCompanionLink = async () => {
   try {
-    await navigator.clipboard.writeText(companionLink.value)
+    await copyTextToClipboard(companionLink.value)
     companionLinkCopied.value = true
     setTimeout(() => { companionLinkCopied.value = false }, 2000)
   } catch {

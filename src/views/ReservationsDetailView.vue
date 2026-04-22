@@ -650,6 +650,7 @@ import { notifyCheckinRealizado } from '../services/notificationService'
 import { getMessageSettings, getPredefinedMessages } from '../services/messageSettingsService'
 import { buildReservationContext, resolveTemplate } from '../utils/messageUtils'
 import { DEFAULT_PREREGISTRO_TEMPLATE } from '../utils/voucherUtils'
+import { copyTextToClipboard } from '../utils/clipboard'
 import { syncReservationOccupancy } from '../services/reservationService'
 import { useAgeCategorySettings } from '../composables/useAgeCategorySettings'
 import { AppInput, AppSelect, AppDatePicker, AppFormGrid } from '../components/ui/forms'
@@ -1536,7 +1537,7 @@ const regeneratePreregistroLink = async () => {
     const rawPath = String(data?.checkin_url || '')
     const appOrigin = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '')
     const fullUrl = rawPath.startsWith('http') ? rawPath : `${appOrigin}${rawPath}`
-    await navigator.clipboard.writeText(fullUrl)
+    await copyTextToClipboard(fullUrl)
     toast.success('Link regenerado correctamente y copiado al portapapeles')
   } catch {
     toast.error('No se pudo regenerar el link.')
@@ -1575,7 +1576,7 @@ const copyWhatsappPreregistroMessage = async () => {
   }
 
   const { text } = resolveTemplate(preregistroBody, vars)
-  await navigator.clipboard.writeText(text)
+  await copyTextToClipboard(text)
   toast.success('Mensaje copiado al portapapeles')
 }
 
@@ -1591,7 +1592,7 @@ const copyPreregistroLink = async () => {
   const appOrigin = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '')
   const fullUrl = rawPath.startsWith('http') ? rawPath : `${appOrigin}${rawPath}`
 
-  await navigator.clipboard.writeText(fullUrl)
+  await copyTextToClipboard(fullUrl)
   toast.success('Link copiado al portapapeles')
 }
 

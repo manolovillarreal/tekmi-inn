@@ -91,6 +91,7 @@ import {
   buildVoucherMessage,
   resolveTemplate,
 } from '../../utils/messageUtils'
+import { copyTextToClipboard } from '../../utils/clipboard'
 import { buildQuotePublicUrl, buildQuotationWhatsAppMessage } from '../../utils/voucherUtils'
 
 const props = defineProps({
@@ -243,7 +244,7 @@ watch(() => props.modelValue, (isOpen) => {
 })
 
 const copyText = async (text) => {
-  await navigator.clipboard.writeText(String(text || ''))
+  await copyTextToClipboard(text)
   emit('copied')
 }
 </script>

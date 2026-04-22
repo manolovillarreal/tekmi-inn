@@ -284,6 +284,7 @@ import { usePermissions } from '../composables/usePermissions'
 import { useAccountStore } from '../stores/account'
 import { useToast } from '../composables/useToast'
 import { useAgeCategorySettings } from '../composables/useAgeCategorySettings'
+import { copyTextToClipboard } from '../utils/clipboard'
 import { formatReferenceDisplay } from '../utils/referenceUtils'
 import { copyQuotationAsWhatsApp, buildQuotePublicUrl } from '../utils/voucherUtils'
 import { getMessageSettings, getPredefinedMessages } from '../services/messageSettingsService'
@@ -565,7 +566,7 @@ const handleQuoteLink = async () => {
   // If token already exists — just copy the URL
   if (inquiry.value.quote_token) {
     try {
-      await navigator.clipboard.writeText(quotePublicUrl.value)
+      await copyTextToClipboard(quotePublicUrl.value)
       toast.success('Link de cotización copiado al portapapeles.')
     } catch {
       toast.error('No se pudo copiar el link.')
@@ -578,7 +579,7 @@ const handleQuoteLink = async () => {
     const token = await store.generateInquiryQuoteToken(inquiry.value.id)
     inquiry.value = { ...inquiry.value, quote_token: token }
     const url = buildQuotePublicUrl(token)
-    await navigator.clipboard.writeText(url)
+    await copyTextToClipboard(url)
     toast.success('Link de cotización generado y copiado al portapapeles.')
   } catch (err) {
     toast.error(err.message || 'No se pudo generar el link de cotización.')

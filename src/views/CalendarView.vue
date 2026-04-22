@@ -88,7 +88,12 @@
       <button type="button" class="toggle-btn" :class="{ active: activeTab === 'entries' }" @click="activeTab = 'entries'">Entradas</button>
       <button type="button" class="toggle-btn" :class="{ active: activeTab === 'exits' }" @click="activeTab = 'exits'">Salidas</button>
     </div>
-
+    <div class="flex items-center gap-3 mb-2">
+      <label class="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+        <input type="checkbox" v-model="showInquiries" class="form-checkbox h-4 w-4 text-gray-400" />
+        Mostrar consultas
+      </label>
+    </div>
     <div v-if="activeTab === 'calendar'" class="space-y-3">
 
     <div
@@ -521,7 +526,6 @@
         </transition>
       </div>
     </div>
-
     </div>
 
     <div v-else-if="activeTab === 'entries'" class="space-y-3">
@@ -692,6 +696,7 @@ const periodPreset = ref('this_month')
 const periodFrom = ref('')
 const periodTo = ref('')
 const activeTab = ref('calendar')
+const showInquiries = ref(false)
 const weekStart = ref(getWeekStartMonday(new Date()))
 const monthStart = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
 const mobileLegendOpen = ref(false)
@@ -1303,8 +1308,12 @@ const mobileCompleteUnits = computed(() => {
 })
 
 const filteredOccupancies = computed(() => {
-  if (selectedVenueSet.value.size === 0) return occupancies.value
-  return occupancies.value.filter((occ) => selectedVenueSet.value.has(occ.units?.venue_id))
+  const visibleOccupancies = showInquiries.value
+    ? occupancies.value
+    : occupancies.value.filter((occ) => occ.occupancy_type !== 'inquiry_hold')
+
+  if (selectedVenueSet.value.size === 0) return visibleOccupancies
+  return visibleOccupancies.filter((occ) => selectedVenueSet.value.has(occ.units?.venue_id))
 })
 
 const calendarMetrics = computed(() => {
@@ -1835,11 +1844,11 @@ function getUnitSegmentsForComplete(unitId) {
 }
 
 function occupancyColor(occ) {
+  if (occ.occupancy_type === 'inquiry_hold') return 'bg-gray-400' // color neutro para consultas
   return {
     reservation: 'bg-blue-500',
     maintenance: 'bg-orange-500',
     owner_use: 'bg-purple-500',
-    inquiry_hold: 'bg-amber-500',
     external: 'bg-gray-500'
   }[occ.occupancy_type] || 'bg-gray-400'
 }

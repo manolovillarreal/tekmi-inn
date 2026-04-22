@@ -92,6 +92,7 @@
         </div>
       </div>
 
+
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <AppInput
           v-model="guestName"
@@ -102,8 +103,27 @@
           v-model="pricePerNight"
           type="number"
           label="Precio por noche"
-          placeholder="Precio por noche"
+          :placeholder="tarifaSugerida > 0 ? tarifaSugerida : 'Precio por noche'"
         />
+        <AppInput
+          v-model="guestPhone"
+          label="Teléfono de contacto"
+          placeholder="Número de teléfono"
+        />
+      </div>
+
+      <div class="flex flex-wrap gap-4 items-center mt-2">
+        <span v-if="nights > 0" class="text-sm text-gray-500">{{ nights }} noche{{ nights !== 1 ? 's' : '' }}</span>
+        <span v-if="totalCalculado > 0" class="text-sm text-gray-700 font-semibold">Total: ${{ totalCalculado.toLocaleString('es-CO') }}</span>
+      </div>
+
+      <div class="flex gap-2 pt-1">
+        <button type="button" class="btn-primary flex-1" @click="crearConsulta" :disabled="!checked || loading || nights === 0 || !pricePerNight">
+          Crear consulta
+        </button>
+        <button type="button" class="btn-primary flex-1" @click="goToForm">
+          + Nuevo Registro
+        </button>
       </div>
 
       <div class="rounded-md border border-gray-200 bg-gray-50 p-3">
@@ -113,11 +133,7 @@
         </button>
       </div>
 
-      <div class="pt-1">
-        <button type="button" class="btn-primary" @click="goToForm">
-          + Nuevo Registro
-        </button>
-      </div>
+      <!-- ...el bloque anterior de botones reemplaza este... -->
     </div>
   </div>
 </template>
@@ -148,6 +164,31 @@ const checkOut = ref('')
 const personas = ref(2)
 const guestName = ref('')
 const pricePerNight = ref('')
+const guestPhone = ref('')
+// Sugerencia de tarifa (puedes ajustar la lógica según tu fuente de sugerencias)
+const tarifaSugerida = computed(() => {
+  // Aquí podrías obtener la sugerencia real desde props, API, etc.
+  // Por ahora, ejemplo fijo:
+  return 350000
+})
+
+const totalCalculado = computed(() => {
+  const noches = nights.value
+  const precio = Number(pricePerNight.value)
+  if (!noches || !precio) return 0
+  return noches * precio
+})
+
+function crearConsulta() {
+  // Aquí deberías implementar la lógica para crear la consulta
+  // Por ahora, solo muestra un toast de ejemplo
+  const nombre = guestName.value?.trim()
+  toast.success(`Consulta creada${!nombre ? ' (anónima)' : ''}`)
+  // Limpiar campos si deseas
+  // guestName.value = ''
+  // pricePerNight.value = ''
+  // guestPhone.value = ''
+}
 const selectedUnitIds = ref([])
 const touched = ref({ checkIn: false, checkOut: false })
 const profile = ref({})
