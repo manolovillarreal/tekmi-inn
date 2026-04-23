@@ -1,3 +1,7 @@
+export const config = {
+  verify_jwt: false,
+}
+
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { createHash, randomBytes } from 'node:crypto'

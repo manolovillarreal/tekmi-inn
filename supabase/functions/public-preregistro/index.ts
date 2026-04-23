@@ -1,3 +1,7 @@
+export const config = {
+  verify_jwt: false,
+}
+
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { createHash } from 'node:crypto'
@@ -18,6 +22,23 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+const formatDateLongEs = (value: string | null) => {
+  if (!value) return '-'
+  const date = new Date(`${value}T00:00:00.000Z`)
+  if (Number.isNaN(date.getTime())) return '-'
+  return new Intl.DateTimeFormat('es-CO', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(date)
+}
+
+const esc = (s: string | null | undefined) =>
+  String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
 
 const normalizeValue = (value: unknown) => {
   if (typeof value !== 'string') return null
@@ -138,6 +159,90 @@ const isGuestComplete = (guest: Record<string, unknown> | null): boolean => {
   )
 }
 
+interface PreregistroRenderParams {
+  businessName: string
+  logoUrl: string | null
+  guestName: string | null
+  checkIn: string | null
+  checkOut: string | null
+  guestsCount: number
+  ogDescription: string
+  publicUrl: string
+  token: string
+}
+
+function renderPreregistroHtml(p: PreregistroRenderParams): string {
+  const logoTag = p.logoUrl
+    ? `<img src="${esc(p.logoUrl)}" alt="${esc(p.businessName)}" style="width:64px;height:64px;object-fit:contain;border-radius:12px;border:1px solid #e5e7eb;background:#fff;display:block;margin:0 auto 12px" />`
+    : ''
+
+  const staySection = p.checkIn && p.checkOut
+    ? `
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:14px;line-height:1.7;color:#374151">
+        <p style="margin:0">🗓 <strong>Check-in:</strong> ${esc(formatDateLongEs(p.checkIn))}</p>
+        <p style="margin:0">🗓 <strong>Check-out:</strong> ${esc(formatDateLongEs(p.checkOut))}</p>
+        <p style="margin:0">👥 ${p.guestsCount} ${p.guestsCount === 1 ? 'persona' : 'personas'}</p>
+      </div>`
+    : ''
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="refresh" content="0;url=${esc(p.publicUrl)}" />
+  <title>${esc(p.businessName)} · Pre-registro</title>
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Pre-registro · ${esc(p.businessName)}" />
+  <meta property="og:description" content="${esc(p.ogDescription)}" />
+  ${p.logoUrl ? `<meta property="og:image" content="${esc(p.logoUrl)}" />` : ''}
+  <meta property="og:site_name" content="${esc(p.businessName)}" />
+  <meta property="og:url" content="${esc(p.publicUrl)}" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Pre-registro · ${esc(p.businessName)}" />
+  <meta name="twitter:description" content="${esc(p.ogDescription)}" />
+  ${p.logoUrl ? `<meta name="twitter:image" content="${esc(p.logoUrl)}" />` : ''}
+</head>
+<body style="margin:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:24px 16px 64px">
+  <div style="max-width:520px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:20px">
+      ${logoTag}
+      <h1 style="margin:0 0 4px;font-size:22px;font-weight:700;color:#111827">${esc(p.businessName)}</h1>
+      <p style="margin:0;font-size:14px;color:#6b7280">Pre-registro de huéspedes</p>
+    </div>
+
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px 20px 4px;box-shadow:0 1px 3px rgba(0,0,0,.07)">
+      ${p.guestName ? `<h2 style="margin:0 0 16px;font-size:18px;font-weight:600;color:#111827">Hola ${esc(p.guestName)} 👋</h2>` : '<h2 style="margin:0 0 16px;font-size:18px;font-weight:600;color:#111827">Pre-registro 👋</h2>'}
+      <p style="margin:0 0 16px;font-size:14px;color:#6b7280">Completa tu información antes de llegar al alojamiento.</p>
+      ${staySection}
+      <p style="margin:16px 0 16px;font-size:13px;color:#9ca3af;text-align:center">Si tienes dudas, contáctanos.</p>
+    </div>
+  </div>
+</body>
+</html>`
+}
+
+function notFoundPreregistroHtml(): string {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pre-registro no encontrado</title>
+</head>
+<body style="margin:0;background:#f3f4f6;font-family:-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh">
+  <div style="text-align:center;padding:40px">
+    <h1 style="color:#374151">Pre-registro no encontrado</h1>
+    <p style="color:#6b7280">El enlace puede ser inválido, haber expirado o la reserva fue cancelada.</p>
+  </div>
+</body>
+</html>`
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -157,15 +262,28 @@ serve(async (req) => {
   // ── GET ─────────────────────────────────────────────────────────────────────
   if (req.method === 'GET') {
     try {
+      const format = normalizeValue(url.searchParams.get('format'))
       const reservation = await getReservationByToken(adminClient, token)
 
       if (!reservation) {
-        return Response.json({ message: 'Link inválido.' }, { status: 404, headers: corsHeaders })
+        if (format === 'json') {
+          return Response.json({ message: 'Link inválido.' }, { status: 404, headers: corsHeaders })
+        }
+        return new Response(notFoundPreregistroHtml(), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+        })
       }
 
       const validity = checkTokenValidity(reservation)
       if (!validity.valid) {
-        return Response.json({ message: 'Este link ya no está disponible.' }, { status: 410, headers: corsHeaders })
+        if (format === 'json') {
+          return Response.json({ message: 'Este link ya no está disponible.' }, { status: 410, headers: corsHeaders })
+        }
+        return new Response(notFoundPreregistroHtml(), {
+          status: 410,
+          headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+        })
       }
 
       const accountId = reservation.account_id as string
@@ -181,7 +299,7 @@ serve(async (req) => {
           .eq('reservation_id', reservation.id),
         adminClient
           .from('account_profile')
-          .select('commercial_name, legal_name, phone')
+          .select('commercial_name, legal_name, phone, logo_url')
           .eq('account_id', accountId)
           .maybeSingle(),
       ])
@@ -196,33 +314,74 @@ serve(async (req) => {
       const companionsExpected = Math.max(0, guestsCount - 1)
       const companionsRemaining = Math.max(0, companionsExpected - companions.length)
 
-      return Response.json(
-        {
-          reservation: {
-            id: reservation.id,
-            check_in: reservation.check_in,
-            check_out: reservation.check_out,
-            adults: reservation.adults,
-            children: reservation.children,
-            guests_count: guestsCount,
-            status: reservation.status,
-            preregistro_completado: reservation.preregistro_completado,
+      // JSON response
+      if (format === 'json') {
+        return Response.json(
+          {
+            reservation: {
+              id: reservation.id,
+              check_in: reservation.check_in,
+              check_out: reservation.check_out,
+              adults: reservation.adults,
+              children: reservation.children,
+              guests_count: guestsCount,
+              status: reservation.status,
+              preregistro_completado: reservation.preregistro_completado,
+            },
+            guest: primaryGuest,
+            companions,
+            companions_remaining: companionsRemaining,
+            account: {
+              name: accountProfile?.commercial_name || accountProfile?.legal_name || 'Alojamiento',
+              phone: accountProfile?.phone || '',
+            },
           },
-          guest: primaryGuest,
-          companions,
-          companions_remaining: companionsRemaining,
-          account: {
-            name: accountProfile?.commercial_name || accountProfile?.legal_name || 'Alojamiento',
-            phone: accountProfile?.phone || '',
-          },
-        },
-        { headers: corsHeaders }
-      )
+          { headers: corsHeaders }
+        )
+      }
+
+      // HTML response with OG tags
+      const businessName = accountProfile?.commercial_name || accountProfile?.legal_name || 'Alojamiento'
+      const logoUrl: string | null = accountProfile?.logo_url || null
+      const guestName = primaryGuest
+        ? `${primaryGuest.first_name || ''} ${primaryGuest.last_name || ''}`.trim()
+        : null
+
+      const ogDescription = [
+        guestName ? `Hola ${guestName}` : null,
+        'Completa tu información antes de llegar',
+        reservation.check_in ? `Check-in: ${formatDateLongEs(reservation.check_in)}` : null,
+      ].filter(Boolean).join('. ')
+
+      const publicUrl = `https://inn.tekmi.co/prerregistro/${token}`
+
+      const html = renderPreregistroHtml({
+        businessName,
+        logoUrl,
+        guestName,
+        checkIn: reservation.check_in,
+        checkOut: reservation.check_out,
+        guestsCount,
+        ogDescription,
+        publicUrl,
+        token,
+      })
+
+      return new Response(html, {
+        headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+      })
     } catch (error) {
-      return Response.json(
-        { message: error instanceof Error ? error.message : 'Error inesperado.' },
-        { status: 500, headers: corsHeaders }
-      )
+      const format = normalizeValue(url.searchParams.get('format'))
+      if (format === 'json') {
+        return Response.json(
+          { message: error instanceof Error ? error.message : 'Error inesperado.' },
+          { status: 500, headers: corsHeaders }
+        )
+      }
+      return new Response(notFoundPreregistroHtml(), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+      })
     }
   }
 
