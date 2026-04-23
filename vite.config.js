@@ -32,6 +32,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       injectRegister: false,
+      includeAssets: ['favicon.ico', 'icons/favicon-32.png', 'icons/apple-touch-icon.png'],
       // injectManifest: usa src/sw.js como fuente del service worker.
       // El precaching workbox se inyecta via self.__WB_MANIFEST en build.
       strategies: 'injectManifest',
@@ -47,9 +48,9 @@ export default defineConfig({
         orientation: 'portrait',
         start_url: '/',
         icons: [
-          { src: '/icons/pwa-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/pwa-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icons/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+          { src: '/icons/pwa-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icons/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icons/pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
       }
     })
