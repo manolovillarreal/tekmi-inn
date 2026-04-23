@@ -168,7 +168,7 @@ const formatDate = (value) => {
 const loadContextFromApi = async () => {
   try {
     const res = await fetch(
-      `${FUNCTIONS_URL}/public-preregistro?token=${encodeURIComponent(token.value)}`,
+        `${FUNCTIONS_URL}/public-preregistro?token=${encodeURIComponent(token.value)}&format=json`,
       { headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}`, 'Content-Type': 'application/json' } }
     )
     const data = await res.json()
