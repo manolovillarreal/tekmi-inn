@@ -14,10 +14,10 @@ const router = createRouter({
       meta: { guestOnly: true, plainLayout: true }
     },
     {
-      path: '/q/:token',
+      path: '/cotizacion/:token',
       name: 'cotizacion-publica',
       component: () => import('../views/PublicQuotationView.vue'),
-      meta: { plainLayout: true }
+      meta: { plainLayout: true, requiresAuth: false }
     },
     {
       path: '/prerregistro/:token',

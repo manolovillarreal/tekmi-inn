@@ -1,5 +1,30 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/cotizacion/:token",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(?:WhatsApp|facebookexternalhit|Twitterbot|LinkedInBot|Slackbot|TelegramBot).*"
+        }
+      ],
+      "destination": "https://feuuvdvhdjiqcfxmxuul.supabase.co/functions/v1/public-quote?token=:token"
+    },
+    {
+      "source": "/prerregistro/:token",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(?:WhatsApp|facebookexternalhit|Twitterbot|LinkedInBot|Slackbot|TelegramBot).*"
+        }
+      ],
+      "destination": "https://feuuvdvhdjiqcfxmxuul.supabase.co/functions/v1/public-preregistro?token=:token"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

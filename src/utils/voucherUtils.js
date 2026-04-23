@@ -125,8 +125,8 @@ export const formatCop = (value) => currencyFormatter.format(Number(value || 0))
 
 export const buildQuotePublicUrl = (token) => {
   if (!token) return ''
-  const base = (import.meta.env?.VITE_SUPABASE_URL || '').replace(/\/$/, '')
-  return `${base}/functions/v1/public-quote?token=${token}`
+  const base = (import.meta.env?.VITE_APP_URL || '').replace(/\/$/, '')
+  return `${base}/cotizacion/${token}`
 }
 
 export const formatDateLongEs = (value) => {
