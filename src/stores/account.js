@@ -80,7 +80,7 @@ export const useAccountStore = defineStore('account', () => {
 
     const { data: accountUsers, error: membershipError } = await supabase
       .from('account_users')
-      .select('account_id, role, accounts(name, status)')
+      .select('account_id, role, accounts(name)')
       .eq('user_id', user.id)
       .limit(1)
 
@@ -119,13 +119,25 @@ export const useAccountStore = defineStore('account', () => {
       }
     }
 
+    // Fetch account status separately so login keeps working even if the
+    // status column migration has not been applied yet.
+    let accountStatus = 'active'
+    const { data: accountData, error: accountStatusError } = await supabase
+      .from('accounts')
+      .select('status')
+      .eq('id', membership.account_id)
+      .maybeSingle()
+    if (!accountStatusError && accountData?.status) {
+      accountStatus = accountData.status
+    }
+
     setAccountContext({
       accountId: membership.account_id,
       userId: user.id,
       userEmail: user.email || '',
       role: membership.role,
       accountName: membership.accounts?.name || '',
-      accountStatus: membership.accounts?.status || 'active'
+      accountStatus,
     })
 
     await loadRolePermissions(membership.role)
