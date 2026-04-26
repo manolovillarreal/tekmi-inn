@@ -7,11 +7,13 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { createHash, randomBytes } from 'node:crypto'
 
 type GuestInput = {
-  name?: string
+  first_name?: string
+  last_name?: string
   nationality?: string
   document_type?: 'CC' | 'CE' | 'PA' | 'PE' | 'PT' | 'DNI' | 'TI' | 'RC' | 'MS' | ''
   document_number?: string
   phone?: string
+  phone_country_code?: string
   email?: string
   birth_date?: string
 }
@@ -33,11 +35,13 @@ const sanitizeGuest = (guest: GuestInput) => {
   const birthDate = normalizeValue(guest.birth_date)
 
   return {
-    name: normalizeValue(guest.name),
+    first_name: normalizeValue(guest.first_name),
+    last_name: normalizeValue(guest.last_name),
     nationality: normalizeValue(guest.nationality),
     document_type: documentType,
     document_number: documentNumber,
     phone: normalizeValue(guest.phone),
+    phone_country_code: normalizeValue(guest.phone_country_code) || '+57',
     email: normalizeValue(guest.email),
     birth_date: birthDate,
   }
@@ -104,12 +108,12 @@ const resolveGuest = async (
   accountId: string,
   payload: ReturnType<typeof sanitizeGuest>
 ) => {
-  if (!payload.name) return null
+  if (!payload.first_name) return null
 
   if (payload.document_type && payload.document_number) {
     const { data: existing, error: existingError } = await client
       .from('guests')
-      .select('id, name, nationality, document_type, document_number, phone, email, birth_date')
+      .select('id, first_name, last_name, nationality, document_type, document_number, phone, phone_country_code, email, birth_date')
       .eq('account_id', accountId)
       .eq('document_type', payload.document_type)
       .eq('document_number', payload.document_number)
@@ -119,11 +123,13 @@ const resolveGuest = async (
 
     if (existing) {
       const updatePayload = {
-        name: payload.name || existing.name,
+        first_name: payload.first_name || existing.first_name,
+        last_name: payload.last_name || existing.last_name,
         nationality: payload.nationality || existing.nationality,
         document_type: payload.document_type || existing.document_type,
         document_number: payload.document_number || existing.document_number,
         phone: payload.phone || existing.phone,
+        phone_country_code: payload.phone_country_code || existing.phone_country_code || '+57',
         email: payload.email || existing.email,
         birth_date: payload.birth_date || existing.birth_date,
       }
@@ -310,7 +316,7 @@ serve(async (req) => {
       }
 
       const guestPayload = sanitizeGuest(guestInput)
-      if (!guestPayload.name) {
+      if (!guestPayload.first_name) {
         return Response.json({ message: 'El acompañante debe tener nombre.' }, { status: 400, headers: corsHeaders })
       }
 
