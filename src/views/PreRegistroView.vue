@@ -23,7 +23,7 @@
           <p class="mt-3 text-sm text-gray-600">Te esperamos el {{ formatDate(checkInDate) }}.</p>
         </div>
 
-        <div class="mt-6 rounded-md border border-gray-200 bg-gray-50 p-4">
+        <div v-if="companionsRemaining > 0" class="mt-6 rounded-md border border-gray-200 bg-gray-50 p-4">
           <p class="text-sm font-medium text-gray-900">¿Viajan acompañantes que quieran registrarse por su cuenta?</p>
           <template v-if="!companionLink">
             <button
@@ -74,7 +74,7 @@
         />
 
         <!-- Companion link — alternative to filling companion data manually -->
-        <div v-if="guestsCount > 1" class="rounded-md border border-gray-200 bg-gray-50 p-4">
+        <div v-if="guestsCount > 1 && companionsRemaining > 0" class="rounded-md border border-gray-200 bg-gray-50 p-4">
           <p class="text-sm font-medium text-gray-900">¿Prefieren que los acompañantes se registren por su cuenta?</p>
           <p class="mt-1 text-xs text-gray-500">Genera un link exclusivo para que cada acompañante complete sus propios datos.</p>
           <template v-if="!companionLink">
@@ -146,10 +146,14 @@ const reservationInfo = computed(() => ({
   check_out: checkOutDate.value,
 }))
 
-const parseErrorMessage = (status, message) => {
+const parseErrorMessage = (status, message, body = null) => {
   if (status === 404) return 'Este link no es válido.'
   if (status === 409) return 'El pre-registro ya fue completado.'
-  if (status === 410) return 'Este link ya no está disponible. Comunícate directamente con el alojamiento.'
+  if (status === 410) {
+    if (body?.reason === 'edit_expired')
+      return 'El período de edición del pre-registro ha finalizado. Para modificaciones, contacta directamente al alojamiento.'
+    return 'Este link ya no está disponible. Comunícate directamente con el alojamiento.'
+  }
   return message || 'Ocurrió un error inesperado.'
 }
 
@@ -174,7 +178,7 @@ const loadContextFromApi = async () => {
     const data = await res.json()
 
     if (!res.ok) {
-      errorMessage.value = parseErrorMessage(res.status, data?.message)
+      errorMessage.value = parseErrorMessage(res.status, data?.message, data)
       if (data?.contact_phone) contactPhone.value = String(data.contact_phone)
       viewState.value = 'error'
       return
@@ -185,6 +189,7 @@ const loadContextFromApi = async () => {
     guestsCount.value = Math.max(1, Number(data.reservation?.guests_count || 1))
     accommodationName.value = String(data.account?.name || 'Alojamiento')
     contactPhone.value = String(data.account?.phone || '')
+    accommodationLogo.value = String(data.account?.logo_url || '')
     companionsRemaining.value = Number(data.companions_remaining ?? 0)
     initialPrimaryGuest.value = data.guest || null
     viewState.value = 'form'
@@ -210,7 +215,7 @@ const handleSubmit = async ({ primary_guest, additional_guests }) => {
     const data = await res.json()
 
     if (!res.ok) {
-      errorMessage.value = parseErrorMessage(res.status, data?.message)
+      errorMessage.value = parseErrorMessage(res.status, data?.message, data)
       if (data?.contact_phone) contactPhone.value = String(data.contact_phone)
       viewState.value = 'error'
       submitting.value = false
@@ -218,6 +223,7 @@ const handleSubmit = async ({ primary_guest, additional_guests }) => {
     }
 
     if (data?.check_in) checkInDate.value = data.check_in
+    companionsRemaining.value = Number(data?.companions_remaining ?? 0)
     viewState.value = 'success'
   } catch {
     errorMessage.value = 'Ocurrió un error inesperado al enviar el pre-registro.'

@@ -29,6 +29,23 @@ const normalizeValue = (value: unknown) => {
   return trimmed === '' ? null : trimmed
 }
 
+// CAMBIO 7: used for OG HTML
+const esc = (s: string | null | undefined) =>
+  String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+const formatDateLongEs = (value: string | null) => {
+  if (!value) return '-'
+  const date = new Date(`${value}T00:00:00.000Z`)
+  if (Number.isNaN(date.getTime())) return '-'
+  return new Intl.DateTimeFormat('es-CO', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(date)
+}
+
 const sanitizeGuest = (guest: GuestInput) => {
   const documentType = normalizeValue(guest.document_type)
   const documentNumber = normalizeValue(guest.document_number)
@@ -81,7 +98,7 @@ const getAccountProfile = async (
 ) => {
   const { data } = await client
     .from('account_profile')
-    .select('commercial_name, legal_name, phone')
+    .select('commercial_name, legal_name, phone, logo_url')
     .eq('account_id', accountId)
     .maybeSingle()
   return data
@@ -157,6 +174,57 @@ const resolveGuest = async (
   return created
 }
 
+// CAMBIO 7: HTML with OG tags for companion link
+interface CompanionRenderParams {
+  businessName: string
+  logoUrl: string | null
+  primaryGuestName: string | null
+  checkIn: string | null
+  publicUrl: string
+}
+
+function renderCompanionHtml(p: CompanionRenderParams): string {
+  const logoTag = p.logoUrl
+    ? `<img src="${esc(p.logoUrl)}" alt="${esc(p.businessName)}" style="width:64px;height:64px;object-fit:contain;border-radius:12px;border:1px solid #e5e7eb;background:#fff;display:block;margin:0 auto 12px" />`
+    : ''
+
+  const desc = [
+    p.primaryGuestName ? `Regístrate como acompañante de ${p.primaryGuestName}` : 'Regístrate como acompañante',
+    p.checkIn ? `Check-in: ${formatDateLongEs(p.checkIn)}` : null,
+  ].filter(Boolean).join('. ')
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="refresh" content="0;url=${esc(p.publicUrl)}" />
+  <title>Pre-registro acompañantes · ${esc(p.businessName)}</title>
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Pre-registro acompañantes · ${esc(p.businessName)}" />
+  <meta property="og:description" content="${esc(desc)}" />
+  ${p.logoUrl ? `<meta property="og:image" content="${esc(p.logoUrl)}" />` : ''}
+  <meta property="og:site_name" content="${esc(p.businessName)}" />
+  <meta property="og:url" content="${esc(p.publicUrl)}" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Pre-registro acompañantes · ${esc(p.businessName)}" />
+  <meta name="twitter:description" content="${esc(desc)}" />
+  ${p.logoUrl ? `<meta name="twitter:image" content="${esc(p.logoUrl)}" />` : ''}
+</head>
+<body style="margin:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh">
+  <div style="text-align:center;padding:40px">
+    <div style="margin-bottom:16px">${logoTag}</div>
+    <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#111827">${esc(p.businessName)}</h1>
+    <p style="margin:0;font-size:14px;color:#6b7280">Pre-registro de acompañantes</p>
+  </div>
+</body>
+</html>`
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -168,11 +236,12 @@ serve(async (req) => {
     const adminClient = createClient(supabaseUrl, serviceRoleKey)
 
     // ---------------------------------------------------------------
-    // GET: Obtener datos de la reserva por companion token
+    // GET: datos de la reserva por companion token + OG HTML para bots
     // ---------------------------------------------------------------
     if (req.method === 'GET') {
       const url = new URL(req.url)
       const companionToken = normalizeValue(url.searchParams.get('token'))
+      const format = normalizeValue(url.searchParams.get('format'))
 
       if (!companionToken) {
         return Response.json({ message: 'token es requerido.' }, { status: 400, headers: corsHeaders })
@@ -182,7 +251,13 @@ serve(async (req) => {
       const reservation = await getReservationByCompanionTokenHash(adminClient, companionTokenHash)
 
       if (!reservation) {
-        return Response.json({ message: 'Link inválido.' }, { status: 404, headers: corsHeaders })
+        if (format === 'json') {
+          return Response.json({ message: 'Link inválido.' }, { status: 404, headers: corsHeaders })
+        }
+        return new Response('<html><body>Link inválido.</body></html>', {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+        })
       }
 
       const BLOCKED_STATUSES = ['completed', 'finalized', 'cancelled']
@@ -200,10 +275,27 @@ serve(async (req) => {
         .eq('is_primary', true)
         .maybeSingle()
 
-      const pg = primaryGuestRow?.guests as { first_name?: string; last_name?: string } | null
+      // deno-lint-ignore no-explicit-any
+      const pg = primaryGuestRow?.guests as any
       const primaryGuestName = pg
         ? [pg.first_name, pg.last_name].filter(Boolean).join(' ')
         : null
+
+      // CAMBIO 7: return HTML with OG tags when not JSON format
+      if (format !== 'json') {
+        const businessName = profile?.commercial_name || profile?.legal_name || 'Alojamiento'
+        const publicUrl = `https://inn.tekmi.co/prerregistro-acompanante/${companionToken}`
+        const html = renderCompanionHtml({
+          businessName,
+          logoUrl: profile?.logo_url || null,
+          primaryGuestName,
+          checkIn: reservation.check_in,
+          publicUrl,
+        })
+        return new Response(html, {
+          headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+        })
+      }
 
       return Response.json({
         reservation: {
@@ -214,6 +306,7 @@ serve(async (req) => {
         account: {
           name: profile?.commercial_name || profile?.legal_name || 'Alojamiento',
           phone: profile?.phone || '',
+          logo_url: profile?.logo_url || null,
         },
         primary_guest_name: primaryGuestName,
       }, { headers: corsHeaders })
@@ -228,8 +321,6 @@ serve(async (req) => {
 
     // ---------------------------------------------------------------
     // Acción: generate
-    // Genera el companion_token para una reserva dado el primary_token.
-    // Es idempotente: si ya existe un companion_token_raw, lo reusa.
     // ---------------------------------------------------------------
     if (action === 'generate') {
       const primaryToken = normalizeValue(body?.primary_token)
@@ -242,6 +333,23 @@ serve(async (req) => {
 
       if (!reservation) {
         return Response.json({ message: 'Link inválido.' }, { status: 404, headers: corsHeaders })
+      }
+
+      // CAMBIO 3: check companion capacity before generating link
+      const totalGuests = Number(reservation.adults || 0) + Number(reservation.children || 0)
+      const maxCompanions = Math.max(0, totalGuests - 1)
+      if (maxCompanions === 0) {
+        return Response.json(
+          { message: 'Esta reserva no admite acompañantes.' },
+          { status: 422, headers: corsHeaders }
+        )
+      }
+      const currentCount = await countRegisteredCompanions(adminClient, reservation.id, reservation.account_id as string)
+      if (currentCount >= maxCompanions) {
+        return Response.json(
+          { message: 'El límite de acompañantes ha sido alcanzado.' },
+          { status: 422, headers: corsHeaders }
+        )
       }
 
       // Idempotente: reusar token existente si ya fue generado
@@ -276,7 +384,6 @@ serve(async (req) => {
 
     // ---------------------------------------------------------------
     // Acción: register
-    // Registra un acompañante dado el companion_token.
     // ---------------------------------------------------------------
     if (action === 'register') {
       const companionToken = normalizeValue(body?.companion_token)
@@ -308,10 +415,10 @@ serve(async (req) => {
       if (currentCompanions >= maxCompanions) {
         return Response.json(
           {
-            message: 'Se ha alcanzado el límite de acompañantes para esta reserva.',
+            message: 'El límite de acompañantes ha sido alcanzado.',
             contact_phone: profile?.phone || null,
           },
-          { status: 409, headers: corsHeaders }
+          { status: 422, headers: corsHeaders }
         )
       }
 

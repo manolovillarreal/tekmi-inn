@@ -23,6 +23,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const EDIT_WINDOW_MS = 12 * 60 * 60 * 1000
+
 const formatDateLongEs = (value: string | null) => {
   if (!value) return '-'
   const date = new Date(`${value}T00:00:00.000Z`)
@@ -69,7 +71,7 @@ const getReservationByToken = async (client: ReturnType<typeof createClient>, to
 
   const { data, error } = await client
     .from('reservations')
-    .select('id, account_id, status, check_in, check_out, adults, children, guest_id, preregistro_completado, preregistro_token_expiry')
+    .select('id, account_id, status, check_in, check_out, adults, children, guest_id, preregistro_completado, preregistro_completado_at, preregistro_token_expiry')
     .eq('preregistro_token', tokenHash)
     .maybeSingle()
 
@@ -81,15 +83,22 @@ const BLOCKED_STATUSES = ['completed', 'finalized', 'cancelled']
 
 const checkTokenValidity = (reservation: NonNullable<Awaited<ReturnType<typeof getReservationByToken>>>) => {
   if (BLOCKED_STATUSES.includes(reservation.status)) {
-    return { valid: false, status: 410 as const }
+    return { valid: false, status: 410 as const, reason: 'unavailable' }
   }
   if (reservation.preregistro_token_expiry) {
     const expiry = new Date(reservation.preregistro_token_expiry)
     if (expiry <= new Date()) {
-      return { valid: false, status: 410 as const }
+      return { valid: false, status: 410 as const, reason: 'unavailable' }
     }
   }
-  return { valid: true }
+  // CAMBIO 5: 12h edit window
+  if (reservation.preregistro_completado && reservation.preregistro_completado_at) {
+    const completedAt = new Date(reservation.preregistro_completado_at)
+    if (Date.now() - completedAt.getTime() > EDIT_WINDOW_MS) {
+      return { valid: false, status: 410 as const, reason: 'edit_expired' }
+    }
+  }
+  return { valid: true as const }
 }
 
 // Upsert guest by document — only used when there is no prior guest_id
@@ -277,8 +286,11 @@ serve(async (req) => {
 
       const validity = checkTokenValidity(reservation)
       if (!validity.valid) {
+        const msg = validity.reason === 'edit_expired'
+          ? 'El período de edición del pre-registro ha finalizado. Para modificaciones, contacta al alojamiento.'
+          : 'Este link ya no está disponible.'
         if (format === 'json') {
-          return Response.json({ message: 'Este link ya no está disponible.' }, { status: 410, headers: corsHeaders })
+          return Response.json({ message: msg, reason: validity.reason }, { status: 410, headers: corsHeaders })
         }
         return new Response(notFoundPreregistroHtml(), {
           status: 410,
@@ -304,9 +316,10 @@ serve(async (req) => {
           .maybeSingle(),
       ])
 
-      const rows = reservationGuests || []
-      const primaryRow = rows.find((r) => r.is_primary)
-      const companionRows = rows.filter((r) => !r.is_primary)
+      // deno-lint-ignore no-explicit-any
+      const rows: any[] = reservationGuests || []
+      const primaryRow = rows.find((r: any) => r.is_primary)
+      const companionRows = rows.filter((r: any) => !r.is_primary)
 
       // deno-lint-ignore no-explicit-any
       let primaryGuest: any = primaryRow?.guests ?? null
@@ -321,7 +334,7 @@ serve(async (req) => {
         primaryGuest = directGuest ?? null
       }
 
-      const companions = companionRows.map((r) => r.guests).filter(Boolean)
+      const companions = companionRows.map((r: any) => r.guests).filter(Boolean)
 
       const companionsExpected = Math.max(0, guestsCount - 1)
       const companionsRemaining = Math.max(0, companionsExpected - companions.length)
@@ -346,6 +359,7 @@ serve(async (req) => {
             account: {
               name: accountProfile?.commercial_name || accountProfile?.legal_name || 'Alojamiento',
               phone: accountProfile?.phone || '',
+              logo_url: accountProfile?.logo_url || null,
             },
           },
           { headers: corsHeaders }
@@ -410,21 +424,13 @@ serve(async (req) => {
         return Response.json({ message: 'Link inválido.' }, { status: 404, headers: corsHeaders })
       }
 
+      // CAMBIO 5: checkTokenValidity now blocks edit_expired (>12h) with 410
       const validity = checkTokenValidity(reservation)
       if (!validity.valid) {
-        return Response.json({ message: 'Este link ya no está disponible.' }, { status: 410, headers: corsHeaders })
-      }
-
-      if (reservation.preregistro_completado) {
-        const { data: profile } = await adminClient
-          .from('account_profile')
-          .select('phone')
-          .eq('account_id', reservation.account_id)
-          .maybeSingle()
-        return Response.json(
-          { message: 'Pre-registro ya completado.', contact_phone: profile?.phone || null },
-          { status: 409, headers: corsHeaders }
-        )
+        const msg = validity.reason === 'edit_expired'
+          ? 'El período de edición del pre-registro ha finalizado. Para modificaciones, contacta al alojamiento.'
+          : 'Este link ya no está disponible.'
+        return Response.json({ message: msg, reason: validity.reason }, { status: 410, headers: corsHeaders })
       }
 
       const accountId = reservation.account_id as string
@@ -444,9 +450,7 @@ serve(async (req) => {
         if (guestPayload.last_name) updatePayload.last_name = guestPayload.last_name
         if (guestPayload.nationality) updatePayload.nationality = guestPayload.nationality
         if (guestPayload.document_type) updatePayload.document_type = guestPayload.document_type
-        if (guestPayload.document_number) {
-          updatePayload.document_number = guestPayload.document_number
-        }
+        if (guestPayload.document_number) updatePayload.document_number = guestPayload.document_number
         if (guestPayload.phone) updatePayload.phone = guestPayload.phone
         if (guestPayload.phone_country_code) updatePayload.phone_country_code = guestPayload.phone_country_code
         if (guestPayload.email) updatePayload.email = guestPayload.email
@@ -495,6 +499,16 @@ serve(async (req) => {
 
       const existingCompanionIds = new Set((existingCompanionRows || []).map((r) => r.guest_id))
 
+      // CAMBIO 3: block if companion capacity is full
+      const guestsCount = Math.max(1, Number(reservation.adults || 0) + Number(reservation.children || 0))
+      const companionsExpected = Math.max(0, guestsCount - 1)
+      if (companionsInput.length > 0 && existingCompanionIds.size >= companionsExpected) {
+        return Response.json(
+          { message: 'El límite de acompañantes ha sido alcanzado.' },
+          { status: 422, headers: corsHeaders }
+        )
+      }
+
       // Insert only new companions
       for (const companionInput of companionsInput) {
         const payload = sanitizeGuest(companionInput)
@@ -511,16 +525,15 @@ serve(async (req) => {
       }
 
       // Compute completeness
-      const guestsCount = Math.max(1, Number(reservation.adults || 0) + Number(reservation.children || 0))
-      const companionsExpected = Math.max(0, guestsCount - 1)
       const { data: allGuestRows } = await adminClient
         .from('reservation_guests')
         .select('is_primary, guests!reservation_guests_guest_id_fkey(*)')
         .eq('reservation_id', reservation.id)
 
-      const rows = allGuestRows || []
-      const primaryRow = rows.find((r) => r.is_primary)
-      const companionCount = rows.filter((r) => !r.is_primary).length
+      // deno-lint-ignore no-explicit-any
+      const rows: any[] = allGuestRows || []
+      const primaryRow = rows.find((r: any) => r.is_primary)
+      const companionCount = rows.filter((r: any) => !r.is_primary).length
       const primaryComplete = isGuestComplete(primaryRow?.guests ?? null)
       const companionsRemaining = Math.max(0, companionsExpected - companionCount)
       const isComplete = primaryComplete && companionsRemaining === 0

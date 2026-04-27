@@ -23,6 +23,17 @@
       "destination": "https://feuuvdvhdjiqcfxmxuul.supabase.co/functions/v1/public-preregistro?token=:token"
     },
     {
+      "source": "/prerregistro-acompanante/:token",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(?:WhatsApp|facebookexternalhit|Twitterbot|LinkedInBot|Slackbot|TelegramBot).*"
+        }
+      ],
+      "destination": "https://feuuvdvhdjiqcfxmxuul.supabase.co/functions/v1/public-companion-preregistro?token=:token"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

@@ -274,7 +274,7 @@ onMounted(async () => {
 
   try {
     const res = await fetch(
-      `${FUNCTIONS_URL}/public-companion-preregistro?token=${encodeURIComponent(token)}`,
+      `${FUNCTIONS_URL}/public-companion-preregistro?token=${encodeURIComponent(token)}&format=json`,
       { headers: { apikey: ANON_KEY, Authorization: `Bearer ${ANON_KEY}` } }
     )
     const data = await res.json()
@@ -293,6 +293,7 @@ onMounted(async () => {
     accommodationName.value = String(data.account?.name || 'Alojamiento')
     primaryGuestName.value = String(data.primary_guest_name || '')
     contactPhone.value = String(data.account?.phone || '')
+    accommodationLogo.value = String(data.account?.logo_url || '')
     viewState.value = 'form'
   } catch {
     errorMessage.value = 'No se pudo cargar la información del pre-registro.'
